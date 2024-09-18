@@ -133,31 +133,27 @@ class LanguageSelectionWindow(QDialog, QObject):
 
         self.korean_button = QPushButton(self.tr("     한 국 어"))
         self.english_button = QPushButton(self.tr("     English"))
-        self.arabic_button = QPushButton(self.tr("     العربية"))
 
         # 국기 아이콘 추가
         self.korean_button.setIcon(QIcon("image/korea.png"))
         self.english_button.setIcon(QIcon("image/america.png"))
-        self.arabic_button.setIcon(QIcon("image/uae.png"))
 
         # 버튼 크기 정책 설정
         size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         size_policy.setHeightForWidth(True)
 
-        for button in [self.korean_button, self.english_button, self.arabic_button]:
+        for button in [self.korean_button, self.english_button]:
             button.setSizePolicy(size_policy)
             button.setMinimumHeight(70)  # 버튼 높이 조정
             button.setMaximumWidth(450)
             button.setIconSize(QSize(70, 70))  # 아이콘 크기 조정
             button.setStyleSheet(button.styleSheet())
 
-        self.korean_button.clicked.connect(lambda: self.select_language("Korean"))
-        self.english_button.clicked.connect(lambda: self.select_language("English"))
-        self.arabic_button.clicked.connect(lambda: self.select_language("Arabic"))
+        self.korean_button.clicked.connect(lambda: self.select_language("ko"))
+        self.english_button.clicked.connect(lambda: self.select_language("en"))
 
         form_layout.addWidget(self.korean_button)
         form_layout.addWidget(self.english_button)
-        form_layout.addWidget(self.arabic_button)
 
         main_layout.addWidget(form_container)
 
@@ -172,9 +168,8 @@ class Translator:
     """Helper class to load and install QTranslator"""
 
     translation_files = {
-        "Korean": "translations/app_ko.qm",
-        "English": "translations/app_en.qm",
-        "Arabic": "translations/app_ar.qm"
+        "ko": "translations/app_ko.qm",
+        "en": "translations/app_en.qm",
     }
 
     def __init__(self, app):

@@ -13,6 +13,10 @@ from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtGui import QTextCursor, QTextTableFormat
 from PyQt5.QtCore import Qt
+import mgrs, re
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt5.QtGui import QColor, QPainter
+from PyQt5.QtCore import Qt
 
 
 class AddAssetWindow(QDialog, QObject):
@@ -53,71 +57,90 @@ class AddAssetWindow(QDialog, QObject):
         asset_info_layout_main.setVerticalSpacing(20)  # 수직 간격 설정
         asset_info_layout_main.setColumnStretch(1, 1)  # 두 번째 열(입력 필드)에 더 많은 공간 할당
 
+        # 레이블 목록 정의
         labels = [
-            self.tr("구성군"),
-            self.tr("자산번호"),
-            self.tr("담당자"),
+            self.tr("구성군"), self.tr("자산번호"),
+            (self.tr("담당자"), self.tr("(영문)")),
             self.tr("연락처"),
-            self.tr("방어대상자산"),
-            self.tr("지역구분"),
+            (self.tr("방어대상자산"), self.tr("(영문)")),
+            (self.tr("지역구분"), self.tr("(영문)")),
+            (self.tr("위도"), self.tr("경도")),
             self.tr("군사좌표(MGRS)"),
-            self.tr("임무 및 기능 기술")
+            self.tr("임무/기능(국/영문)"),
         ]
 
-        tech_text_height = 100
+        row = 0  # 행 번호 초기화
+        for label in labels:
+            hbox = QHBoxLayout()  # 수평 레이아웃 생성
 
-        for i, label in enumerate(labels):
-            label_widget = QLabel(label)
-            label_widget.setStyleSheet("font: 강한공군체; font-size: 16px; font-weight: bold;")
-            label_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-            label_widget.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-            label_widget.setWordWrap(True)
-            label_widget.setMinimumWidth(150)
+            if isinstance(label, tuple):  # 레이블이 튜플인 경우 (예: 담당자와 영문)
+                label_widget = QLabel(label[0])
+                sub_label_widget = QLabel(label[1])
+                input_widgets = []
 
-            if label == self.tr("구성군"):
-                self.unit_combo = QComboBox()
-                self.unit_combo.addItems([self.tr("지상군"), self.tr("해군"), self.tr("공군"), self.tr("기타")])
-                self.unit_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                self.unit_combo.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
-                asset_info_layout_main.addWidget(label_widget, i, 0)
-                asset_info_layout_main.addWidget(self.unit_combo, i, 1)
-            elif label == self.tr("임무 및 기능 기술"):
-                input_widget = QTextEdit()
-                input_widget.setMinimumHeight(tech_text_height)
-                input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                input_widget.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
-                asset_info_layout_main.addWidget(label_widget, i, 0, Qt.AlignTop)
-                asset_info_layout_main.addWidget(input_widget, i, 1)
-            elif label == self.tr("군사좌표(MGRS)"):
-                input_widget = AutoSpacingLineEdit()
-                input_widget.setPlaceholderText("99A AA 99999 99999")
+                for i, sub_label in enumerate(label):
+                    if label == (self.tr("위도"), self.tr("경도")):
+                        input_widget = CoordinateEdit(sub_label)
+                        input_widget.editingFinished.connect(self.convert_to_mgrs)
+                    else:
+                        input_widget = UnderlineEdit()
+                    input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                    input_widget.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
+                    input_widgets.append(input_widget)
+
+                hbox.addWidget(label_widget)
+                hbox.addWidget(input_widgets[0])
+                hbox.addWidget(sub_label_widget)
+                hbox.addWidget(input_widgets[1])
+
+                self.asset_info_fields[label] = tuple(input_widgets)
+
+                # 레이블 위젯 스타일 설정 (메인 레이블과 서브 레이블 모두 동일한 스타일 적용)
+                for widget in [label_widget, sub_label_widget]:
+                    widget.setStyleSheet("font: 강한공군체; font-size: 16px; font-weight: bold;")
+                    widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                    widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    widget.setFixedWidth(75)  # 레이블 너비를 절반으로 줄임
+
+
+            else:  # 레이블이 단일 문자열인 경우
+                label_widget = QLabel(label)
+
+                if label == self.tr("구성군"):
+                    # 콤보박스 생성
+                    self.unit_combo = QComboBox()
+                    self.unit_combo.addItems([self.tr("지상군"), self.tr("해군"), self.tr("공군"), self.tr("기타")])
+                    self.unit_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                    self.unit_combo.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
+                    input_widget = self.unit_combo
+
+                elif label == self.tr("임무/기능(국/영문)"):
+                    input_widget = QTextEdit()
+                    input_widget.setMinimumHeight(100)
+
+                elif label == self.tr("군사좌표(MGRS)"):
+                    input_widget = AutoSpacingLineEdit()
+                    input_widget.setPlaceholderText("99A AA 99999 99999")
+                else:
+                    input_widget = UnderlineEdit()
+
                 input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                 input_widget.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
 
-                example_label = QLabel(f"{self.tr('ex)')}: 99A AA 99999 99999")
-                example_label.setStyleSheet("color: gray; font-size: 12px;")
+                hbox.addWidget(label_widget)
+                hbox.addWidget(input_widget)
 
-                layout = QVBoxLayout()
-                layout.addWidget(input_widget)
-                layout.addWidget(example_label)
-                layout.setSpacing(2)
-                layout.setAlignment(Qt.AlignTop)
-
-                container = QWidget()
-                container.setLayout(layout)
-                container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-                asset_info_layout_main.addWidget(label_widget, i, 0)
-                asset_info_layout_main.addWidget(container, i, 1)
-            else:
-                input_widget = UnderlineEdit()
-                input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                input_widget.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
-                asset_info_layout_main.addWidget(label_widget, i, 0)
-                asset_info_layout_main.addWidget(input_widget, i, 1)
-
-            if label != self.tr("구성군"):
                 self.asset_info_fields[label] = input_widget
+
+            # 레이블 위젯 스타일 설정
+            label_widget.setStyleSheet("font: 강한공군체; font-size: 16px; font-weight: bold;")
+            label_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+            label_widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            label_widget.setFixedWidth(150)  # 모든 레이블의 너비를 고정
+
+            # 메인 레이아웃에 수평 레이아웃 추가
+            asset_info_layout_main.addLayout(hbox, row, 0, 1, 4)
+            row += 1
 
         asset_info_layout_main.setColumnStretch(0, 0)
         asset_info_layout_main.setColumnStretch(1, 1)
@@ -276,6 +299,37 @@ class AddAssetWindow(QDialog, QObject):
         main_layout.addLayout(button_layout)  # 메인 레이아웃에 버튼 레이아웃 추가
         self.setLayout(main_layout)  # 전체 레이아웃 설정
 
+    def convert_to_mgrs(self):
+        lat_widget, lon_widget = self.asset_info_fields[(self.tr("위도"), self.tr("경도"))]
+        lat_input = lat_widget.text()
+        lon_input = lon_widget.text()
+
+        try:
+            lat = float(lat_input[1:])  # 'N' 또는 'S' 제거
+            lon = float(lon_input[1:])  # 'E' 또는 'W' 제거
+
+            if lat_input.startswith('S'):
+                lat = -lat
+            if lon_input.startswith('W'):
+                lon = -lon
+
+            m = mgrs.MGRS()
+            mgrs_coord = m.toMGRS(lat, lon)
+            self.asset_info_fields[self.tr("군사좌표(MGRS)")].setText(mgrs_coord)
+        except ValueError as e:
+            print(f"좌표 변환 오류: {e}")
+
+    def getting_unit(self, unit):
+        if unit == "지상군" or unit == "Ground Forces":
+            return ("지상군", "Ground Forces")
+        elif unit == "해군" or unit == "Navy":
+            return ("해군", "Navy")
+        elif unit == "공군" or unit == "Air Force":
+            return ("공군", "Air Force")
+        elif unit == "기타" or unit == "Other":
+            return ("기타", "Other")
+        return (unit, unit)  # 기본값
+
     def refresh(self):
         self.reset_data()  # 기존의 reset_data 메서드 호출
 
@@ -295,47 +349,39 @@ class AddAssetWindow(QDialog, QObject):
         total_score = sum(checkbox.score for checkbox in self.checkboxes.values() if checkbox.isChecked())  # 총합 점수 계산
         self.total_score_label.setText(self.tr(f"총합 점수: {total_score}"))  # 총합 점수 레이블 업데이트
 
-    def summarize_score(self):
-        total_score = 0
-        importance_score = 0
-        vulnerability_score = 0
-        threat_score = 0
-
-        for checkbox_name, checkbox in self.checkboxes.items():
-            if checkbox.isChecked():
-                if checkbox_name.startswith("중요도"):
-                    importance_score += checkbox.score
-                elif checkbox_name.startswith("취약성"):
-                    vulnerability_score += checkbox.score
-                elif checkbox_name.startswith("위협"):
-                    threat_score += checkbox.score
-
-        total_score = importance_score + vulnerability_score + threat_score
-        return total_score, importance_score, vulnerability_score, threat_score
-
     def save_data(self):
         try:
             # 자산 정보 입력 필드에서 공백 체크
             for label, field in self.asset_info_fields.items():
-                if not (field.toPlainText().strip() if isinstance(field,
-                                                                  QTextEdit) else field.text().strip()) and label != self.tr(
-                    "임무 및 기능 기술"):
-                    QMessageBox.warning(self, self.tr("입력 오류"), self.tr(f"{label} 값을 입력하세요."))  # 공백일 경우 경고
+                if isinstance(field, QTextEdit):
+                    value = field.toPlainText().strip()
+                elif isinstance(field, QLineEdit):
+                    value = field.text().strip()
+                else:
+                    continue
+
+                if not value and label != self.tr("임무/기능(국/영문)"):
+                    QMessageBox.warning(self, self.tr("입력 오류"), self.tr(f"{label} 값을 입력하세요."))
                     return
 
             # 구성군 데이터 저장
-            unit = self.unit_combo.currentText().strip()  # 선택된 구성군
+            unit = self.unit_combo.currentText().strip()
+            unit_tuple = self.getting_unit(unit)
 
-            asset_data = {
-                label: (str(field.toPlainText()).strip() if isinstance(field, QTextEdit) else str(field.text()).strip())
-                for label, field in self.asset_info_fields.items()
-            }
-
-            # asset_data에 구성군 추가
-            asset_data[self.tr("구성군")] = unit  # 추가된 구성군 저장
+            asset_data = {}
+            for label, field in self.asset_info_fields.items():
+                if isinstance(field, QTextEdit):
+                    asset_data[label] = field.toPlainText().strip()
+                elif isinstance(field, QLineEdit):
+                    asset_data[label] = field.text().strip()
+                elif isinstance(field, tuple):
+                    asset_data[label] = tuple(
+                        f.text().strip() if isinstance(f, QLineEdit) else f.toPlainText().strip() for f in field)
+            # 새로운 형식으로 변경
+            lat_lon_key = (self.tr("위도"), self.tr("경도"))
+            lat, lon = asset_data[lat_lon_key]
+            lat_lon = f"{lat},{lon}"
             scores_data = {}
-
-            # 점수 데이터 추출 및 저장
             for section, items in self.sections:
                 for item in items:
                     if isinstance(item, tuple) and isinstance(item[1], (int, float)):
@@ -373,24 +419,23 @@ class AddAssetWindow(QDialog, QObject):
                     scores_data[score_key] = 0  # 0으로 설정
 
             # 자산 번호로 데이터베이스에서 자산 정보 확인
-            target_asset = asset_data[self.tr("방어대상자산")]
-            self.parent.cursor.execute("SELECT id FROM assets WHERE target_asset=?", (target_asset,))
+            target_asset = asset_data[(self.tr("방어대상자산"), self.tr("(영문)"))][0]
+            self.parent.cursor.execute(f"SELECT id FROM cal_assets_{self.parent.selected_language} WHERE target_asset=?", (target_asset,))
             existing_asset = self.parent.cursor.fetchone()
-
             if existing_asset:  # 이미 존재하는 자산이면 수정
                 # UPDATE 쿼리
-                self.parent.cursor.execute('''
-                    UPDATE assets SET
-                        unit=?, asset_number=?, manager=?, contact=?, area=?, mgrs=?, description=?,
-                        중요도=?, 중요도_가점_중심=?, 중요도_가점_기능=?, 
-                        취약성_피해민감도_방호강도=?, 취약성_피해민감도_분산배치=?, 
-                        취약성_복구가능성_복구시간=?, 취약성_복구가능성_복구능력=?, 
-                        위협_공격가능성=?, 위협_탐지가능성=?
+                self.parent.cursor.execute(f'''
+                    UPDATE cal_assets_ko SET
+                        unit=?, asset_number=?, manager=?, contact=?, area=?, coordinate=?, mgrs=?, description=?,
+                        criticality=?, criticality_bonus_center=?, criticality_bonus_function=?, 
+                        vulnerability_damage_protection=?, vulnerability_damage_dispersion=?, 
+                        vulnerability_recovery_time=?, vulnerability_recovery_ability=?, 
+                        threat_attack=?, threat_detection=?
                     WHERE target_asset=?
                 ''', (
-                    unit, asset_data[self.tr("자산번호")], asset_data[self.tr("담당자")], asset_data[self.tr("연락처")],
-                    asset_data[self.tr("지역구분")], asset_data[self.tr("군사좌표(MGRS)")],
-                    asset_data[self.tr("임무 및 기능 기술")],
+                    unit_tuple[0], asset_data[self.tr("자산번호")], asset_data[(self.tr("담당자"), self.tr("(영문)"))][0], asset_data[self.tr("연락처")],
+                    asset_data[(self.tr("지역구분"), self.tr("(영문)"))][0], lat_lon, asset_data[self.tr("군사좌표(MGRS)")],
+                    asset_data[self.tr("임무/기능(국/영문)")],
                     scores_data.get(self.tr("중요도"), 0),
                     scores_data.get(self.tr("중요도_중요도 가점(중심)"), 0),
                     scores_data.get(self.tr("중요도_중요도 가점(기능)"), 0),
@@ -402,28 +447,19 @@ class AddAssetWindow(QDialog, QObject):
                     scores_data.get(self.tr("위협_탐지가능성"), 0),
                     target_asset  # 변경할 자산 번호
                 ))
-                QMessageBox.information(self, self.tr("성공"), self.tr("자산 정보가 수정되었습니다!"))  # 성공 메시지
-            else:  # 해당 자산이 없으면 새로 추가
-                # INSERT 쿼리
-                # 기존 자산이 없을 경우, 새로운 id 생성
-                self.parent.cursor.execute("SELECT MAX(id) FROM assets")
-                max_id = self.parent.cursor.fetchone()[0]
-                new_id = 1 if max_id is None else max_id + 1
-
-                # INSERT 쿼리 수정
-                self.parent.cursor.execute('''
-                    INSERT INTO assets (
-                        id, unit, asset_number, manager, contact, target_asset,
-                        area, mgrs, description,
-                        중요도, 중요도_가점_중심, 중요도_가점_기능, 
-                        취약성_피해민감도_방호강도, 취약성_피해민감도_분산배치, 
-                        취약성_복구가능성_복구시간, 취약성_복구가능성_복구능력, 
-                        위협_공격가능성, 위협_탐지가능성, language
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                # UPDATE 쿼리
+                self.parent.cursor.execute(f'''
+                    UPDATE cal_assets_en SET
+                        unit=?, asset_number=?, manager=?, contact=?, area=?, coordinate=?, mgrs=?, description=?,
+                        criticality=?, criticality_bonus_center=?, criticality_bonus_function=?, 
+                        vulnerability_damage_protection=?, vulnerability_damage_dispersion=?, 
+                        vulnerability_recovery_time=?, vulnerability_recovery_ability=?, 
+                        threat_attack=?, threat_detection=?
+                    WHERE target_asset=?
                 ''', (
-                    new_id, unit, asset_data[self.tr("자산번호")], asset_data[self.tr("담당자")],
-                    asset_data[self.tr("연락처")], asset_data[self.tr("방어대상자산")], asset_data[self.tr("지역구분")],
-                    asset_data[self.tr("군사좌표(MGRS)")], asset_data[self.tr("임무 및 기능 기술")],
+                    unit_tuple[1], asset_data[self.tr("자산번호")], asset_data[(self.tr("담당자"), self.tr("(영문)"))][1], asset_data[self.tr("연락처")],
+                    asset_data[(self.tr("지역구분"), self.tr("(영문)"))][1], lat_lon, asset_data[self.tr("군사좌표(MGRS)")],
+                    asset_data[self.tr("임무/기능(국/영문)")],
                     scores_data.get(self.tr("중요도"), 0),
                     scores_data.get(self.tr("중요도_중요도 가점(중심)"), 0),
                     scores_data.get(self.tr("중요도_중요도 가점(기능)"), 0),
@@ -433,7 +469,66 @@ class AddAssetWindow(QDialog, QObject):
                     scores_data.get(self.tr("취약성_복구가능성_복구능력"), 0),
                     scores_data.get(self.tr("위협_공격가능성"), 0),
                     scores_data.get(self.tr("위협_탐지가능성"), 0),
-                    self.language
+                    target_asset  # 변경할 자산 번호
+                ))
+
+
+                QMessageBox.information(self, self.tr("성공"), self.tr("자산 정보가 수정되었습니다!"))  # 성공 메시지
+            else:  # 해당 자산이 없으면 새로 추가
+                # INSERT 쿼리
+                # 기존 자산이 없을 경우, 새로운 id 생성
+                self.parent.cursor.execute("SELECT MAX(id) FROM cal_assets_ko")
+                self.parent.cursor.execute("SELECT MAX(id) FROM cal_assets_en")
+                max_id = self.parent.cursor.fetchone()[0]
+                new_id = 1 if max_id is None else max_id + 1
+
+                # INSERT 쿼리 수정
+                self.parent.cursor.execute(f'''
+                    INSERT INTO cal_assets_ko(
+                        id, unit, asset_number, manager, contact, target_asset,
+                        area, coordinate, mgrs, description,
+                        criticality, criticality_bonus_center, criticality_bonus_function, 
+                        vulnerability_damage_protection, vulnerability_damage_dispersion, 
+                        vulnerability_recovery_time, vulnerability_recovery_ability, 
+                        threat_attack, threat_detection
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_id, unit_tuple[0], asset_data[self.tr("자산번호")], asset_data[(self.tr("담당자"), self.tr("(영문)"))][0], asset_data[self.tr("연락처")],
+                    asset_data[(self.tr("방어대상자산"), self.tr("(영문)"))][0], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][0], lat_lon, asset_data[self.tr("군사좌표(MGRS)")],
+                    asset_data[self.tr("임무/기능(국/영문)")],
+                    scores_data.get(self.tr("중요도"), 0),
+                    scores_data.get(self.tr("중요도_중요도 가점(중심)"), 0),
+                    scores_data.get(self.tr("중요도_중요도 가점(기능)"), 0),
+                    scores_data.get(self.tr("취약성_피해민감도_방호강도"), 0),
+                    scores_data.get(self.tr("취약성_피해민감도_분산배치"), 0),
+                    scores_data.get(self.tr("취약성_복구가능성_복구시간"), 0),
+                    scores_data.get(self.tr("취약성_복구가능성_복구능력"), 0),
+                    scores_data.get(self.tr("위협_공격가능성"), 0),
+                    scores_data.get(self.tr("위협_탐지가능성"), 0),
+                ))
+                # INSERT 쿼리 수정
+                self.parent.cursor.execute(f'''
+                    INSERT INTO cal_assets_en(
+                        id, unit, asset_number, manager, contact, target_asset,
+                        area, coordinate, mgrs, description,
+                        criticality, criticality_bonus_center, criticality_bonus_function, 
+                        vulnerability_damage_protection, vulnerability_damage_dispersion, 
+                        vulnerability_recovery_time, vulnerability_recovery_ability, 
+                        threat_attack, threat_detection
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_id, unit_tuple[1], asset_data[self.tr("자산번호")], asset_data[(self.tr("담당자"), self.tr("(영문)"))][1], asset_data[self.tr("연락처")],
+                    asset_data[(self.tr("방어대상자산"), self.tr("(영문)"))][1], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][1], lat_lon, asset_data[self.tr("군사좌표(MGRS)")],
+                    asset_data[self.tr("임무/기능(국/영문)")],
+                    scores_data.get(self.tr("중요도"), 0),
+                    scores_data.get(self.tr("중요도_중요도 가점(중심)"), 0),
+                    scores_data.get(self.tr("중요도_중요도 가점(기능)"), 0),
+                    scores_data.get(self.tr("취약성_피해민감도_방호강도"), 0),
+                    scores_data.get(self.tr("취약성_피해민감도_분산배치"), 0),
+                    scores_data.get(self.tr("취약성_복구가능성_복구시간"), 0),
+                    scores_data.get(self.tr("취약성_복구가능성_복구능력"), 0),
+                    scores_data.get(self.tr("위협_공격가능성"), 0),
+                    scores_data.get(self.tr("위협_탐지가능성"), 0),
                 ))
                 QMessageBox.information(self, self.tr("성공"), self.tr("자산 및 CVT 점수 저장 성공!"))  # 성공 메시지
             self.parent.conn.commit()  # 변경사항 커밋
@@ -448,36 +543,54 @@ class AddAssetWindow(QDialog, QObject):
 
     def set_data(self, asset_id):
         self.asset_id = asset_id  # 선택한 자산의 ID
-        self.parent.cursor.execute("SELECT * FROM assets WHERE id=?", (asset_id,))  # 자산 정보 조회
-
-        data = self.parent.cursor.fetchone()  # 결과 가져오기
-
-        if data:
+        self.parent.cursor.execute(f"SELECT * FROM cal_assets_ko WHERE id=?", (asset_id,))  # 자산 정보 조회
+        asset_data1 = self.parent.cursor.fetchone()  # 결과 가져오기
+        self.parent.cursor.execute(f"SELECT * FROM cal_assets_en WHERE id=?", (asset_id,))  # 자산 정보 조회
+        asset_data2 = self.parent.cursor.fetchone()  # 결과 가져오기
+        if asset_data1 and asset_data2:
             # Reset all checkboxes to unchecked
             self.reset_checkboxes()
-
             # UI 필드에 데이터 설정
-            # 구성군(콤보박스 특성)
-            unit = data[1]  # 데이터베이스에서 가져온 구성군 값
-            self.unit_combo.setCurrentText(unit)  # 구성군 콤보박스에 값 설정
-            self.asset_info_fields[self.tr("자산번호")].setText(str(data[2]))  # 자산번호
-            self.asset_info_fields[self.tr("담당자")].setText(data[3])  # 담당자
-            self.asset_info_fields[self.tr("연락처")].setText(data[4])  # 연락처
-            self.asset_info_fields[self.tr("방어대상자산")].setText(data[5])  # 방어대상자산
-            self.asset_info_fields[self.tr("지역구분")].setText(data[6])  # 지역구분
-            self.asset_info_fields[self.tr("군사좌표(MGRS)")].setText(data[7])  # 군사좌표(MGRS)
-            self.asset_info_fields[self.tr("임무 및 기능 기술")].setPlainText(data[8])  # 임무 및 기능 기술
+            coord_str = asset_data1[7]
+            lat, lon = coord_str.split(',')
+            for label, field in self.asset_info_fields.items():
+                if isinstance(field, tuple):
+                    if label == (self.tr("담당자"), self.tr("(영문)")):
+                        f1, f2 = field
+                        f1.setText(asset_data1[3])
+                        f2.setText(asset_data2[3])
 
+                    elif label == (self.tr("방어대상자산"), self.tr("(영문)")):
+                        f1, f2 = field
+                        f1.setText(asset_data1[5])
+                        f2.setText(asset_data2[5])
+
+                    elif label == (self.tr("지역구분"), self.tr("(영문)")):
+                        f1, f2 = field
+                        f1.setText(asset_data1[6])
+                        f2.setText(asset_data2[6])
+
+                    elif label == (self.tr("위도"), self.tr("경도")):
+                        f1, f2 = field
+                        f1.setText(lat)
+                        f2.setText(lon)
+                else:
+                    # 구성군(콤보박스 특성)
+                    self.unit_combo.setCurrentText(asset_data1[1] if self.parent.selected_language == 'ko' else asset_data2[1])
+                    self.asset_info_fields[self.tr("자산번호")].setText(str(asset_data1[2]))  # 자산번호
+                    self.asset_info_fields[self.tr("연락처")].setText(asset_data1[4])  # 연락처
+                    self.asset_info_fields[self.tr("군사좌표(MGRS)")].setText(asset_data1[8])  # 군사좌표(MGRS)
+                    self.asset_info_fields[self.tr("임무/기능(국/영문)")].setPlainText(asset_data1[9])  # 임무 및 기능 기술
             # 체크박스 상태 설정
-            self.set_checkbox_state(self.tr("중요도"), data[9] if data[9] is not None else 0)  # NULL 체크
-            self.set_checkbox_state(self.tr("중요도_중요도 가점(중심)"), data[10] if data[10] is not None else 0)
-            self.set_checkbox_state(self.tr("중요도_중요도 가점(기능)"), data[11] if data[11] is not None else 0)
-            self.set_checkbox_state(self.tr("취약성_피해민감도_방호강도"), data[12] if data[12] is not None else 0)
-            self.set_checkbox_state(self.tr("취약성_피해민감도_분산배치"), data[13] if data[13] is not None else 0)
-            self.set_checkbox_state(self.tr("취약성_복구가능성_복구시간"), data[14] if data[14] is not None else 0)
-            self.set_checkbox_state(self.tr("취약성_복구가능성_복구능력"), data[15] if data[15] is not None else 0)
-            self.set_checkbox_state(self.tr("위협_공격가능성"), data[16] if data[16] is not None else 0)
-            self.set_checkbox_state(self.tr("위협_탐지가능성"), data[17] if data[17] is not None else 0)
+            self.set_checkbox_state(self.tr("중요도"), asset_data1[10] if asset_data1[10] is not None else 0)  # NULL 체크
+            self.set_checkbox_state(self.tr("중요도_중요도 가점(중심)"), asset_data1[11] if asset_data1[11] is not None else 0)
+            self.set_checkbox_state(self.tr("중요도_중요도 가점(기능)"), asset_data1[12] if asset_data1[12] is not None else 0)
+            self.set_checkbox_state(self.tr("취약성_피해민감도_방호강도"), asset_data1[13] if asset_data1[13] is not None else 0)
+            self.set_checkbox_state(self.tr("취약성_피해민감도_분산배치"), asset_data1[14] if asset_data1[14] is not None else 0)
+            self.set_checkbox_state(self.tr("취약성_복구가능성_복구시간"), asset_data1[15] if asset_data1[15] is not None else 0)
+            self.set_checkbox_state(self.tr("취약성_복구가능성_복구능력"), asset_data1[16] if asset_data1[16] is not None else 0)
+            self.set_checkbox_state(self.tr("위협_공격가능성"), asset_data1[17] if asset_data1[17] is not None else 0)
+            self.set_checkbox_state(self.tr("위협_탐지가능성"), asset_data1[18] if asset_data1[18] is not None else 0)
 
     def reset_data(self):
         """모든 입력 필드와 체크박스를 초기화합니다."""
@@ -485,15 +598,29 @@ class AddAssetWindow(QDialog, QObject):
         self.asset_id = None
 
         # 구성군 콤보박스 초기화
-        self.unit_combo.setCurrentIndex(0)
 
         # 모든 입력 필드 초기화
-        for field in self.asset_info_fields.values():
-            if isinstance(field, QTextEdit):
-                field.setPlainText("")
+        for label, field in self.asset_info_fields.items():
+            if label == self.tr('구성군'):
+                self.unit_combo.setCurrentIndex(0)
+            elif isinstance(label, tuple):
+                if label == (self.tr("지역구분"), self.tr("(영문)")):
+                    f1, f2 = field
+                    f1.setText("")
+                    f2.setText("")
+                elif label == (self.tr("방어자산명"), self.tr("(영문)")):
+                    f1, f2 = field
+                    f1.setText("")
+                    f2.setText("")
+                elif label == (self.tr("위도"), self.tr("경도")):
+                    f1, f2 = field
+                    f1.setText("")
+                    f2.setText("")
             else:
-                field.setText("")
-
+                if isinstance(field, QTextEdit):
+                    field.setPlainText("")
+                else:
+                    field.setText("")
         # 모든 체크박스 초기화
         self.reset_checkboxes()
 
@@ -559,25 +686,37 @@ class AddAssetWindow(QDialog, QObject):
 
             # 자산 정보 섹션
             assets_info = self.tr('자산정보')
+            coordinate = self.tr("경위도")
+            lang = 0 if self.parent.selected_language == 'ko' else 1
             cursor.insertHtml(f"<h2>{assets_info}</h2>")
             cursor.insertHtml(f"<table {table_style}>")
-
             # 구성군 정보 추가
             cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr('구성군')}</th>"
                               f"<td {td_style} width='70%'>{self.unit_combo.currentText().strip()}</td></tr>")
-
             for label, field in self.asset_info_fields.items():
-                if isinstance(field, QLineEdit):
-                    value = field.text()
-                elif isinstance(field, QTextEdit):
-                    value = field.toPlainText()
-                elif isinstance(field, QComboBox):
-                    value = field.currentText()
+                if isinstance(label, tuple):
+                    if label == (self.tr("위도"), self.tr("경도")):
+                        lat, lon = field
+                        value = f"{lat.text().strip()}, {lon.text().strip()}"
+                        cursor.insertHtml(f"<tr><th {th_style} width='30%'>{coordinate}</th>"
+                                      f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+                    else:
+                        selected_field = field[0] if self.parent.selected_language == 'ko' else field[1]
+                        if isinstance(selected_field, QLineEdit):
+                            value = selected_field.text().strip()
+                        else:
+                            value = selected_field.toPlainText().strip()
+                        cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr(label[lang])}</th>"
+                                      f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
                 else:
-                    value = str(field)  # 다른 타입의 필드 처리
-
-                cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr(label)}</th>"
-                                  f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+                    if isinstance(field, QLineEdit):
+                        value = field.text()
+                    elif isinstance(field, QTextEdit):
+                        value = field.toPlainText()
+                    else:
+                        value = str(field)  # 다른 타입의 필드 처리
+                    cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr(label)}</th>"
+                                      f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
 
             cursor.insertHtml("</table>")
             cursor.insertHtml("<br><br>")
@@ -603,7 +742,7 @@ class AddAssetWindow(QDialog, QObject):
             cursor.insertHtml("<br><br>")
 
             # 중요도 섹션
-            self.add_importance_section(cursor)
+            self.add_criticality_section(cursor)
             cursor.insertHtml("<br><br>")
             # 취약성 섹션
             self.add_vulnerability_section(cursor)
@@ -625,12 +764,30 @@ class AddAssetWindow(QDialog, QObject):
                 printer.setOutputFileName(file_path)
                 printer.setPageOrientation(QPageLayout.Landscape)
                 document.print_(printer)
-                QMessageBox.information(self, self.tr("저장 완료"), self.tr(f"자산 보고서가 {file_path} 파일로 저장되었습니다."))
+                QMessageBox.information(self, self.tr("저장 완료"), self.tr("자산 보고서가 {} 파일로 저장되었습니다.").format(file_path))
 
         except Exception as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"보고서 생성 중 오류가 발생했습니다: {str(e)}"))
+            QMessageBox.critical(self, self.tr("오류"), self.tr("보고서 생성 중 오류가 발생했습니다: {}").format(str(e)))
 
-    def add_importance_section(self, cursor):
+    def summarize_score(self):
+        total_score = 0
+        importance_score = 0
+        vulnerability_score = 0
+        threat_score = 0
+
+        for checkbox_name, checkbox in self.checkboxes.items():
+            if checkbox.isChecked():
+                if checkbox_name.startswith("중요도"):
+                    importance_score += checkbox.score
+                elif checkbox_name.startswith("취약성"):
+                    vulnerability_score += checkbox.score
+                elif checkbox_name.startswith("위협"):
+                    threat_score += checkbox.score
+
+        total_score = importance_score + vulnerability_score + threat_score
+        return total_score, importance_score, vulnerability_score, threat_score
+
+    def add_criticality_section(self, cursor):
         cursor.insertHtml(f"<h3>{self.tr(self.sections[0][0])}</h3>")
 
         # 공통 스타일
@@ -660,7 +817,7 @@ class AddAssetWindow(QDialog, QObject):
                 cursor.insertHtml(f"<h4>{self.tr(subsection[0])}</h4>")
                 cursor.insertHtml(f"<table {table_style}>")
                 cursor.insertHtml(
-                    f"<tr><th {th_style} width='70%'align='center'>{self.tr('항목')}</th><th {th_style} width='15%'align='center'>{self.tr('점수')}</th><th {th_style} width='15%'align='center'>{self.tr('체크')}</th></tr>")
+                    f"<tr><th {th_style} width='70%'align='center'>{table_scores}</th><th {th_style} width='15%'align='center'>{table_scores}</th><th {th_style} width='15%'align='center'>{table_checks}</th></tr>")
                 for item, score in subsection[1]:
                     checkbox = self.checkboxes.get(self.sections[0][0] + "_" + subsection[0] + "_" + item)
                     checkbox = "☑" if checkbox.isChecked() else "☐"
@@ -724,7 +881,6 @@ class AddAssetWindow(QDialog, QObject):
         # 테이블 간 간격 추가
         cursor.insertHtml("<br>")
 
-
 class UnderlineEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -773,8 +929,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle(self.tr("자산 관리"))  # 창 제목 설정
         self.setMinimumSize(1024, 768)  # 최소 크기 설정
-        self.selected_language = "Korean"
-        self.db_path = 'assets.db'
+        self.selected_language = "ko"
+        self.db_path = 'assets_management.db'
         self.conn = sqlite3.connect(self.db_path)  # 데이터베이스 연결
         self.cursor = self.conn.cursor()  # 커서 생성
 
@@ -842,7 +998,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def initDB(self):
         # 데이터베이스 테이블 생성
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS assets (
+            CREATE TABLE IF NOT EXISTS cal_assets_ko (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 unit TEXT,
                 asset_number TEXT,
@@ -850,18 +1006,41 @@ class MainWindow(QtWidgets.QMainWindow):
                 contact TEXT,
                 target_asset TEXT,
                 area TEXT,
+                coordinate TEXT,
                 mgrs TEXT,   
                 description TEXT,
-                중요도 FLOAT, 
-                중요도_가점_중심 FLOAT,
-                중요도_가점_기능 FLOAT,
-                취약성_피해민감도_방호강도 FLOAT, 
-                취약성_피해민감도_분산배치 FLOAT,
-                취약성_복구가능성_복구시간 FLOAT, 
-                취약성_복구가능성_복구능력 FLOAT, 
-                위협_공격가능성 FLOAT, 
-                위협_탐지가능성 FLOAT,
-                language TEXT
+                criticality FLOAT, 
+                criticality_bonus_center FLOAT,
+                criticality_bonus_function FLOAT,
+                vulnerability_damage_protection FLOAT, 
+                vulnerability_damage_dispersion FLOAT,
+                vulnerability_recovery_time FLOAT, 
+                vulnerability_recovery_ability FLOAT, 
+                threat_attack FLOAT, 
+                threat_detection FLOAT
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS cal_assets_en (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                unit TEXT,
+                asset_number TEXT,
+                manager TEXT,
+                contact TEXT,
+                target_asset TEXT,
+                area TEXT,
+                coordinate TEXT,
+                mgrs TEXT,   
+                description TEXT,
+                criticality FLOAT, 
+                criticality_bonus_center FLOAT,
+                criticality_bonus_function FLOAT,
+                vulnerability_damage_protection FLOAT, 
+                vulnerability_damage_dispersion FLOAT,
+                vulnerability_recovery_time FLOAT, 
+                vulnerability_recovery_ability FLOAT, 
+                threat_attack FLOAT, 
+                threat_detection FLOAT
             )
         ''')
         self.conn.commit()  # 변경사항 커밋
@@ -910,6 +1089,73 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_view_assets_page(self):
         self.centralWidget.setCurrentIndex(0)  # 인덱스 0의 페이지로 전환
 
+class WarningDialog(QDialog):
+    def __init__(self, message, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("경고")
+        self.setWindowIcon(QIcon("warning_icon.png"))  # 경고 아이콘 추가 (아이콘 파일 필요)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setStyleSheet("background-color: #FFF0F0;")
+
+        layout = QVBoxLayout()
+
+        warning_label = QLabel(message)
+        warning_label.setStyleSheet("color: #D32F2F; font-size: 14px;")
+        warning_label.setWordWrap(True)
+        warning_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(warning_label)
+
+        ok_button = QPushButton("확인")
+        ok_button.setStyleSheet("""
+            QPushButton {
+                background-color: #D32F2F;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #FF5252;
+            }
+        """)
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button, alignment=Qt.AlignCenter)
+
+        self.setLayout(layout)
+
+class CoordinateEdit(UnderlineEdit):
+    def __init__(self, coordinate_type, parent=None):
+        super().__init__(parent)
+        self.coordinate_type = coordinate_type
+        self.setPlaceholderText(f"예: {'N39.99999' if coordinate_type == '위도' else 'E128.99999'}")
+        self.other_edit = None
+
+    def set_other_edit(self, other_edit):
+        self.other_edit = other_edit
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.validate_input()
+
+    def validate_input(self):
+        if not self.text():
+            return
+
+        pattern = r'^[NS]?\d{1,2}\.\d{5}$' if self.coordinate_type == '위도' else r'^[EW]?\d{1,3}\.\d{5}$'
+        if not re.match(pattern, self.text()):
+            self.show_warning(f"{self.coordinate_type} 형식이 올바르지 않습니다.\n예시: {'N39.99999' if self.coordinate_type == '위도' else 'E128.99999'}")
+        else:
+            if self.other_edit and self.other_edit.text():
+                other_pattern = r'^[EW]?\d{1,3}\.\d{5}$' if self.coordinate_type == '위도' else r'^[NS]?\d{1,2}\.\d{5}$'
+                if not re.match(other_pattern, self.other_edit.text()):
+                    self.other_edit.show_warning(f"{'경도' if self.coordinate_type == '위도' else '위도'} 형식이 올바르지 않습니다.\n예시: {'E128.99999' if self.coordinate_type == '위도' else 'N39.99999'}")
+
+    def show_warning(self, message):
+        dialog = WarningDialog(message, self)
+        dialog.exec_()
+
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
 
 
 if __name__ == "__main__":

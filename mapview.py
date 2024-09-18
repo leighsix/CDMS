@@ -23,7 +23,7 @@ from branca.colormap import LinearColormap
 
 class CalAssetMapView(QDialog):
     """지도 보기 다이얼로그 창"""
-    def __init__(self, coordinates_list, selected_language):
+    def __init__(self, coordinates_list):
         QDialog.__init__(self)
         QObject.__init__(self)
         self.setWindowTitle(self.tr("CAL 지도 보기"))
@@ -31,16 +31,9 @@ class CalAssetMapView(QDialog):
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        self.create_map(selected_language)
         self.initUI()
         self.load_map(coordinates_list)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
-
-    def create_map(self, selected_language):
-        if selected_language == "Korean":
-            self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        else:
-            self.map = folium.Map(location=[25.2048, 55.2708], zoom_start=7)
 
     def initUI(self):
         layout = QVBoxLayout(self)
@@ -106,7 +99,7 @@ class CalAssetMapView(QDialog):
             '''
         legend_html += '</div></div>'
 
-        for unit, asset_name, mgrs_coord in coordinates_list:
+        for unit, asset_name, coordinate, mgrs_coord in coordinates_list:
             try:
                 zone, square, easting, northing = self.parse_mgrs(mgrs_coord)
                 mgrs_full_str = f'{zone}{square}{easting}{northing}'
@@ -209,26 +202,18 @@ class CalAssetMapView(QDialog):
         else:
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
 
-class MapView(QDialog):
+class PriorityMapView(QDialog):
     """지도 보기 다이얼로그 창"""
-    def __init__(self, coordinates_list, selected_language):
-        QDialog.__init__(self)
-        QObject.__init__(self)
-        self.setWindowTitle(self.tr("CAL 우선순위 지도 보기"))
+    def __init__(self, coordinates_list):
+        super().__init__()
+        self.setWindowTitle("CAL 우선순위 지도 보기")
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        self.create_map(selected_language)
         self.initUI()
         self.load_map(coordinates_list)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
-
-    def create_map(self, selected_language):
-        if selected_language == "Korean":
-            self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        else:
-            self.map = folium.Map(location=[25.2048, 55.2708], zoom_start=7)
 
     def initUI(self):
         layout = QVBoxLayout(self)
@@ -270,9 +255,9 @@ class MapView(QDialog):
         m_conv = mgrs.MGRS()
 
         # 우선순위 정렬 및 색상 계산
-        coordinates_list.sort(key=lambda x: x[2])  # 우선순위로 정렬
-        max_priority = max(item[2] for item in coordinates_list)
-        min_priority = min(item[2] for item in coordinates_list)
+        coordinates_list.sort(key=lambda x: x[-1])  # 우선순위로 정렬
+        max_priority = max(item[-1] for item in coordinates_list)
+        min_priority = min(item[-1] for item in coordinates_list)
 
         # 그라데이션 색상맵 생성
         colormap = LinearColormap(colors=['red', 'yellow', 'green'], vmin=min_priority, vmax=max_priority)
@@ -285,7 +270,7 @@ class MapView(QDialog):
         colormap._font_size = '14px'
         colormap._ticklabels = [str(i) for i in range(min_priority, max_priority + 1)]
 
-        for asset_id, mgrs_coord, priority in coordinates_list:
+        for unit, asset_name, coordinate, mgrs_coord, priority in coordinates_list:
             try:
                 zone, square, easting, northing = self.parse_mgrs(mgrs_coord)
                 mgrs_full_str = f'{zone}{square}{easting}{northing}'
@@ -321,7 +306,7 @@ class MapView(QDialog):
                     location=[lat, lon],
                     icon=icon,
                     popup=folium.Popup(f"""
-                        <b>{critical_assets}:</b> {asset_id}<br>
+                        <b>{critical_assets}:</b> {asset_name}<br>
                         <b>MGRS:</b> {mgrs_coord}<br>
                         <b>{priorities}:</b> {priority}
                     """, max_width=200)
@@ -388,9 +373,8 @@ class MapView(QDialog):
         else:
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
 
-
 class DefenseAssetMapView(QDialog):
-    def __init__(self, coordinates_list, selected_language):
+    def __init__(self, coordinates_list):
         QDialog.__init__(self)
         QObject.__init__(self)
         self.setWindowTitle(self.tr("DAL 지도 보기"))
@@ -398,8 +382,6 @@ class DefenseAssetMapView(QDialog):
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        self.selected_language = selected_language
-        self.create_map()
         self.coordinates_list = coordinates_list
         self.show_defense_radius = False
         self.initUI()
@@ -408,13 +390,6 @@ class DefenseAssetMapView(QDialog):
         # 창 크기 조절 허용
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
 
-    def create_map(self):
-        if self.selected_language == "Korean":
-            # 한국 서울 중심
-            self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        else:
-            # 아랍에미리트 두바이 중심
-            self.map = folium.Map(location=[25.2048, 55.2708], zoom_start=7)
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -448,7 +423,6 @@ class DefenseAssetMapView(QDialog):
         return match.group(1), match.group(2), match.group(3), match.group(4)
 
     def load_map(self, coordinates_list):
-        self.create_map()
         if not coordinates_list:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
@@ -478,7 +452,7 @@ class DefenseAssetMapView(QDialog):
         legend_html += "</div>"
         self.map.get_root().html.add_child(folium.Element(legend_html))
 
-        for asset_name, mgrs_coord, weapon_system, threat_degree in self.coordinates_list:
+        for asset_name, coordinate, mgrs_coord, weapon_system, threat_degree in self.coordinates_list:
             try:
                 zone, square, easting, northing = self.parse_mgrs(mgrs_coord)
                 mgrs_full_str = f'{zone}{square}{easting}{northing}'
@@ -634,15 +608,10 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     # 서울 주변 예시 사용 (weapon_system과 threat_degree 추가)
-    coordinates_list_example = [
-        ('NamSan Tower', '52SDH8572719195', 'PAC-3', 0),
-        ('Jamsil Station', '52SDH8391122760', 'KM-SAM2', 0),
-        ('Gyeongbokgung', '52SDH8248121549', 'THAAD', 0),
-        ('Incheon Airport', '52SDC7996709959', 'L-SAM', 0),
-        ('Suwon Hwaseong', '52SDG8551498892', 'MSE', 0)
-    ]
+    coordinates_list_example = [('해군', '원자력 발전소', 'N38.12345,E128.45321', '52S DH 52073 19653', 1),
+                                ('지상군', 'asdf', 'N39.11233,E127.12345', '52S CJ 37757 30918', 2)]
 
-    map_loader = DefenseAssetMapView(coordinates_list_example, "Korean")
+    map_loader = PriorityMapView(coordinates_list_example)
     map_loader.show()
 
     sys.exit(app.exec_())

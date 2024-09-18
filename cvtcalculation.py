@@ -10,11 +10,12 @@ from PyQt5.QtGui import QTextDocument, QTextCursor, QTextTableFormat, QTextFrame
 from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject
 from PyQt5.QtGui import QIcon
 from languageselection import Translator
-from mapview import MapView
+from mapview import PriorityMapView
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QComboBox, QLineEdit, QLabel, QTableWidget, QHeaderView, \
     QTableWidgetItem, QPushButton, QMessageBox, QCheckBox, QAbstractItemView
 from PyQt5.QtCore import Qt, pyqtSignal, QRect, QTimer
 import pandas as pd
+import traceback
 
 
 class MainWindow(QtWidgets.QMainWindow, QObject):
@@ -24,8 +25,8 @@ class MainWindow(QtWidgets.QMainWindow, QObject):
         self.setWindowTitle("CAL/DAL Management System")
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(800, 600)
-        self.conn = sqlite3.connect('assets.db')
-        self.selected_language = "Korean"  # 기본 언어 설정
+        self.conn = sqlite3.connect('assets_management.db')
+        self.selected_language = "ko"  # 기본 언어 설정
         self.cursor = self.conn.cursor()
 
         self.initDB()
@@ -45,40 +46,64 @@ class MainWindow(QtWidgets.QMainWindow, QObject):
     def initDB(self):
         """데이터베이스 테이블 초기화 메서드"""
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS assets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                unit TEXT,
-                asset_number TEXT,
-                manager TEXT,
-                contact TEXT,
-                target_asset TEXT,
-                area TEXT,
-                mgrs TEXT,
-                coordinates TEXT,
-                description TEXT,
-                중요도 FLOAT, 
-                중요도_가점_중심 FLOAT,
-                중요도_가점_기능 FLOAT,
-                취약성_피해민감도_방호강도 FLOAT, 
-                취약성_피해민감도_분산배치 FLOAT,
-                취약성_복구가능성_복구시간 FLOAT, 
-                취약성_복구가능성_복구능력 FLOAT, 
-                위협_공격가능성 FLOAT, 
-                위협_탐지가능성 FLOAT,
-                language TEXT 
-            )
+        CREATE TABLE IF NOT EXISTS cal_assets_ko (
+        id INTEGER PRIMARY KEY,
+        unit TEXT,
+        asset_number INT,
+        manager TEXT,
+        contact TEXT,
+        target_asset TEXT,
+        area TEXT,
+        coordinate TEXT,
+        mgrs TEXT,
+        description TEXT,
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
+        )
         ''')
         self.conn.commit()
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cal_assets_en (
+        id INTEGER PRIMARY KEY,
+        unit TEXT,
+        asset_number INT,
+        manager TEXT,
+        contact TEXT,
+        target_asset TEXT,
+        area TEXT,
+        coordinate TEXT,
+        mgrs TEXT,
+        description TEXT,
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
+        )
+        ''')
+        self.conn.commit()  # 변경사항 커밋
+
 
 class CVTCalculationWindow(QDialog):
     """CVT 계산을 위한 다이얼로그 창"""
-
     def __init__(self, parent):
         super(CVTCalculationWindow, self).__init__(parent)
         self.parent = parent
         self.setMinimumSize(800, 600)
         self.initUI()
-        self.assets_data = pd.DataFrame()
+        self.assets_data_ko = pd.DataFrame()
+        self.assets_data_en = pd.DataFrame()
         self.deleted_ids = []
 
     def initUI(self):
@@ -139,11 +164,11 @@ class CVTCalculationWindow(QDialog):
         self.weight_layout.addWidget(self.weight_checkbox)
 
 
-        self.importance_weight_input = QLineEdit()
-        self.importance_weight_input.setFixedSize(120, 30)
-        self.importance_weight_input.setStyleSheet("font: 바른공군체; font-size: 16px;")
+        self.criticality_weight_input = QLineEdit()
+        self.criticality_weight_input.setFixedSize(120, 30)
+        self.criticality_weight_input.setStyleSheet("font: 바른공군체; font-size: 16px;")
 
-        self.importance_weight_input.setPlaceholderText(self.tr("중요도 가중치"))
+        self.criticality_weight_input.setPlaceholderText(self.tr("중요도 가중치"))
         self.vulnerability_weight_input = QLineEdit()
         self.vulnerability_weight_input.setFixedSize(150, 30)
         self.vulnerability_weight_input.setStyleSheet("font: 바른공군체; font-size: 16px;")
@@ -153,7 +178,7 @@ class CVTCalculationWindow(QDialog):
         self.threat_weight_input.setStyleSheet("font: 바른공군체; font-size: 16px;")
         self.threat_weight_input.setPlaceholderText(self.tr("위협 가중치"))
 
-        self.weight_layout.addWidget(self.importance_weight_input)
+        self.weight_layout.addWidget(self.criticality_weight_input)
         self.weight_layout.addWidget(self.vulnerability_weight_input)
         self.weight_layout.addWidget(self.threat_weight_input)
 
@@ -172,11 +197,14 @@ class CVTCalculationWindow(QDialog):
 
         # 결과 테이블 초기화
         self.results_table = MyTableWidget(self)
-        headers = ["", self.tr("우선순위"), self.tr("구성군"), self.tr("방어대상자산"), self.tr("지역구분"), self.tr("군사좌표"),
-                   self.tr("중요도"), self.tr("취약성"), self.tr("위협 점수"), self.tr("가점"), self.tr("합계"), self.tr("삭제")]
+        headers = ["", self.tr("우선순위"), self.tr("구성군"), self.tr("방어대상자산"), self.tr("지역구분"), self.tr("경위도"),
+                   self.tr("군사좌표(MGRS)"), self.tr("중요도"), self.tr("취약성"), self.tr("위협 점수"), self.tr("가점"),
+                   self.tr("합계"), self.tr("삭제"), self.tr("ID")]
         self.results_table.setColumnCount(len(headers))
         self.results_table.setHorizontalHeaderLabels(headers)
-        self.results_table.setColumnHidden(9, True)  # 가점 열을 기본적으로 숨김
+        self.results_table.setColumnHidden(10, True)  # 가점 열을 기본적으로 숨김
+        self.results_table.setColumnHidden(13, True)  # 가점 열을 기본적으로 숨김
+
 
         # 행 번호 숨기기
         self.results_table.verticalHeader().setVisible(False)
@@ -191,8 +219,8 @@ class CVTCalculationWindow(QDialog):
         header = self.results_table.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         header.resizeSection(0, 60)  # 체크박스 열의 너비를 60으로 설정
-        header.resizeSection(1, 100)  # 우선순위 열의 너비를 60으로 설정
-        header.resizeSection(-1, 100)
+        header.resizeSection(1, 100)  # 우선순위 열의 너비를 100으로 설정
+        header.resizeSection(12, 100)
 
         # 헤더 텍스트 중앙 정렬
         for column in range(header.count()):
@@ -206,7 +234,7 @@ class CVTCalculationWindow(QDialog):
         self.results_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # 나머지 열들이 남은 공간을 채우도록 설정
-        for column in range(2, header.count()-1):
+        for column in range(2, header.count()-2):
             self.results_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
 
         # 헤더 높이 자동 조절
@@ -262,104 +290,140 @@ class CVTCalculationWindow(QDialog):
         self.bonus_checkbox.setChecked(False)  # 가점 적용 체크박스 해제
         self.toggle_bonus_column(False)  # 가점 열 숨기기
         self.load_all_assets()  # 테이블 데이터 새로고침
-        self.update_results_table(self.assets_data)  # 테이블 업데이트
+        self.update_results_table(self.assets_data_ko if self.parent.selected_language == 'ko' else self.assets_data_en)  # 테이블 업데이트
         self.results_table.uncheckAllRows()
 
     def toggle_weight_inputs(self):
         """가중치 입력 필드 활성화/비활성화 기능"""
         is_checked = self.weight_checkbox.isChecked()
-        self.importance_weight_input.setEnabled(is_checked)
+        self.criticality_weight_input.setEnabled(is_checked)
         self.vulnerability_weight_input.setEnabled(is_checked)
         self.threat_weight_input.setEnabled(is_checked)
 
         if not is_checked:
-            self.importance_weight_input.clear()
+            self.criticality_weight_input.clear()
             self.vulnerability_weight_input.clear()
             self.threat_weight_input.clear()
 
     def toggle_bonus_column(self, checked):
-        self.results_table.setColumnHidden(9, not checked)  # 가점 열 표시/숨김
+        self.results_table.setColumnHidden(10, not checked)  # 가점 열 표시/숨김
+
+        self.results_table.blockSignals(True)  # 신호 일시 차단
+
+        for row in range(self.results_table.rowCount()):
+            asset_id = self.results_table.item(row, 13).text()
+            if checked:
+                bonus_value = self.assets_data_ko.loc[self.assets_data_ko['id'] == int(asset_id), 'bonus'].values[0]
+                item = QTableWidgetItem(f"{bonus_value:.2f}")
+                item.setTextAlignment(Qt.AlignCenter)
+                item.setFlags(item.flags() | Qt.ItemIsEditable)
+                self.results_table.setItem(row, 10, item)
+            else:
+                self.assets_data_ko.loc[self.assets_data_ko['id'] == int(asset_id), 'bonus'] = 0.0
+                self.assets_data_en.loc[self.assets_data_en['id'] == int(asset_id), 'bonus'] = 0.0
+                if self.results_table.item(row, 10):
+                    self.results_table.item(row, 10).setText("0.00")
+
+        self.results_table.blockSignals(False)  # 신호 재개
+
+        # 열 표시 상태가 변경된 후 update_bonus 연결
         if checked:
-            for row in range(self.results_table.rowCount()):
-                target_asset = self.results_table.item(row, 3).text()
-                area = self.results_table.item(row, 4).text()
-                mgrs = self.results_table.item(row, 5).text()
-                asset_row = self.assets_data[(self.assets_data['target_asset'] == target_asset) &
-                                             (self.assets_data['area'] == area) &
-                                             (self.assets_data['mgrs'] == mgrs)].index
-                if len(asset_row) > 0:
-                    bonus_value = self.assets_data.loc[asset_row[0], 'bonus']
-                    item = QTableWidgetItem(f"{bonus_value:.2f}")
-                    item.setTextAlignment(Qt.AlignCenter)
-                    item.setFlags(item.flags() | Qt.ItemIsEditable)
-                    self.results_table.setItem(row, 9, item)
             self.results_table.cellChanged.connect(self.update_bonus)
-        else:
-            for row in range(self.results_table.rowCount()):
-                target_asset = self.results_table.item(row, 3).text()
-                area = self.results_table.item(row, 4).text()
-                mgrs = self.results_table.item(row, 5).text()
-                asset_row = self.assets_data[(self.assets_data['target_asset'] == target_asset) &
-                                             (self.assets_data['area'] == area) &
-                                             (self.assets_data['mgrs'] == mgrs)].index
-                if len(asset_row) > 0:
-                    self.assets_data.loc[asset_row[0], 'bonus'] = 0.0
 
     def update_bonus(self, row, column):
-        if column == 9:  # 가점 열
-            bonus_value = self.results_table.item(row, column).text()
-            try:
-                bonus_value = float(bonus_value)
-                target_asset = self.results_table.item(row, 3).text()
-                area = self.results_table.item(row, 4).text()
-                mgrs = self.results_table.item(row, 5).text()
-                asset_row = self.assets_data[(self.assets_data['target_asset'] == target_asset) &
-                                             (self.assets_data['area'] == area) &
-                                             (self.assets_data['mgrs'] == mgrs)].index
-                if len(asset_row) > 0:
-                    self.assets_data.loc[asset_row[0], 'bonus'] = bonus_value
-                else:
-                    raise ValueError("일치하는 행을 찾을 수 없습니다.")
-            except ValueError as e:
-                QMessageBox.warning(self, "경고", f"오류: {str(e)}")
-                self.results_table.item(row, column).setText("0.00")
-                target_asset = self.results_table.item(row, 3).text()
-                area = self.results_table.item(row, 4).text()
-                mgrs = self.results_table.item(row, 5).text()
-                asset_row = self.assets_data[(self.assets_data['target_asset'] == target_asset) &
-                                             (self.assets_data['area'] == area) &
-                                             (self.assets_data['mgrs'] == mgrs)].index
-                if len(asset_row) > 0:
-                    self.assets_data.loc[asset_row[0], 'bonus'] = 0.0
+        try:
+            if column == 10:  # 가점 열
+                bonus_item = self.results_table.item(row, column)
+                if bonus_item is None:
+                    return
+                bonus_value = bonus_item.text()
+                try:
+                    bonus_value = float(bonus_value)
+                    asset_id_item = self.results_table.item(row, 13)
+                    if asset_id_item is None:
+                        QMessageBox.warning(self, "경고", "자산 ID를 찾을 수 없습니다.")
+                        return
+                    asset_id = asset_id_item.text()
+
+                    # 데이터프레임 업데이트
+                    self.assets_data_ko.loc[self.assets_data_ko['id'] == int(asset_id), 'bonus'] = bonus_value
+                    self.assets_data_en.loc[self.assets_data_en['id'] == int(asset_id), 'bonus'] = bonus_value
+
+                    # 테이블 업데이트
+                    formatted_bonus = f"{bonus_value:.2f}"
+                    self.results_table.blockSignals(True)  # 신호 차단
+                    self.results_table.item(row, column).setText(formatted_bonus)
+                    self.results_table.blockSignals(False)  # 신호 재개
+
+                except ValueError:
+                    QMessageBox.warning(self, "경고", "올바른 숫자를 입력해주세요.")
+                    self.results_table.blockSignals(True)
+                    self.results_table.item(row, column).setText("0.00")
+                    self.results_table.blockSignals(False)
+
+                    # 에러 시 데이터프레임 업데이트
+                    asset_id_item = self.results_table.item(row, 13)
+                    if asset_id_item:
+                        asset_id = asset_id_item.text()
+                        self.assets_data_ko.loc[self.assets_data_ko['id'] == int(asset_id), 'bonus'] = 0.0
+                        self.assets_data_en.loc[self.assets_data_en['id'] == int(asset_id), 'bonus'] = 0.0
+                    else:
+                        QMessageBox.warning(self, "경고", "자산 ID를 찾을 수 없어 업데이트할 수 없습니다.")
+        except Exception as e:
+            error_msg = f"오류 발생: {str(e)}\n\n{traceback.format_exc()}"
+            QMessageBox.critical(self, "오류", error_msg)
+            print(error_msg)  # 콘솔에도 오류 출력
 
     def load_all_assets(self):
         """자산 정보를 데이터베이스에서 선택된 언어에 해당하는 데이터만 로드하여 표시하는 함수"""
-        query = '''
-            SELECT id, unit, target_asset, area, mgrs,
-                   중요도 + 중요도_가점_중심 + 중요도_가점_기능 AS total_importance,
-                   취약성_피해민감도_방호강도 +
-                   취약성_피해민감도_분산배치 +
-                   취약성_복구가능성_복구시간 +
-                   취약성_복구가능성_복구능력 AS total_vulnerability,
-                   위협_공격가능성 + 위협_탐지가능성 AS total_threat,
-                   language
-            FROM assets
-            WHERE language = ?
+        query = f'''
+            SELECT id, unit, target_asset, area, coordinate, mgrs,
+                   criticality + criticality_bonus_center + criticality_bonus_function AS total_criticality,
+                   vulnerability_damage_protection +
+                   vulnerability_damage_dispersion +
+                   vulnerability_recovery_time +
+                   vulnerability_recovery_ability AS total_vulnerability,
+                   threat_attack + threat_detection AS total_threat
+            FROM cal_assets_ko
         '''
 
-        self.parent.cursor.execute(query, (self.parent.selected_language,))
-        asset_data = self.parent.cursor.fetchall()
+        self.parent.cursor.execute(query,)
+        assets_data_ko = self.parent.cursor.fetchall()
 
         # DataFrame으로 변환하여 삭제된 자산 제외
-        self.assets_data = pd.DataFrame(asset_data, columns=['id', 'unit', 'target_asset', 'area', 'mgrs', 'total_importance',
-                                                             'total_vulnerability', 'total_threat',
-                                                             'language'])
+        self.assets_data_ko = pd.DataFrame(assets_data_ko, columns=['id', 'unit', 'target_asset', 'area', 'coordinate', 'mgrs', 'total_criticality',
+                                                             'total_vulnerability', 'total_threat'
+                                                             ])
 
         # 'bonus' 열 추가 및 초기화
-        self.assets_data['bonus'] = 0.0
+        self.assets_data_ko['bonus'] = 0.0
+
+
+        query = f'''
+            SELECT id, unit, target_asset, area, coordinate, mgrs,
+                   criticality + criticality_bonus_center + criticality_bonus_function AS total_criticality,
+                   vulnerability_damage_protection +
+                   vulnerability_damage_dispersion +
+                   vulnerability_recovery_time +
+                   vulnerability_recovery_ability AS total_vulnerability,
+                   threat_attack + threat_detection AS total_threat
+            FROM cal_assets_en
+        '''
+        self.parent.cursor.execute(query,)
+        assets_data_en = self.parent.cursor.fetchall()
+
+        # DataFrame으로 변환하여 삭제된 자산 제외
+        self.assets_data_en = pd.DataFrame(assets_data_en, columns=['id', 'unit', 'target_asset', 'area', 'coordinate', 'mgrs', 'total_criticality',
+                                                             'total_vulnerability', 'total_threat'
+                                                             ])
+        # 'bonus' 열 추가 및 초기화
+        self.assets_data_en['bonus'] = 0.0
 
         # 테이블에 데이터 표시
-        self.calculate_cvt(self.assets_data)
+        if self.parent.selected_language == 'ko':
+            self.calculate_cvt(self.assets_data_ko)
+        else:
+            self.calculate_cvt(self.assets_data_en)
 
     def update_results_table(self, data):
         """테이블에 데이터 표시"""
@@ -376,29 +440,30 @@ class CVTCalculationWindow(QDialog):
                 item = QTableWidgetItem(str(text))
                 item.setTextAlignment(Qt.AlignCenter)  # 가운데 정렬
                 return item
-
+            self.results_table.setItem(row_position, 13, create_centered_item(row['id']))
             self.results_table.setItem(row_position, 1, create_centered_item(row['rank']))
             self.results_table.setItem(row_position, 2, create_centered_item(row['unit']))
             self.results_table.setItem(row_position, 3, create_centered_item(row['target_asset']))
             self.results_table.setItem(row_position, 4, create_centered_item(row['area']))
-            self.results_table.setItem(row_position, 5, create_centered_item(row['mgrs']))
-            self.results_table.setItem(row_position, 6, create_centered_item(f"{row['importance']:.2f}"))
-            self.results_table.setItem(row_position, 7, create_centered_item(f"{row['vulnerability']:.2f}"))
-            self.results_table.setItem(row_position, 8, create_centered_item(f"{row['threat']:.2f}"))
-            self.results_table.setItem(row_position, 9, create_centered_item(f"{row['bonus']:.2f}"))
-            self.results_table.setItem(row_position, 10, create_centered_item(f"{row['total_score']:.2f}"))
-
+            self.results_table.setItem(row_position, 5, create_centered_item(row['coordinate']))
+            self.results_table.setItem(row_position, 6, create_centered_item(row['mgrs']))
+            self.results_table.setItem(row_position, 7, create_centered_item(f"{row['criticality']:.2f}"))
+            self.results_table.setItem(row_position, 8, create_centered_item(f"{row['vulnerability']:.2f}"))
+            self.results_table.setItem(row_position, 9, create_centered_item(f"{row['threat']:.2f}"))
+            self.results_table.setItem(row_position, 10, create_centered_item(f"{row['bonus']:.2f}"))
+            self.results_table.setItem(row_position, 11, create_centered_item(f"{row['total_score']:.2f}"))
             # 삭제 버튼 위치 변경
             delete_button = QPushButton(self.tr("삭제"))
             delete_button.setFont(QFont("바른공군체", 13))
             delete_button.setMaximumWidth(100)
             delete_button.clicked.connect(lambda checked, id=row['id']: self.delete_row(id))
-            self.results_table.setCellWidget(row_position, 11, delete_button)
+            self.results_table.setCellWidget(row_position, 12, delete_button)
 
     def delete_row(self, asset_id):
         """자산을 삭제하는 함수 (DataFrame에서만)"""
         self.deleted_ids.append(asset_id)
-        self.assets_data = self.assets_data[self.assets_data['id'] != asset_id]
+        self.assets_data_ko = self.assets_data_ko[self.assets_data_ko['id'] != asset_id]
+        self.assets_data_en = self.assets_data_en[self.assets_data_en['id'] != asset_id]
 
         # 테이블 갱신
         self.recalculate_cvt()
@@ -411,17 +476,17 @@ class CVTCalculationWindow(QDialog):
                 return
 
             # 가중치 초기화 가져오기
-            importance_weight = float(self.importance_weight_input.text() or 1.0)
+            criticality_weight = float(self.criticality_weight_input.text() or 1.0)
             vulnerability_weight = float(self.vulnerability_weight_input.text() or 1.0)
             threat_weight = float(self.threat_weight_input.text() or 1.0)
 
             # 가중치 적용
-            data['importance'] = data['total_importance'].astype(float) * importance_weight
+            data['criticality'] = data['total_criticality'].astype(float) * criticality_weight
             data['vulnerability'] = data['total_vulnerability'].astype(float) * vulnerability_weight
             data['threat'] = data['total_threat'].astype(float) * threat_weight
 
             # 합산
-            data['total_score'] = data['importance'] + data['vulnerability'] + data['threat'] + data['bonus']
+            data['total_score'] = data['criticality'] + data['vulnerability'] + data['threat'] + data['bonus']
             data.sort_values('total_score', ascending=False, inplace=True)
 
             # 순위 매기기
@@ -436,14 +501,18 @@ class CVTCalculationWindow(QDialog):
     def recalculate_cvt(self):
         """CVT 계산 메서드"""
         try:
-            if self.assets_data.empty:
+            if self.assets_data_ko.empty and self.assets_data_en.empty:
                 QMessageBox.warning(self, self.tr("경고"), self.tr("자산 데이터가 없습니다."))
                 return
             unit_filter = self.unit_filter.currentText()
             search_text = self.asset_search_input.text()
 
             # 데이터프레임 필터링
-            filtered_data = self.assets_data.copy()
+            if self.parent.selected_language == 'ko':
+                filtered_data = self.assets_data_ko.copy()
+            else:
+                filtered_data = self.assets_data_en.copy()
+
             self.results_table.uncheckAllRows()
             if unit_filter != self.tr("전체"):
                 filtered_data = filtered_data[filtered_data['unit'] == unit_filter]
@@ -452,22 +521,22 @@ class CVTCalculationWindow(QDialog):
                 filtered_data = filtered_data[
                     filtered_data['target_asset'].str.contains(search_text, case=False, na=False) |
                     filtered_data['area'].str.contains(search_text, case=False, na=False) |
+                    filtered_data['coordinate'].str.contains(search_text, case=False, na=False) |
                     filtered_data['mgrs'].str.contains(search_text, case=False, na=False)
                     ]
 
-
             # 가중치 가져오기
-            importance_weight = float(self.importance_weight_input.text() or 1.0)
+            criticality_weight = float(self.criticality_weight_input.text() or 1.0)
             vulnerability_weight = float(self.vulnerability_weight_input.text() or 1.0)
             threat_weight = float(self.threat_weight_input.text() or 1.0)
 
             # 가중치 적용
-            filtered_data['importance'] = filtered_data['total_importance'].astype(float) * importance_weight
+            filtered_data['criticality'] = filtered_data['total_criticality'].astype(float) * criticality_weight
             filtered_data['vulnerability'] = filtered_data['total_vulnerability'].astype(float) * vulnerability_weight
             filtered_data['threat'] = filtered_data['total_threat'].astype(float) * threat_weight
 
             # 합산
-            filtered_data['total_score'] = filtered_data['importance'] + filtered_data['vulnerability'] + filtered_data[
+            filtered_data['total_score'] = filtered_data['criticality'] + filtered_data['vulnerability'] + filtered_data[
                 'threat'] + filtered_data['bonus']
             filtered_data.sort_values('total_score', ascending=False, inplace=True)
 
@@ -483,38 +552,68 @@ class CVTCalculationWindow(QDialog):
     def initialize_priority(self):
         try:
             # 기존 데이터 삭제
-            self.parent.cursor.execute('DELETE FROM assets_priority')
-            self.parent.conn.commit()
+            if hasattr(self, 'parent') and hasattr(self.parent, 'cursor') and hasattr(self.parent, 'conn'):
+                self.parent.cursor.execute('DELETE FROM cal_assets_priority_ko')
+                self.parent.cursor.execute('DELETE FROM cal_assets_priority_en')
+                self.parent.conn.commit()
+            else:
+                raise AttributeError("데이터베이스 연결이 설정되지 않았습니다.")
 
             # 가중치 초기화
-            self.weight_checkbox.setChecked(False)
-            self.toggle_weight_inputs()
+            if hasattr(self, 'weight_checkbox') and hasattr(self, 'toggle_weight_inputs'):
+                self.weight_checkbox.setChecked(False)
+                self.toggle_weight_inputs()
 
             # 가점 초기화
-            self.bonus_checkbox.setChecked(False)
-            self.toggle_bonus_column(False)
+            if hasattr(self, 'bonus_checkbox') and hasattr(self, 'toggle_bonus_column'):
+                self.bonus_checkbox.setChecked(False)
+                self.toggle_bonus_column(False)
 
             # 구성군 필터 초기화 ('전체'로 설정)
-            self.unit_filter.setCurrentText("전체")
+            if hasattr(self, 'unit_filter'):
+                self.unit_filter.setCurrentText("전체")
 
             # 검색 필터 초기화 (빈 문자열로 설정)
-            self.asset_search_input.setText("")
+            if hasattr(self, 'asset_search_input'):
+                self.asset_search_input.setText("")
 
             # 데이터베이스에서 원래 데이터 다시 불러오기
-            self.load_all_assets()
+            if hasattr(self, 'load_all_assets'):
+                self.load_all_assets()
+            else:
+                raise AttributeError("load_all_assets 메서드가 정의되지 않았습니다.")
 
             # CVT 재계산
-            self.recalculate_cvt()
+            if hasattr(self, 'recalculate_cvt'):
+                self.recalculate_cvt()
+            else:
+                raise AttributeError("recalculate_cvt 메서드가 정의되지 않았습니다.")
 
             QMessageBox.information(self, self.tr("성공"), self.tr("우선순위 정보가 성공적으로 초기화되었습니다."))
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), f"{self.tr('우선순위 정보 초기화 중 오류가 발생했습니다:')} {str(e)}")
-            self.parent.conn.rollback()
+            if hasattr(self, 'parent') and hasattr(self.parent, 'conn'):
+                self.parent.conn.rollback()
 
         finally:
             # 테이블 새로고침
-            self.update_results_table(self.assets_data)
+            if hasattr(self, 'parent') and hasattr(self.parent, 'selected_language'):
+                if hasattr(self, 'update_results_table'):
+                    if self.parent.selected_language == 'ko':
+                        if hasattr(self, 'assets_data_ko'):
+                            self.update_results_table(self.assets_data_ko)
+                        else:
+                            print("assets_data_ko가 정의되지 않았습니다.")
+                    else:
+                        if hasattr(self, 'assets_data_en'):
+                            self.update_results_table(self.assets_data_en)
+                        else:
+                            print("assets_data_en이 정의되지 않았습니다.")
+                else:
+                    print("update_results_table 메서드가 정의되지 않았습니다.")
+            else:
+                print("parent 또는 selected_language가 정의되지 않았습니다.")
 
     def show_map_view(self):
         """체크된 자산을 지도에 표시하는 함수"""
@@ -522,41 +621,61 @@ class CVTCalculationWindow(QDialog):
         for row in range(self.results_table.rowCount()):
             check_box = self.results_table.cellWidget(row, 0)
             if isinstance(check_box, CenteredCheckBox) and check_box.isChecked():
-                asset_id = self.results_table.item(row, 3).text()  # 방어대상자산 열
-                mgrs_coord = self.results_table.item(row, 5).text()  # 군사좌표 열
+                unit = self.results_table.item(row,2).text() # 구성군 열
+                asset_name = self.results_table.item(row, 3).text()  # 방어대상자산 열
+                coordinate = self.results_table.item(row, 5).text()  # 방어대상자산 열
+                mgrs_coord = self.results_table.item(row, 6).text()  # 군사좌표 열
                 priority = int(self.results_table.item(row, 1).text())  # 우선순위 열
-                selected_assets.append((asset_id, mgrs_coord, priority))
+                selected_assets.append((unit, asset_name, coordinate, mgrs_coord, priority))
 
         if not selected_assets:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
 
-        map_view = MapView(selected_assets, self.parent.selected_language)
+        map_view = PriorityMapView(selected_assets)
         map_view.exec_()
 
     def decision_priority(self):
         try:
             # assets_priority 테이블 생성 (이미 존재하지 않는 경우)
             self.parent.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS assets_priority (
+                CREATE TABLE IF NOT EXISTS cal_assets_priority_ko (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     priority INTEGER,
                     unit TEXT,
                     target_asset TEXT,
                     area TEXT,
+                    coordinate TEXT,
                     mgrs TEXT,
-                    importance REAL,
+                    criticality REAL,
                     vulnerability REAL,
                     threat REAL,
                     bonus REAL,
-                    total_score REAL,
-                    language TEXT
+                    total_score REAL
                 )
             ''')
             self.parent.conn.commit()
-
+            # assets_priority 테이블 생성 (이미 존재하지 않는 경우)
+            self.parent.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cal_assets_priority_en (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    priority INTEGER,
+                    unit TEXT,
+                    target_asset TEXT,
+                    area TEXT,
+                    coordinate TEXT,
+                    mgrs TEXT,
+                    criticality REAL,
+                    vulnerability REAL,
+                    threat REAL,
+                    bonus REAL,
+                    total_score REAL
+                )
+            ''')
+            self.parent.conn.commit()
             # 기존 데이터 삭제
-            self.parent.cursor.execute('DELETE FROM assets_priority')
+            self.parent.cursor.execute('DELETE FROM cal_assets_priority_ko')
+            self.parent.cursor.execute('DELETE FROM cal_assets_priority_en')
 
             # 테이블에 표시된 모든 행의 데이터를 가져옵니다
             for row in range(self.results_table.rowCount()):
@@ -564,20 +683,43 @@ class CVTCalculationWindow(QDialog):
                 unit = self.results_table.item(row, 2).text() if self.results_table.item(row, 2) else ''
                 target_asset = self.results_table.item(row, 3).text() if self.results_table.item(row, 3) else ''
                 area = self.results_table.item(row, 4).text() if self.results_table.item(row, 4) else ''
-                mgrs = self.results_table.item(row, 5).text() if self.results_table.item(row, 5) else ''
-                criticality = float(self.results_table.item(row, 6).text()) if self.results_table.item(row, 6) else 0.0
-                vulnerability = float(self.results_table.item(row, 7).text()) if self.results_table.item(row,
-                                                                                                         7) else 0.0
-                threat = float(self.results_table.item(row, 8).text()) if self.results_table.item(row, 8) else 0.0
-                bonus = float(self.results_table.item(row, 9).text()) if self.results_table.item(row, 9) else 0.0
-                total_score = float(self.results_table.item(row, 10).text()) if self.results_table.item(row, 10) else 0.0
+                coordinate = self.results_table.item(row, 5).text() if self.results_table.item(row, 5) else ''
+                mgrs = self.results_table.item(row, 6).text() if self.results_table.item(row, 6) else ''
+                criticality = float(self.results_table.item(row, 7).text()) if self.results_table.item(row, 7) else 0.0
+                vulnerability = float(self.results_table.item(row, 8).text()) if self.results_table.item(row,
+                                                                                                         8) else 0.0
+                threat = float(self.results_table.item(row, 9).text()) if self.results_table.item(row, 9) else 0.0
+                bonus = float(self.results_table.item(row, 10).text()) if self.results_table.item(row, 10) else 0.0
+                total_score = float(self.results_table.item(row, 11).text()) if self.results_table.item(row, 11) else 0.0
+                asset_id = int(self.results_table.item(row, 13).text()) if self.results_table.item(row, 13) else 0
+
+                unit_en = self.assets_data_en.loc[self.assets_data_en['id'] == asset_id, 'unit'].values[0] if not \
+                self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+                unit_ko = self.assets_data_ko.loc[self.assets_data_en['id'] == asset_id, 'unit'].values[0] if not \
+                self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+                target_asset_en = self.assets_data_en.loc[self.assets_data_en['id'] == asset_id, 'target_asset'].values[0] if not \
+                    self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+                target_asset_ko = self.assets_data_ko.loc[self.assets_data_en['id'] == asset_id, 'target_asset'].values[0] if not \
+                    self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+                area_en = self.assets_data_en.loc[self.assets_data_en['id'] == asset_id, 'area'].values[0] if not \
+                    self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+                area_ko = self.assets_data_ko.loc[self.assets_data_en['id'] == asset_id, 'area'].values[0] if not \
+                    self.assets_data_en[self.assets_data_en['id'] == asset_id].empty else None
+
 
                 # 데이터를 assets_priority 테이블에 삽입
                 self.parent.cursor.execute('''
-                    INSERT INTO assets_priority 
-                    (priority, unit, target_asset, area, mgrs, importance, vulnerability, threat, bonus, total_score, language)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (priority, unit, target_asset, area, mgrs, criticality, vulnerability, threat, bonus, total_score, self.parent.selected_language))
+                    INSERT INTO cal_assets_priority_ko 
+                    (priority, unit, target_asset, area, coordinate, mgrs, criticality, vulnerability, threat, bonus, total_score, id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (priority, unit_ko, target_asset_ko, area_ko, coordinate, mgrs, criticality, vulnerability, threat, bonus, total_score, asset_id))
+                # 데이터를 assets_priority 테이블에 삽입
+
+                self.parent.cursor.execute('''
+                    INSERT INTO cal_assets_priority_en 
+                    (priority, unit, target_asset, area, coordinate, mgrs, criticality, vulnerability, threat, bonus, total_score, id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (priority, unit_en, target_asset_en, area_en, coordinate, mgrs, criticality, vulnerability, threat, bonus, total_score, asset_id))
 
             # 변경사항을 커밋
             self.parent.conn.commit()
@@ -614,7 +756,7 @@ class CVTCalculationWindow(QDialog):
             cursor.insertHtml("<br><br>")
             if self.weight_checkbox.isChecked():
                 cursor.insertHtml(f"<p><strong>{self.tr('가중치 적용')}:</strong> {self.tr('YES')}</p>")
-                cursor.insertHtml(f"<p><strong>{self.tr('중요도 가중치')}:</strong> {self.importance_weight_input.text()}</p>")
+                cursor.insertHtml(f"<p><strong>{self.tr('중요도 가중치')}:</strong> {self.criticality_weight_input.text()}</p>")
                 cursor.insertHtml(f"<p><strong>{self.tr('취약성 가중치')}:</strong> {self.vulnerability_weight_input.text()}</p>")
                 cursor.insertHtml(f"<p><strong>{self.tr('위협 가중치')}:</strong> {self.threat_weight_input.text()}</p>")
             else:
@@ -635,7 +777,8 @@ class CVTCalculationWindow(QDialog):
             table = cursor.insertTable(rows, cols, table_format)
 
             # 헤더 추가
-            headers = [self.tr("우선순위"), self.tr("구성군"), self.tr("방어대상자산"), self.tr("지역구분"), self.tr("MGRS"), self.tr("중요도"),
+            headers = [self.tr("우선순위"), self.tr("구성군"), self.tr("방어대상자산"), self.tr("지역구분"), self.tr("경위도"),
+                       self.tr("MGRS"), self.tr("중요도"),
                        self.tr("취약성"), self.tr("위협 점수"), self.tr("가점"), self.tr("합계")]
             for col, header in enumerate(headers):
                 cell = table.cellAt(0, col)

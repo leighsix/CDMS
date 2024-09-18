@@ -34,9 +34,9 @@ class CommonMapView(QObject):
             return
         m_conv = mgrs.MGRS()
 
-        coordinates_list.sort(key=lambda x: x[2])
-        max_priority = max(item[2] for item in coordinates_list)
-        min_priority = min(item[2] for item in coordinates_list)
+        coordinates_list.sort(key=lambda x: x[-1])
+        max_priority = max(item[-1] for item in coordinates_list)
+        min_priority = min(item[-1] for item in coordinates_list)
 
         colormap = LinearColormap(colors=['red', 'yellow', 'green'], vmin=min_priority, vmax=max_priority)
         # "우선순위"를 .ts 파일에서 번역될 수 있도록 수정
@@ -48,7 +48,7 @@ class CommonMapView(QObject):
         colormap._font_size = '14px'
         colormap._ticklabels = [str(i) for i in range(min_priority, max_priority + 1)]
 
-        for asset_id, mgrs_coord, priority in coordinates_list:
+        for asset_name, mgrs_coord, priority in coordinates_list:
             try:
                 zone, square, easting, northing = self.parse_mgrs(mgrs_coord)
                 mgrs_full_str = f'{zone}{square}{easting}{northing}'
@@ -83,7 +83,7 @@ class CommonMapView(QObject):
                     icon=icon,
                     # "자산", "우선순위"를 .ts 파일에서 번역될 수 있도록 수정
                     popup=folium.Popup(f"""
-                        <b>{critical_assets}:</b> {asset_id}<br>
+                        <b>{critical_assets}:</b> {asset_name}<br>
                         <b>MGRS:</b> {mgrs_coord}<br>
                         <b>{priorities}:</b> {priority}
                     """, max_width=200)

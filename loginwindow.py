@@ -169,6 +169,33 @@ class LoginWindow(QDialog, QObject):
         main_layout.setContentsMargins(100, 50, 100, 50)
         self.setLayout(main_layout)
 
+    def show_message(self, title, message, icon):
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setIcon(icon)
+        msg_box.setFont(QFont("강한공군체", 15, QFont.Bold))
+        # 스타일시트 적용
+        msg_box.setStyleSheet("""
+            QMessageBox {
+                background-color: #f0f0f0;
+            }
+            QLabel {
+                color: black;
+                font-weight: bold;
+                text-shadow: 2px 2px 2px black;
+            }
+        """)
+        # 아이콘 크기 조절
+        icon_label = msg_box.findChild(QLabel, "qt_msgboxex_icon_label")
+        if icon_label:
+            icon_pixmap = icon_label.pixmap()
+            if icon_pixmap:
+                scaled_pixmap = icon_pixmap.scaled(23, 23, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                icon_label.setPixmap(scaled_pixmap)
+
+        msg_box.exec_()
+
     def login(self):
         username = self.username_input.text()
         password = self.password_input.text()
@@ -178,24 +205,6 @@ class LoginWindow(QDialog, QObject):
             self.accept()
         else:
             self.show_message(self.tr("로그인 실패"), self.tr("아이디 또는 비밀번호가 잘못되었습니다."), QMessageBox.Critical)
-
-    def show_message(self, title, message, icon):
-        msg = QMessageBox(self)
-        msg.setIcon(icon)
-        msg.setStyleSheet("QMessageBox { background-color: #F0F0F0; }")  # 배경색 설정
-        msg.setWindowTitle(title)
-        msg.setText(message)
-        msg.setFont(QFont("강한공군체", 13, QFont.Bold))
-
-        # 아이콘 크기 조절
-        icon_label = msg.findChild(QLabel, "qt_msgboxex_icon_label")
-        if icon_label:
-            icon_pixmap = icon_label.pixmap()
-            if icon_pixmap:
-                scaled_pixmap = icon_pixmap.scaled(23, 23, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                icon_label.setPixmap(scaled_pixmap)
-
-        msg.exec_()
 
 
 if __name__ == '__main__':

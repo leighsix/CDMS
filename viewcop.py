@@ -26,7 +26,6 @@ class ViewCopWindow(QDialog):
         self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
         self.show_defense_radius = False
         self.initUI()
-        self.create_map()
         self.update_map()  # 초기 지도 로드
 
     def load_dataframes(self):
@@ -34,21 +33,29 @@ class ViewCopWindow(QDialog):
         self.defense_assets_df = pd.DataFrame()
 
         try:
-            conn = sqlite3.connect('assets.db')
+            conn = sqlite3.connect('assets_management.db')
 
             try:
-                query = "SELECT * FROM assets_priority WHERE language = ?"
-                self.assets_df = pd.read_sql_query(query, conn, params=(self.parent.selected_language,))
+                query = "SELECT * FROM cal_assets_priority_ko"
+                self.cal_df_ko = pd.read_sql_query(query, conn,)
+                query = "SELECT * FROM cal_assets_priority_en"
+                self.cal_df_en = pd.read_sql_query(query, conn,)
+
             except sqlite3.OperationalError:
                 print("assets_priority 테이블이 존재하지 않습니다.")
-                self.assets_df = pd.DataFrame(columns=["priority", "unit", "target_asset", "area", "mgrs", "language"])
+                self.cal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "target_asset", "area", "coordinate", "mgrs", "criticality", "vulnerability", "threat", "bonus", "total_score"])
+                self.cal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "target_asset", "area", "coordinate", "mgrs", "criticality", "vulnerability", "threat", "bonus", "total_score"])
+
 
             try:
-                query = "SELECT * FROM defense_assets WHERE language = ?"
-                self.defense_assets_df = pd.read_sql_query(query, conn, params=(self.parent.selected_language,))
+                query = "SELECT * FROM dal_assets_ko"
+                self.dal_df_ko = pd.read_sql_query(query, conn,)
+                query = "SELECT * FROM dal_assets_en"
+                self.dal_df_en = pd.read_sql_query(query, conn,)
             except sqlite3.OperationalError:
                 print("defense_assets 테이블이 존재하지 않습니다.")
-                self.defense_assets_df = pd.DataFrame(columns=["asset_name", "mgrs", "weapon_system", "language"])
+                self.dal_df_ko = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree"])
+                self.dal_df_en = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree"])
 
         except sqlite3.Error as e:
             print(f"데이터베이스 연결 오류: {e}")
@@ -57,7 +64,7 @@ class ViewCopWindow(QDialog):
             if conn:
                 conn.close()
 
-        if self.assets_df.empty and self.defense_assets_df.empty:
+        if self.cal_df_ko.empty and self.dal_df_ko.empty:
             print("경고: 데이터를 불러오지 못했습니다. 빈 DataFrame을 사용합니다.")
 
     def refresh(self):
@@ -82,19 +89,15 @@ class ViewCopWindow(QDialog):
         # 지도 업데이트
         self.update_map()
 
-    def create_map(self):
-        if self.parent.selected_language == "Korean":
-            # 한국 서울 중심
-            self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-        else:
-            # 아랍에미리트 두바이 중심
-            self.map = folium.Map(location=[25.2048, 55.2708], zoom_start=7)
-
     def initUI(self):
         main_layout = QHBoxLayout()
 
+        # QSplitter 생성
+        splitter = QSplitter(Qt.Horizontal)
+
         # 좌측 레이아웃 (필터 및 테이블)
-        left_layout = QVBoxLayout()
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
 
         # 필터 추가
         self.filter_layout = QHBoxLayout()
@@ -110,7 +113,7 @@ class ViewCopWindow(QDialog):
         self.filter_layout.addWidget(self.search_filter)
 
         self.display_count_combo = QComboBox()
-        self.display_count_combo.addItems([self.tr("전체"), "30", "50", "100", "200", "300"])
+        self.display_count_combo.addItems(["30", "50", "100", "200"])
         self.display_count_combo.currentTextChanged.connect(self.load_assets)
         self.filter_layout.addWidget(self.display_count_combo)
         left_layout.addLayout(self.filter_layout)
@@ -119,7 +122,7 @@ class ViewCopWindow(QDialog):
         self.assets_table = MyTableWidget()
         self.assets_table.setColumnCount(5)
         self.assets_table.setHorizontalHeaderLabels(
-            ["", self.tr("우선순위"), self.tr("구성군"), self.tr("방어대상자산"), self.tr("지역구분")])
+            ["", self.tr("우선순위"), self.tr("구성군"), self.tr("지역구분"), self.tr("방어대상자산")])
 
         # 행 번호 숨기기
         self.assets_table.verticalHeader().setVisible(False)
@@ -144,6 +147,49 @@ class ViewCopWindow(QDialog):
 
         left_layout.addWidget(self.assets_table)
 
+        # 페이지네이션 컨트롤 추가
+        self.pagination_layout = QHBoxLayout()
+        self.prev_button = QPushButton("◀")
+        self.next_button = QPushButton("▶")
+        self.page_label = QLabel()
+
+        # 스타일 설정
+        button_style = """
+            QPushButton {
+                background-color: #f0f0f0;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+        """
+        self.prev_button.setStyleSheet(button_style)
+        self.next_button.setStyleSheet(button_style)
+
+        # 레이아웃에 위젯 추가
+        self.pagination_layout.addWidget(self.prev_button)
+        self.pagination_layout.addWidget(self.page_label)
+        self.pagination_layout.addWidget(self.next_button)
+
+        # 레이아웃 정렬 및 간격 설정
+        self.pagination_layout.setAlignment(Qt.AlignCenter)
+        self.pagination_layout.setSpacing(10)
+
+        left_layout.addLayout(self.pagination_layout)
+
+        # 버튼 연결
+        self.prev_button.clicked.connect(self.prev_page)
+        self.next_button.clicked.connect(self.next_page)
+
+        # 초기 페이지 설정
+        self.current_page = 1
+        self.rows_per_page = 30  # 기본값 설정
+        self.total_pages = 1  # 초기값 설정
+        self.update_page_label()
+
         # 버튼 레이아웃 설정
         button_layout = QHBoxLayout()
         button_layout.setSpacing(20)
@@ -159,7 +205,8 @@ class ViewCopWindow(QDialog):
         left_layout.addLayout(button_layout)  # 버튼 레이아웃을 left_layout에 추가
 
         # 우측 레이아웃 (지도 및 체크박스)
-        right_layout = QVBoxLayout()
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
 
         # 무기체계 체크박스 그룹
         weapon_group = QGroupBox(self.tr("무기체계"))
@@ -195,10 +242,15 @@ class ViewCopWindow(QDialog):
 
         # 수평 레이아웃을 right_layout에 추가
         right_layout.addLayout(checkbox_button_layout)
+        # 위젯들을 QSplitter에 추가
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        # QSplitter를 메인 레이아웃에 추가
+        main_layout.addWidget(splitter)
 
-        main_layout.addLayout(left_layout, 1)
-        main_layout.addLayout(right_layout, 3)
         self.setLayout(main_layout)
+        # 초기 분할 비율 설정 (1:3)
+        splitter.setSizes([100, 300])
 
         # 지도 뷰
         self.map_view = QWebEngineView()
@@ -211,7 +263,7 @@ class ViewCopWindow(QDialog):
         self.update_map()
 
     def load_assets(self):
-        filtered_df = self.assets_df
+        filtered_df = self.cal_df_ko if self.parent.selected_language == 'ko' else self.cal_df_en
 
         unit_filter_text = self.unit_filter.currentText()
         if unit_filter_text != self.tr("전체"):
@@ -226,27 +278,54 @@ class ViewCopWindow(QDialog):
 
         filtered_df = filtered_df.sort_values('priority')
 
-        display_count = self.display_count_combo.currentText()
-        if display_count != self.tr("전체"):
-            limit = int(display_count)
-            filtered_df = filtered_df.head(limit)
+        # 페이지네이션 설정
+        self.rows_per_page = int(self.display_count_combo.currentText())
+        self.total_pages = -(-len(filtered_df) // self.rows_per_page)  # 올림 나눗셈
+
+        # 현재 페이지에 해당하는 데이터만 선택
+        start_idx = (self.current_page - 1) * self.rows_per_page
+        end_idx = start_idx + self.rows_per_page
+        page_df = filtered_df.iloc[start_idx:end_idx]
+
         self.assets_table.uncheckAllRows()
-        self.assets_table.setRowCount(len(filtered_df))
-        for row, (_, asset) in enumerate(filtered_df.iterrows()):
+        self.assets_table.setRowCount(len(page_df))
+        for row, (_, asset) in enumerate(page_df.iterrows()):
             checkbox = CenteredCheckBox()
             self.assets_table.setCellWidget(row, 0, checkbox)
             checkbox.checkbox.stateChanged.connect(self.update_map)
-            for col, value in enumerate(asset[['priority', 'unit', 'target_asset', 'area']], start=1):
+            for col, value in enumerate(asset[['priority', 'unit', 'area', 'target_asset']], start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.assets_table.setItem(row, col, item)
+
         self.update_map()
+        self.update_pagination()
+
+    def update_pagination(self):
+        self.page_label.setText(f"{self.current_page} / {self.total_pages}")
+        self.prev_button.setEnabled(self.current_page > 1)
+        self.next_button.setEnabled(self.current_page < self.total_pages)
+
+    def update_page_label(self):
+        self.page_label.setText(f"{self.current_page} / {self.total_pages}")
+
+    def prev_page(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.update_page_label()
+            self.load_assets()
+
+    def next_page(self):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.update_page_label()
+            self.load_assets()
 
     def get_defense_assets(self):
-        return self.defense_assets_df['weapon_system'].unique().tolist()
+        return self.dal_df_en['weapon_system'].unique().tolist()
 
     def update_map(self):
-        self.create_map()
+        self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
         selected_assets = self.get_selected_assets()
         selected_defense_assets = self.get_selected_defense_assets()
         if selected_assets != []:
@@ -260,30 +339,36 @@ class ViewCopWindow(QDialog):
 
     def get_selected_assets(self):
         selected_assets = []
+        asset_info_ko = pd.DataFrame()
+        asset_info_en = pd.DataFrame()
         for row in range(self.assets_table.rowCount()):
             checkbox_widget = self.assets_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
-                asset_name = self.assets_table.item(row, 3).text()
                 priority = int(self.assets_table.item(row, 1).text())
-                area = self.assets_table.item(row, 4).text()
                 unit = self.assets_table.item(row, 2).text()
-
-                asset_info = self.assets_df[
-                    (self.assets_df['target_asset'] == asset_name) &
-                    (self.assets_df['area'] == area) &
-                    (self.assets_df['unit'] == unit)
-                    ]
-
-                if not asset_info.empty:
-                    mgrs_coord = asset_info.iloc[0]['mgrs']
-                    selected_assets.append((asset_name, mgrs_coord, priority))
+                area = self.assets_table.item(row, 3).text()
+                asset_name = self.assets_table.item(row, 4).text()
+                if self.parent.selected_language == 'ko':
+                    asset_info_ko = self.cal_df_ko[
+                        (self.cal_df_ko['target_asset'] == asset_name) &
+                        (self.cal_df_ko['area'] == area) &
+                        (self.cal_df_ko['unit'] == unit)
+                        ]
+                else:
+                    asset_info_en = self.cal_df_en[
+                        (self.cal_df_en['target_asset'] == asset_name) &
+                        (self.cal_df_en['area'] == area) &
+                        (self.cal_df_en['unit'] == unit)
+                        ]
+                mgrs_coord = asset_info_ko.iloc[0]['mgrs'] if self.parent.selected_language == 'ko' else asset_info_en.iloc[0]['mgrs']
+                selected_assets.append((asset_name, mgrs_coord, priority))
         return selected_assets
 
     def get_selected_defense_assets(self):
         selected_defense_assets = []
         for weapon_system, checkbox in self.defense_assets_checkboxes.items():
             if checkbox.isChecked():
-                assets = self.defense_assets_df[self.defense_assets_df['weapon_system'] == weapon_system]
+                assets = self.dal_df_ko[self.dal_df_ko['weapon_system'] == weapon_system]
                 for _, asset in assets.iterrows():
                     selected_defense_assets.append((asset['asset_name'], asset['mgrs'], weapon_system, asset['threat_degree']))
         return selected_defense_assets
@@ -342,7 +427,6 @@ class ViewCopWindow(QDialog):
             QMessageBox.information(self, self.tr("인쇄 완료"), self.tr("지도가 성공적으로 출력되었습니다."))
         else:
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
-
 
 class CheckBoxHeader(QHeaderView):
     def __init__(self, orientation, parent):
@@ -416,7 +500,7 @@ class MainWindow(QtWidgets.QMainWindow, QObject):
         self.setWindowTitle("CAL/DAL Management System")
         self.setWindowIcon(QIcon("logo.png"))
         self.setMinimumSize(800, 600)
-        self.selected_language = "Korean"  # 기본 언어 설정
+        self.selected_language = "en"  # 기본 언어 설정
         self.central_widget = QtWidgets.QStackedWidget(self)
         self.setCentralWidget(self.central_widget)
         self.view_cop_window = ViewCopWindow(self)

@@ -17,11 +17,10 @@ from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QLabel
 from PyQt5.QtGui import QPainter, QColor, QLinearGradient, QFont, QPen, QPainterPath, QPixmap, QFontMetrics
 from PyQt5.QtCore import Qt, QSize, QParallelAnimationGroup
-from PyQt5.QtCore import (QPropertyAnimation, QParallelAnimationGroup, QRect,
-                          QEasingCurve, QSequentialAnimationGroup, QAbstractAnimation)
+
 
 class AssetManager(QtWidgets.QMainWindow, QObject):
-    def __init__(self, db_path='assets.db'):
+    def __init__(self, db_path='assets_management.db'):
         super(AssetManager, self).__init__()
         self.create_database()
         self.translator = Translator(QApplication.instance())
@@ -112,6 +111,10 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.view_cop_button = QPushButton(self.tr("공통상황도"))
         self.logoff_button = QPushButton(self.tr("로그오프"))
         self.exit_button = QPushButton(self.tr("종료"))
+        # 새로운 버튼 추가
+        self.settings_button = QPushButton(self.tr("설정"))
+        self.weapon_system_button = QPushButton(self.tr("방공무기체계"))
+        self.enemy_missile_base_button = QPushButton(self.tr("적 미사일 발사기지"))
 
         # CAL 관리 하위 버튼
         self.cal_sub_buttons = QWidget(self.button_container)
@@ -131,9 +134,15 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         cal_container.setContentsMargins(0, 0, 0, 0)  # 여백 제거
         cal_container.addWidget(self.cal_management_button)
         cal_container.addWidget(self.cal_sub_buttons)
-        button_layout.addLayout(cal_container)
 
         # 버튼 레이아웃에 추가
+        button_layout.addWidget(self.settings_button)
+        button_layout.addWidget(self.weapon_system_button)
+        button_layout.addWidget(self.enemy_missile_base_button)
+        button_layout.addWidget(self.cal_management_button)
+
+        # 버튼 레이아웃에 추가
+        button_layout.addLayout(cal_container)
         button_layout.addWidget(self.dal_management_button)
         button_layout.addWidget(self.view_cop_button)
         button_layout.addWidget(self.logoff_button)
@@ -142,7 +151,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         # 버튼 스타일 및 크기 설정
         main_buttons = [self.cal_management_button, self.dal_management_button, self.view_cop_button,
                         self.logoff_button, self.exit_button]
-        sub_buttons = [self.add_asset_button, self.view_assets_button, self.calculate_cvt_button]
+        sub_buttons = [self.add_asset_button, self.view_assets_button, self.calculate_cvt_button, self.settings_button,
+                       self.weapon_system_button, self.enemy_missile_base_button]
 
         for button in main_buttons + sub_buttons:
             button.setFont(QFont("강한공군체", 16, QFont.Bold))
@@ -173,6 +183,9 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             button_layout.insertItem(i * 2 + 1, spacer)
 
         # 버튼 클릭 이벤트 연결
+        self.settings_button.clicked.connect(self.show_settings_page)
+        self.weapon_system_button.clicked.connect(self.show_weapon_system_page)
+        self.enemy_missile_base_button.clicked.connect(self.show_enemy_missile_base_page)
         self.cal_management_button.clicked.connect(self.toggle_cal_sub_buttons)
         self.dal_management_button.clicked.connect(self.show_defense_assets_page)
         self.view_cop_button.clicked.connect(self.show_view_cop_page)
@@ -237,6 +250,21 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.stacked_widget.setCurrentWidget(self.main_page)
         self.titleBar.update_title(self.tr("C D M S"), self.tr("CAL/DAL Management System"))
 
+    # 새로운 페이지 표시 메서드
+    def show_settings_page(self):
+        # 설정 페이지 구현
+        settings_window = SettingsWindow(self)
+        settings_window.show()
+
+    def show_weapon_system_page(self):
+        # 방공무기체계 페이지 구현
+        weapon_system_window = WeaponSystemWindow(self)
+        weapon_system_window.show()
+
+    def show_enemy_missile_base_page(self):
+        # 적 미사일 발사기지 페이지 구현
+        enemy_missile_base_window = EnemyMissileBaseWindow(self)
+        enemy_missile_base_window.show()
 
     def show_add_asset_page(self):
         self.refresh_database()
@@ -279,11 +307,11 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def create_database(self):
         """SQLite 데이터베이스 생성 및 테이블 설정"""
-        self.conn = sqlite3.connect('assets.db')  # 'assets.db' 데이터베이스에 연결
+        self.conn = sqlite3.connect('assets_management.db')  # 'assets.db' 데이터베이스에 연결
         self.cursor = self.conn.cursor()  # 커서 생성
         # 자산 정보를 저장할 테이블 생성
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS assets (
+        CREATE TABLE IF NOT EXISTS cal_assets_ko (
         id INTEGER PRIMARY KEY,
         unit TEXT,
         asset_number INT,
@@ -291,49 +319,104 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         contact TEXT,
         target_asset TEXT,
         area TEXT,
+        coordinate TEXT,
         mgrs TEXT,
         description TEXT,
-        중요도 FLOAT,
-        중요도_가점_중심 FLOAT,
-        중요도_가점_기능 FLOAT,
-        취약성_피해민감도_방호강도 FLOAT,
-        취약성_피해민감도_분산배치 FLOAT,
-        취약성_복구가능성_복구시간 FLOAT,
-        취약성_복구가능성_복구능력 FLOAT,
-        위협_공격가능성 FLOAT,
-        위협_탐지가능성 FLOAT,
-        language VARCHAR(10)
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
         )
         ''')
         self.conn.commit()  # 변경사항 커밋
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS defense_assets (
+            CREATE TABLE IF NOT EXISTS dal_assets_ko (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 unit TEXT,
                 area TEXT,
                 asset_name TEXT,
+                coordinate TEXT,
                 mgrs TEXT,
                 weapon_system TEXT,
                 ammo_count INTEGER,
-                threat_degree INTEGER,
-                language TEXT
+                threat_degree INTEGER
             )
         ''')
         self.conn.commit()
         self.cursor.execute('''
-                        CREATE TABLE IF NOT EXISTS assets_priority (
+                        CREATE TABLE IF NOT EXISTS cal_assets_priority_ko (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             priority INTEGER,
                             unit TEXT,
                             target_asset TEXT,
                             area TEXT,
+                            coordinate TEXT,
                             mgrs TEXT,
-                            importance REAL,
+                            criticality REAL,
                             vulnerability REAL,
                             threat REAL,
                             bonus REAL,
-                            total_score REAL,
-                            language TEXT
+                            total_score REAL
+                        )
+                    ''')
+        self.conn.commit()
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cal_assets_en (
+        id INTEGER PRIMARY KEY,
+        unit TEXT,
+        asset_number INT,
+        manager TEXT,
+        contact TEXT,
+        target_asset TEXT,
+        area TEXT,
+        coordinate TEXT,
+        mgrs TEXT,
+        description TEXT,
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
+        )
+        ''')
+        self.conn.commit()  # 변경사항 커밋
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS dal_assets_en (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                unit TEXT,
+                area TEXT,
+                asset_name TEXT,
+                coordinate TEXT,
+                mgrs TEXT,
+                weapon_system TEXT,
+                ammo_count INTEGER,
+                threat_degree INTEGER
+            )
+        ''')
+        self.conn.commit()
+        self.cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS cal_assets_priority_en (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            priority INTEGER,
+                            unit TEXT,
+                            target_asset TEXT,
+                            area TEXT,
+                            coordinate TEXT,
+                            mgrs TEXT,
+                            criticality REAL,
+                            vulnerability REAL,
+                            threat REAL,
+                            bonus REAL,
+                            total_score REAL
                         )
                     ''')
         self.conn.commit()

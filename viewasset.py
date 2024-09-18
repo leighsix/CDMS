@@ -73,11 +73,11 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
         layout.addWidget(filter_group)
 
         self.assets_table = MyTableWidget()
-        self.assets_table.setColumnCount(15)
+        self.assets_table.setColumnCount(16)
         self.assets_table.setHorizontalHeaderLabels([
             "", self.tr("ID"), self.tr("구성군"), self.tr("자산번호"), self.tr("담당자"),
-            self.tr("연락처"), self.tr("방어대상자산"), self.tr("지역구분"),
-            self.tr("군사좌표(MGRS)"), self.tr("임무 및 기능 기술"),
+            self.tr("연락처"), self.tr("방어대상자산"), self.tr("지역구분"), self.tr("경위도"),
+            self.tr("군사좌표(MGRS)"), self.tr("임무/기능 기술"),
             self.tr("중요도"), self.tr("취약성"), self.tr("위협"), self.tr("합산 점수"), self.tr("삭제")
         ])
         self.assets_table.verticalHeader().setVisible(False)
@@ -158,7 +158,7 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
 
     def on_row_click(self, row, column):
         """특정 행 클릭 시 자산 데이터 로드 및 수정 창으로 이동하는 메서드"""
-        if column == 14:  # '삭제' 버튼 클릭 시
+        if column == 15:  # '삭제' 버튼 클릭 시
             self.delete_asset(row)
         else:
             asset_id = self.assets_table.item(row, 1).text()
@@ -170,21 +170,21 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
         unit_filter = self.unit_filter.currentText()
         search_text = self.asset_search_input.text().strip()
 
-        query = '''
+        query = f'''
                     SELECT 
                         id, unit, asset_number, manager, contact,
-                        target_asset, area, mgrs, description,
-                        COALESCE(중요도, 0) + COALESCE(중요도_가점_중심, 0) + COALESCE(중요도_가점_기능, 0),
-                        COALESCE(취약성_피해민감도_방호강도, 0) + COALESCE(취약성_피해민감도_분산배치, 0) + COALESCE(취약성_복구가능성_복구시간, 0) + COALESCE(취약성_복구가능성_복구능력, 0),
-                        COALESCE(위협_공격가능성, 0) + COALESCE(위협_탐지가능성, 0),
-                        (COALESCE(중요도, 0) + COALESCE(중요도_가점_중심, 0) + COALESCE(중요도_가점_기능, 0)) +
-                        (COALESCE(취약성_피해민감도_방호강도, 0) + COALESCE(취약성_피해민감도_분산배치, 0) + COALESCE(취약성_복구가능성_복구시간, 0) + COALESCE(취약성_복구가능성_복구능력, 0)) +
-                        (COALESCE(위협_공격가능성, 0) + COALESCE(위협_탐지가능성, 0)) AS 합산점수
-                    FROM assets
+                        target_asset, area, coordinate, mgrs, description,
+                        COALESCE(criticality, 0) + COALESCE(criticality_bonus_center, 0) + COALESCE(criticality_bonus_function, 0),
+                        COALESCE(vulnerability_damage_protection, 0) + COALESCE(vulnerability_damage_dispersion, 0) + COALESCE(vulnerability_recovery_time, 0) + COALESCE(vulnerability_recovery_ability, 0),
+                        COALESCE(threat_attack, 0) + COALESCE(threat_detection, 0),
+                        (COALESCE(criticality, 0) + COALESCE(criticality_bonus_center, 0) + COALESCE(criticality_bonus_function, 0)) +
+                        (COALESCE(vulnerability_damage_protection, 0) + COALESCE(vulnerability_damage_dispersion, 0) + COALESCE(vulnerability_recovery_time, 0) + COALESCE(vulnerability_recovery_ability, 0)) +
+                        (COALESCE(threat_attack, 0) + COALESCE(threat_detection, 0)) AS total_score
+                    FROM cal_assets_{self.parent.selected_language}
                     '''
 
-        conditions = ["language = ?"]
-        parameters = [self.parent.selected_language]
+        conditions = []
+        parameters = []
 
         if unit_filter != self.tr("전체"):
             conditions.append("unit = ?")
@@ -195,15 +195,16 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
                 "target_asset LIKE ?",
                 "asset_number LIKE ?",
                 "area LIKE ?",
+                "coordinate LIKE ?",
                 "mgrs LIKE ?"
             ]
             conditions.append(f"({' OR '.join(search_conditions)})")
-            parameters.extend([f'%{search_text}%'] * 4)
+            parameters.extend([f'%{search_text}%'] * 5)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        query += " ORDER BY unit"
+        query += "ORDER BY total_score DESC"
 
         self.parent.cursor.execute(query, parameters)
         asset_data = self.parent.cursor.fetchall()
@@ -222,22 +223,26 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
             delete_button.setFont(QFont("바른공군체", 13))
             delete_button.setMaximumWidth(100)
             delete_button.clicked.connect(lambda _, row=row_position: self.delete_asset(row))
-            self.assets_table.setCellWidget(row_position, 14, delete_button)
+            self.assets_table.setCellWidget(row_position, 15, delete_button)
 
         self.assets_table.setColumnHidden(1, True)
         self.assets_table.setColumnHidden(4, True)
         self.assets_table.setColumnHidden(5, True)
         self.assets_table.setColumnHidden(9, True)
-        self.assets_table.setColumnHidden(19, True)
+        self.assets_table.setColumnHidden(10, True)
 
     def delete_asset(self, row):
         """선택된 자산을 삭제"""
-        asset_id = self.assets_table.item(row, 0).text()
-        target_asset = self.assets_table.item(row, 5).text()
+        asset_id = self.assets_table.item(row, 1).text()
+        print(asset_id)
+        target_asset = self.assets_table.item(row, 6).text()
+        print(target_asset)
         reply = QMessageBox.question(self, self.tr("확인"), self.tr("정말로 '{}' (ID: {}) 을(를) 삭제하시겠습니까?".format(target_asset, asset_id)),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.parent.cursor.execute("DELETE FROM assets WHERE id = ?", (asset_id,))
+            self.parent.cursor.execute("DELETE FROM cal_assets_ko WHERE id = ?", (asset_id,))
+            self.parent.conn.commit()
+            self.parent.cursor.execute("DELETE FROM cal_assets_en WHERE id = ?", (asset_id,))
             self.parent.conn.commit()
             self.load_assets()
 
@@ -249,14 +254,15 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
             if checkbox_widget.isChecked():
                 unit = self.assets_table.item(row, 2).text()
                 asset_name = self.assets_table.item(row, 6).text()
-                mgrs = self.assets_table.item(row, 8).text()
-                selected_assets.append((unit, asset_name, mgrs))
+                coordinate = self.assets_table.item(row,8).text()
+                mgrs = self.assets_table.item(row, 9).text()
+                selected_assets.append((unit, asset_name, coordinate, mgrs))
 
         if not selected_assets:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
 
-        map_view = CalAssetMapView(selected_assets, self.parent.selected_language)
+        map_view = CalAssetMapView(selected_assets)
         map_view.exec_()
 
     def print_assets_table(self):
@@ -288,7 +294,7 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
             rows = self.assets_table.rowCount() + 1
             cols = self.assets_table.columnCount() - 1
 
-            excluded_columns = [0, 1, 3, 4, 5, 9]
+            excluded_columns = [0, 1, 4, 5, 9, 10]
 
             actual_cols = cols - len(excluded_columns)
             table = cursor.insertTable(rows, actual_cols, table_format)
@@ -340,14 +346,14 @@ class MainWindow(QMainWindow, QObject):
 
     def __init__(self):
         super().__init__()
-        self.conn = sqlite3.connect('assets.db')
+        self.conn = sqlite3.connect('assets_management.db')
         self.setWindowIcon(QIcon("image/logo.png"))
-        self.setWindowTitle(self.tr("저장된 자산 보기"))
+        self.setWindowTitle(self.tr("CAL 자산 보기"))
         self.cursor = self.conn.cursor()
         self.stacked_widget = QStackedWidget(self)
         self.setCentralWidget(self.stacked_widget)
 
-        self.selected_language = "Korean"
+        self.selected_language = "ko"
         self.translator = Translator(QApplication.instance())
 
         self.view_assets_page = ViewAssetsWindow(self, self.selected_language)
@@ -355,16 +361,7 @@ class MainWindow(QMainWindow, QObject):
 
         self.stacked_widget.addWidget(self.view_assets_page)
         self.stacked_widget.addWidget(self.add_asset_page)
-
-
         self.show_main_page()
-
-        # language_codes 정의
-        self.language_codes = {
-            "English": "en",
-            "Korean": "ko",
-            "Arabic": "ar",
-        }
 
     def show_main_page(self):
         self.stacked_widget.setCurrentIndex(0)
@@ -377,11 +374,20 @@ class MainWindow(QMainWindow, QObject):
         self.refresh_database()  # 데이터 갱신
         self.stacked_widget.setCurrentWidget(self.add_asset_page)
 
+    def show_edit_asset_page(self):
+        self.refresh_database()
+        self.stacked_widget.setCurrentWidget(self.add_asset_page)
+
+    def show_view_assets_page(self):
+        """자산 추가 페이지 표시"""
+        self.refresh_database()  # 데이터 갱신
+        self.stacked_widget.setCurrentWidget(self.view_assets_page)
+
     def refresh_database(self):
         """데이터베이스 연결을 새로 고치기 위한 메서드"""
         if hasattr(self, 'conn') and self.conn:
             self.conn.close()
-        self.conn = sqlite3.connect('assets.db')
+        self.conn = sqlite3.connect('assets_management.db')
         self.cursor = self.conn.cursor()
 
 class CheckBoxHeader(QHeaderView):
