@@ -3,13 +3,16 @@ import sys, os
 import sqlite3
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import *
+from enemy_base import EnemyBaseWindow
 from languageselection import LanguageSelectionWindow, Translator
 from loginwindow import LoginWindow
 from addasset import AddAssetWindow
 from cvtcalculation import CVTCalculationWindow
+from setting import SettingWindow
 from viewasset import ViewAssetsWindow
 from defenseasset import ViewDefenseAssetWindow
 from viewcop import ViewCopWindow
+from weapon_system import WeaponSystemWindow
 from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtCore import QObject, QPointF
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QPushButton
@@ -93,17 +96,24 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.background_label.setPixmap(self.background_pixmap)
         self.background_label.setScaledContents(True)
         self.background_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_page_layout.addWidget(self.background_label)
 
-        # 버튼 컨테이너 위젯
-        self.button_container = QWidget(self.background_label)
-        button_layout = QVBoxLayout(self.button_container)
-        button_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        button_layout.setSpacing(20)
-        button_layout.setContentsMargins(20, 20, 20, 20)
+        # 배경 레이블에 QHBoxLayout 추가
+        background_layout = QHBoxLayout(self.background_label)
+        background_layout.setContentsMargins(20, 20, 20, 20)
 
-        # 버튼 컨테이너의 크기 설정
-        self.button_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        # 왼쪽 버튼 컨테이너 위젯
+        self.left_button_container = QWidget()
+        left_button_layout = QVBoxLayout(self.left_button_container)
+        left_button_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        left_button_layout.setSpacing(20)
+        left_button_layout.setContentsMargins(0, 0, 0, 0)
+
+        # 오른쪽 버튼 컨테이너 위젯
+        self.right_button_container = QWidget()
+        right_button_layout = QVBoxLayout(self.right_button_container)
+        right_button_layout.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        right_button_layout.setSpacing(20)
+        right_button_layout.setContentsMargins(0, 0, 0, 0)
 
         # 버튼 생성
         self.cal_management_button = QPushButton(self.tr("CAL 관리"))
@@ -111,13 +121,14 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.view_cop_button = QPushButton(self.tr("공통상황도"))
         self.logoff_button = QPushButton(self.tr("로그오프"))
         self.exit_button = QPushButton(self.tr("종료"))
+
         # 새로운 버튼 추가
-        self.settings_button = QPushButton(self.tr("설정"))
         self.weapon_system_button = QPushButton(self.tr("방공무기체계"))
-        self.enemy_missile_base_button = QPushButton(self.tr("적 미사일 발사기지"))
+        self.enemy_base_button = QPushButton(self.tr("적 미사일 발사기지"))
+        self.setting_button = QPushButton(self.tr("설정"))
 
         # CAL 관리 하위 버튼
-        self.cal_sub_buttons = QWidget(self.button_container)
+        self.cal_sub_buttons = QWidget(self.left_button_container)
         cal_sub_layout = QVBoxLayout(self.cal_sub_buttons)
         cal_sub_layout.setSpacing(10)
         cal_sub_layout.setContentsMargins(0, 0, 0, 0)
@@ -135,27 +146,37 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         cal_container.addWidget(self.cal_management_button)
         cal_container.addWidget(self.cal_sub_buttons)
 
-        # 버튼 레이아웃에 추가
-        button_layout.addWidget(self.settings_button)
-        button_layout.addWidget(self.weapon_system_button)
-        button_layout.addWidget(self.enemy_missile_base_button)
-        button_layout.addWidget(self.cal_management_button)
+        # 왼쪽 버튼 레이아웃에 추가
+        left_button_layout.addLayout(cal_container)
+        left_button_layout.addWidget(self.dal_management_button)
+        left_button_layout.addWidget(self.view_cop_button)
+        left_button_layout.addWidget(self.logoff_button)
+        left_button_layout.addWidget(self.exit_button)
 
-        # 버튼 레이아웃에 추가
-        button_layout.addLayout(cal_container)
-        button_layout.addWidget(self.dal_management_button)
-        button_layout.addWidget(self.view_cop_button)
-        button_layout.addWidget(self.logoff_button)
-        button_layout.addWidget(self.exit_button)
+        # 오른쪽 버튼 레이아웃에 추가
+        right_button_layout.addWidget(self.weapon_system_button)
+        right_button_layout.addWidget(self.enemy_base_button)
+        right_button_layout.addWidget(self.setting_button)
+
+        # 배경 레이아웃에 버튼 컨테이너 추가
+        background_layout.addWidget(self.left_button_container)
+        background_layout.addStretch(1)  # 중앙에 빈 공간 추가
+        background_layout.addWidget(self.right_button_container)
+
+        # 메인 페이지 레이아웃에 배경 라벨만 추가 (버튼 컨테이너는 이미 배경 라벨의 자식)
+        main_page_layout.addWidget(self.background_label)
+
+        # 배경 크기가 변경될 때 버튼 컨테이너 위치 조정
+        self.background_label.resizeEvent = lambda event: self.adjust_button_containers()
 
         # 버튼 스타일 및 크기 설정
         main_buttons = [self.cal_management_button, self.dal_management_button, self.view_cop_button,
-                        self.logoff_button, self.exit_button]
-        sub_buttons = [self.add_asset_button, self.view_assets_button, self.calculate_cvt_button, self.settings_button,
-                       self.weapon_system_button, self.enemy_missile_base_button]
+                        self.logoff_button, self.exit_button, self.setting_button,
+                        self.weapon_system_button, self.enemy_base_button]
+        sub_buttons = [self.add_asset_button, self.view_assets_button, self.calculate_cvt_button]
 
         for button in main_buttons + sub_buttons:
-            button.setFont(QFont("강한공군체", 16, QFont.Bold))
+            button.setFont(QFont("강한공군체", 15, QFont.Bold))  # 폰트 크기 축소
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             button.setStyleSheet("""
                 QPushButton {
@@ -168,24 +189,22 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             """)
 
         for button in main_buttons:
-            button.setFixedHeight(60)
-            button.setMinimumWidth(220)
-            button.setMaximumWidth(300)
+            button.setFixedHeight(60)  # 높이 축소
+            button.setMinimumWidth(200)  # 최소 너비 축소
+            button.setMaximumWidth(250)  # 최대 너비 축소
 
         for button in sub_buttons:
-            button.setFixedHeight(40)
-            button.setMinimumWidth(170)
-            button.setMaximumWidth(250)
+            button.setFixedHeight(40)  # 높이 축소
+            button.setMinimumWidth(150)  # 최소 너비 축소
+            button.setMaximumWidth(220)  # 최대 너비 축소
 
         # 버튼 간격 조정을 위한 스페이서 추가
         for i in range(4):  # 4개의 스페이서 추가 (버튼 사이)
-            spacer = QSpacerItem(40, 100, QSizePolicy.Minimum, QSizePolicy.Expanding)
-            button_layout.insertItem(i * 2 + 1, spacer)
+            spacer = QSpacerItem(20, 50, QSizePolicy.Minimum, QSizePolicy.Expanding)  # 스페이서 크기 축소
+            left_button_layout.insertItem(i * 2 + 1, spacer)
+            right_button_layout.insertItem(i * 2 + 1, spacer)
 
         # 버튼 클릭 이벤트 연결
-        self.settings_button.clicked.connect(self.show_settings_page)
-        self.weapon_system_button.clicked.connect(self.show_weapon_system_page)
-        self.enemy_missile_base_button.clicked.connect(self.show_enemy_missile_base_page)
         self.cal_management_button.clicked.connect(self.toggle_cal_sub_buttons)
         self.dal_management_button.clicked.connect(self.show_defense_assets_page)
         self.view_cop_button.clicked.connect(self.show_view_cop_page)
@@ -194,6 +213,10 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.add_asset_button.clicked.connect(self.show_add_asset_page)
         self.view_assets_button.clicked.connect(self.show_view_assets_page)
         self.calculate_cvt_button.clicked.connect(self.show_cvt_calculation_page)
+        self.weapon_system_button.clicked.connect(self.show_weapon_system_page)
+        self.enemy_base_button.clicked.connect(self.show_enemy_base_page)
+        self.setting_button.clicked.connect(self.show_setting_page)
+
 
         # 페이지 추가
         self.stacked_widget.addWidget(self.main_page)
@@ -202,12 +225,17 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.cvt_calculation_page = CVTCalculationWindow(self)
         self.defense_assets_page = ViewDefenseAssetWindow(self)
         self.view_cop_page = ViewCopWindow(self)
+        self.weapon_system_page = WeaponSystemWindow(self)
+        self.enemy_base_page = EnemyBaseWindow(self)
+        self.setting_page = SettingWindow(self)
         self.stacked_widget.addWidget(self.add_asset_page)
         self.stacked_widget.addWidget(self.view_assets_page)
         self.stacked_widget.addWidget(self.cvt_calculation_page)
         self.stacked_widget.addWidget(self.defense_assets_page)
         self.stacked_widget.addWidget(self.view_cop_page)
-
+        self.stacked_widget.addWidget(self.weapon_system_page)
+        self.stacked_widget.addWidget(self.enemy_base_page)
+        self.stacked_widget.addWidget(self.setting_page)
         self.stacked_widget.setCurrentWidget(self.main_page)
 
         # 창 크기 및 위치 설정
@@ -219,6 +247,10 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             900
         )
 
+    def adjust_button_containers(self):
+        self.left_button_container.setGeometry(20, 20, 200, self.background_label.height() - 40)
+        self.right_button_container.setGeometry(self.background_label.width() - 220, 20, 200,
+                                                self.background_label.height() - 40)
     def toggle_cal_sub_buttons(self):
         is_expanded = self.cal_sub_buttons.isVisible()
         self.cal_sub_buttons.setVisible(not is_expanded)
@@ -251,20 +283,20 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.titleBar.update_title(self.tr("C D M S"), self.tr("CAL/DAL Management System"))
 
     # 새로운 페이지 표시 메서드
-    def show_settings_page(self):
+    def show_setting_page(self):
         # 설정 페이지 구현
-        settings_window = SettingsWindow(self)
-        settings_window.show()
+        setting_window = SettingWindow(self)
+        setting_window.show()
 
     def show_weapon_system_page(self):
         # 방공무기체계 페이지 구현
         weapon_system_window = WeaponSystemWindow(self)
         weapon_system_window.show()
 
-    def show_enemy_missile_base_page(self):
+    def show_enemy_base_page(self):
         # 적 미사일 발사기지 페이지 구현
-        enemy_missile_base_window = EnemyMissileBaseWindow(self)
-        enemy_missile_base_window.show()
+        enemy_base_window = EnemyBaseWindow(self)
+        enemy_base_window.show()
 
     def show_add_asset_page(self):
         self.refresh_database()
@@ -436,7 +468,6 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.refresh_database()  # 데이터 갱신
         self.view_assets_page.load_assets()
 
-
 class FancyTitleBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -495,7 +526,6 @@ class FancyTitleBar(QWidget):
             painter.drawLine(i, 0, i, self.height())
 
         super().paintEvent(event)
-
 
 class TitleLabel(QWidget):
     def __init__(self, title, subtitle, parent=None):
@@ -562,7 +592,6 @@ class TitleLabel(QWidget):
     def sizeHint(self):
         return QSize(500, 70)  # 적절한 크기 힌트 제공
 
-
 class LogoTitleWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -604,9 +633,6 @@ class LogoTitleWidget(QWidget):
         main_layout.setContentsMargins(10, 10, 10, 10)  # 여백 추가
 
         self.setLayout(main_layout)
-
-
-
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)  # QApplication 인스턴스 생성
