@@ -1,4 +1,5 @@
 import sys
+import sqlite3
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTranslator, QLocale, QLibraryInfo, QObject, QPoint, QRectF, QRect, QSize, QPointF
@@ -78,6 +79,7 @@ class LoginWindow(QDialog, QObject):
         self.setWindowIcon(QIcon("image/logo.png"))
         # 로그인 창의 배경색 설정
         self.setStyleSheet("background-color: #F0F0F0;")
+        self.init_database()  # 데이터베이스 초기화 메서드 호출
         self.initUI()
 
     def initUI(self):
@@ -196,19 +198,53 @@ class LoginWindow(QDialog, QObject):
 
         msg_box.exec_()
 
+    def init_database(self):
+        conn = sqlite3.connect('user_credentials.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT,
+                db_name TEXT
+            )
+        ''')
+        conn = sqlite3.connect('user_credentials.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            id_list = ['navy', 'army', 'airforce']
+            cursor.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", ('admin', 'admin', 'assets_management.db'))
+            for id in id_list:
+                cursor.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", (id, id, f'assets_{id}.db'))
+            conn.commit()
+        conn.close()
+
     def login(self):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        if username == "admin" and password == "admin":
+        conn = sqlite3.connect('user_credentials.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user:
             self.show_message(self.tr("로그인 성공"), self.tr("로그인에 성공했습니다."), QMessageBox.Information)
+            self.username = username
+            self.db_name = user[2]  # 데이터베이스 파일명 저장
             self.accept()
         else:
             self.show_message(self.tr("로그인 실패"), self.tr("아이디 또는 비밀번호가 잘못되었습니다."), QMessageBox.Critical)
-
-
+            # 로그인 실패 시 입력 필드 초기화
+            self.username_input.clear()
+            self.password_input.clear()
+            self.username_input.setFocus()
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = LoginWindow()
-    window.show()
+    if window.exec_() == QDialog.Accepted:
+        print(f"로그인 성공: {window.username}")
+        print(f"사용할 데이터베이스: {window.db_name}")
     sys.exit(app.exec_())

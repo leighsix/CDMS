@@ -9,13 +9,15 @@ from PyQt5.QtCore import Qt, QRect, QCoreApplication, QTranslator
 from addasset import AutoSpacingLineEdit, UnderlineEdit
 from PyQt5.QtWidgets import *
 import sqlite3
-import sys
+import sys, json
 import re, mgrs
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtGui import QTextDocument, QTextCursor, QTextTableFormat, QTextFrameFormat, QTextLength, QTextCharFormat, QFont, QTextBlockFormat
 from PyQt5.QtCore import QDateTime
 from mapview import DefenseAssetMapView
+from setting import MapApp
+
 
 # AddDefenseAssetWindow 클래스
 class AddDefenseAssetWindow(QDialog):
@@ -105,10 +107,18 @@ class AddDefenseAssetWindow(QDialog):
 
                 elif label == self.tr("무기체계"):
                     self.weapon_system_input = QComboBox()
-                    self.weapon_system_input.addItems(["KM-SAM2", "PAC-2", "PAC-3", "MSE", "L-SAM", "THAAD"])
+
+                    # weapon_systems.json 파일에서 무기체계 데이터 읽기
+                    with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+                        weapon_systems = json.load(file)
+
+                    # 무기체계 이름들을 콤보박스에 추가
+                    self.weapon_system_input.addItems(weapon_systems.keys())
+
                     self.weapon_system_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                     self.weapon_system_input.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
                     input_widget = self.weapon_system_input
+
 
                 elif label == self.tr("위협방위"):
                     input_widget = QLineEdit()
@@ -157,7 +167,7 @@ class AddDefenseAssetWindow(QDialog):
         if self.edit_mode:
             self.setWindowTitle(self.tr("방어자산 정보 수정"))
             self.setWindowIcon(QIcon("logo.png"))
-            if self.asset_data and self.asset_data:  # asset_data가 존재할 때만 populate_fields 호출
+            if self.asset_data:  # asset_data가 존재할 때만 populate_fields 호출
                 self.populate_fields()
         else:
             self.setWindowTitle(self.tr("방어자산 추가"))
@@ -345,12 +355,20 @@ class ViewDefenseAssetWindow(QWidget):
         weapon_filter_label = QLabel(self.tr("무기체계 선택"), self)
         weapon_filter_label.setStyleSheet("font: 바른공군체; font-size: 16px;")
         self.weapon_filter = QComboBox()
-        self.weapon_filter.addItems([self.tr("전체"), self.tr("KM-SAM2"), self.tr("PAC-2"), self.tr("PAC-3"),
-                                   self.tr("MSE"), self.tr("L-SAM"), self.tr("THAAD")])
+        # weapon_systems.json 파일에서 무기체계 데이터 읽기
+        with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            weapon_systems = json.load(file)
+
+        # '전체' 항목을 포함한 무기체계 목록 생성
+        weapon_system_list = ['전체'] + list(weapon_systems.keys())
+        # 무기체계 이름들을 콤보박스에 추가
+        self.weapon_filter.addItems(weapon_system_list)
         self.weapon_filter.setFixedSize(150, 30)
         self.weapon_filter.setStyleSheet("font: 바른공군체; font-size: 16px;")
         filter_layout.addWidget(weapon_filter_label)
         filter_layout.addWidget(self.weapon_filter)
+
+        self.weapon_system_input = QComboBox()
 
 
         # 검색 섹션
@@ -492,10 +510,12 @@ class ViewDefenseAssetWindow(QWidget):
         unit_filter = self.unit_filter.currentText()
         weapon_filter = self.weapon_filter.currentText()
         search_text = self.asset_search_input.text()
+
         query = f"""
-                SELECT id, unit, area, asset_name, coordinate, mgrs, weapon_system, ammo_count, threat_degree 
-                FROM dal_assets_{self.parent.selected_language}
-                """
+            SELECT id, unit, area, asset_name, coordinate, mgrs, weapon_system, ammo_count, threat_degree 
+            FROM dal_assets_{self.parent.selected_language}
+            WHERE 1=1
+        """
         params = []
 
         if unit_filter != self.tr("전체"):
@@ -518,6 +538,7 @@ class ViewDefenseAssetWindow(QWidget):
         cursor = self.parent.cursor
         cursor.execute(query, params)
         assets = cursor.fetchall()
+
         self.defense_asset_table.uncheckAllRows()
         self.defense_asset_table.setRowCount(len(assets))
         for row_idx, asset in enumerate(assets):
@@ -572,13 +593,9 @@ class ViewDefenseAssetWindow(QWidget):
         asset_id = self.defense_asset_table.item(row, 1).data(Qt.UserRole)
 
         cursor = self.parent.cursor
-        if self.parent.selected_language == 'ko':
-            cursor.execute(f"SELECT * FROM dal_assets_ko WHERE id = ?", (asset_id,))
-        else:
-            cursor.execute(f"SELECT * FROM dal_assets_en WHERE id = ?", (asset_id,))
+        cursor.execute(f"SELECT * FROM dal_assets_ko WHERE id = ?", (asset_id,))
 
         asset_data = cursor.fetchone()
-        print(asset_data)
 
         edit_window = AddDefenseAssetWindow(self, edit_mode=True, asset_data=asset_data)
         if edit_window.exec_() == QDialog.Accepted:
@@ -595,13 +612,12 @@ class ViewDefenseAssetWindow(QWidget):
                 weapon_system = self.defense_asset_table.item(row, 6).text()
                 threat_degree = int(self.defense_asset_table.item(row, 8).text().replace("°", ""))  # 위협방위 정보 추가
                 selected_assets.append((asset_name, coordinate, mgrs, weapon_system, threat_degree))
-        print(selected_assets)
 
         if not selected_assets:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
 
-        map_view = DefenseAssetMapView(selected_assets)
+        map_view = DefenseAssetMapView(selected_assets, self.parent.map_app.loadSettings())
         map_view.exec_()
 
     def add_defense_asset(self):
@@ -683,13 +699,13 @@ class ViewDefenseAssetWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), self.tr("다음 오류가 발생했습니다: {}").format(str(e)))
 
-
 # MainWindow 클래스
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(self.tr("DAL 관리"))
         self.selected_language = "ko"
+        self.map_app = MapApp()
         self.setGeometry(100, 100, 1024, 768)
 
         try:

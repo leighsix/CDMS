@@ -1,26 +1,16 @@
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QVBoxLayout, QWidget, QDialog, QHBoxLayout, QPushButton, QLineEdit, QComboBox
-from PyQt5.QtCore import QObject, QPointF, Qt
-from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
-from PyQt5 import QtWidgets, QtGui
-import folium
-import io
-import mgrs
-import re
-from branca.colormap import LinearColormap
-import math
+from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QVBoxLayout, QWidget, QDialog, QHBoxLayout, QCheckBox, QPushButton, QLineEdit, QComboBox
 import os
 import configparser
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton, QGridLayout, QMessageBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import folium
 from PyQt5.QtCore import pyqtSignal
 
 
+
 class SettingWindow(QDialog):
-    settingsChanged = pyqtSignal(dict)  # 시그널 추가
+    settingsChanged = pyqtSignal(dict)
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("지도 설정"))
@@ -47,12 +37,14 @@ class SettingWindow(QDialog):
         layout.addLayout(zoom_layout)
 
         # 지도 스타일 설정
-        style_layout = QHBoxLayout()
-        style_layout.addWidget(QLabel(self.tr("지도 스타일:")))
+        map_style_layout = QGridLayout()
+        map_style_layout.addWidget(QLabel(self.tr("지도 스타일:")), 0, 0)
         self.style_combo = QComboBox()
-        self.style_combo.addItems(["OpenStreetMap", "Stamen Terrain", "Stamen Toner", "Cartodb Positron"])
-        style_layout.addWidget(self.style_combo)
-        layout.addLayout(style_layout)
+        self.style_combo.addItems(
+            ["OpenStreetMap", "Cartodb Positron", "CartoDB Voyager", "Stamen Terrain", "Stamen Watercolor"])
+        map_style_layout.addWidget(self.style_combo, 0, 1)
+
+        layout.addLayout(map_style_layout)
 
         # 저장 및 취소 버튼
         button_layout = QHBoxLayout()
@@ -80,19 +72,38 @@ class SettingWindow(QDialog):
             self.zoom_input.setText('7')
 
     def saveSettings(self):
-        config = configparser.ConfigParser()
-        new_settings = {
-            'latitude': self.lat_input.text(),
-            'longitude': self.lon_input.text(),
-            'zoom': self.zoom_input.text(),
-            'style': self.style_combo.currentText()
-        }
-        config['Map'] = new_settings
-        with open('map_settings.ini', 'w') as configfile:
-            config.write(configfile)
-        self.settingsChanged.emit(new_settings)
-        self.accept()
+        try:
+            latitude = float(self.lat_input.text())
+            longitude = float(self.lon_input.text())
+            zoom = int(self.zoom_input.text())
 
+            if not (-90 <= latitude <= 90):
+                raise ValueError("위도는 -90에서 90 사이의 값이어야 합니다.")
+            if not (-180 <= longitude <= 180):
+                raise ValueError("경도는 -180에서 180 사이의 값이어야 합니다.")
+            if not (0 <= zoom <= 18):
+                raise ValueError("줌 레벨은 0에서 18 사이의 정수여야 합니다.")
+
+            new_settings = {
+                'latitude': str(latitude),
+                'longitude': str(longitude),
+                'zoom': str(zoom),
+                'style': self.style_combo.currentText()
+            }
+
+            config = configparser.ConfigParser()
+            config['Map'] = new_settings
+            with open('map_settings.ini', 'w') as configfile:
+                config.write(configfile)
+            self.settingsChanged.emit(new_settings)
+            self.accept()
+
+        except ValueError as e:
+            QMessageBox.warning(self, "입력 오류", str(e))
+            self.loadSettings()  # 초기값으로 리셋
+        except Exception as e:
+            QMessageBox.warning(self, "오류", f"설정을 저장하는 중 오류가 발생했습니다: {str(e)}")
+            self.loadSettings()  # 초기값으로 리셋
 
 class MapApp(QMainWindow):
     def __init__(self):
@@ -111,12 +122,7 @@ class MapApp(QMainWindow):
         settings_button.clicked.connect(self.openSettings)
         layout.addWidget(settings_button)
 
-        self.settings = {
-            'latitude': 37.5665,
-            'longitude': 126.9780,
-            'zoom': 10,
-            'style': 'OpenStreetMap'
-        }
+        self.settings = self.loadSettings()
         self.updateMap()
 
         self.setGeometry(100, 100, 800, 600)
@@ -125,7 +131,7 @@ class MapApp(QMainWindow):
     def openSettings(self):
         self.setting_window = SettingWindow(self)
         self.setting_window.settingsChanged.connect(self.updateSettings)
-        self.setting_window.exec_()  # show() 대신 exec_() 사용
+        self.setting_window.exec_()
 
     def updateSettings(self, new_settings):
         self.settings['latitude'] = float(new_settings['latitude'])
@@ -134,25 +140,55 @@ class MapApp(QMainWindow):
         self.settings['style'] = new_settings['style']
         self.updateMap()
 
+    def loadSettings(self):
+        config = configparser.ConfigParser()
+        if os.path.exists('map_settings.ini'):
+            config.read('map_settings.ini')
+            return {
+                'latitude': config.getfloat('Map', 'latitude', fallback=37.5665),
+                'longitude': config.getfloat('Map', 'longitude', fallback=126.9780),
+                'zoom': config.getint('Map', 'zoom', fallback=7),
+                'style': config.get('Map', 'style', fallback='OpenStreetMap'),
+            }
+        else:
+            return {
+                'latitude': 37.5665,
+                'longitude': 126.9780,
+                'zoom': 7,
+                'style': 'OpenStreetMap',
+            }
+
+    def saveSettings(self):
+        config = configparser.ConfigParser()
+        config['Map'] = self.settings
+        with open('map_settings.ini', 'w') as configfile:
+            config.write(configfile)
+
     def updateMap(self):
         style_dict = {
-            "OpenStreetMap": "OpenStreetMap",
-            "Stamen Terrain": "Stamen Terrain",
-            "Stamen Toner": "Stamen Toner",
-            "Cartodb Positron": "cartodbpositron"
+            "OpenStreetMap": {"tiles": "OpenStreetMap", "attr": "© OpenStreetMap contributors"},
+            "Cartodb Positron": {"tiles": "cartodbpositron", "attr": "© OpenStreetMap contributors © CARTO"},
+            "CartoDB Voyager": {"tiles": "cartodbvoyager", "attr": "© OpenStreetMap contributors © CARTO"},
+            "Stamen Terrain": {"tiles": "Stamen Terrain",
+                               "attr": "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."},
+            "Stamen Watercolor": {"tiles": "Stamen Watercolor",
+                                  "attr": "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."}
         }
 
-        tile = style_dict.get(self.settings['style'], "OpenStreetMap")
+
+        tile = style_dict.get(self.settings['style'], style_dict["OpenStreetMap"])
 
         m = folium.Map(
             location=[self.settings['latitude'], self.settings['longitude']],
             zoom_start=self.settings['zoom'],
-            tiles=tile
+            tiles=tile["tiles"],
+            attr=tile.get("attr", "© OpenStreetMap contributors")
         )
 
         # 지도 데이터를 HTML로 변환
         data = m.get_root().render()
         self.web_view.setHtml(data)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

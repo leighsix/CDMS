@@ -12,6 +12,8 @@ from mapview import CalAssetMapView
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QObject, QRect
 
+from setting import SettingWindow, MapApp
+
 
 class ViewAssetsWindow(QtWidgets.QDialog, QObject):
     """저장된 자산을 보여주는 창"""
@@ -261,8 +263,8 @@ class ViewAssetsWindow(QtWidgets.QDialog, QObject):
         if not selected_assets:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
-
-        map_view = CalAssetMapView(selected_assets)
+        print(self.parent.map_app.loadSettings())
+        map_view = CalAssetMapView(selected_assets, self.parent.map_app.loadSettings())
         map_view.exec_()
 
     def print_assets_table(self):
@@ -352,7 +354,7 @@ class MainWindow(QMainWindow, QObject):
         self.cursor = self.conn.cursor()
         self.stacked_widget = QStackedWidget(self)
         self.setCentralWidget(self.stacked_widget)
-
+        self.map_app = MapApp()
         self.selected_language = "ko"
         self.translator = Translator(QApplication.instance())
 

@@ -6,7 +6,7 @@ from branca.colormap import LinearColormap
 from PyQt5.QtCore import QObject, QCoreApplication
 import sys, logging, io
 import mgrs
-import re
+import re, json
 import html
 from PyQt5.QtCore import QUrl, QTemporaryFile
 from PyQt5.QtGui import QPainter, QPagedPaintDevice
@@ -100,10 +100,6 @@ class DefenseAssetCommonMapView(QObject):
         self.show_defense_radius = show_defense_radius
         self.load_map(coordinates_list, map_obj)
 
-    @staticmethod
-    def add_marker(name, lat, lon, layer):
-        folium.Marker([lat, lon], popup=name).add_to(layer)
-
     def parse_mgrs(self, mgrs_string):
         mgrs_string = re.sub(r'\s+', '', mgrs_string)
         pattern = r'^(\d{1,2}[A-Z])([A-Z]{2})(\d{5})(\d{5})$'
@@ -116,15 +112,23 @@ class DefenseAssetCommonMapView(QObject):
         if not coordinates_list:
             return
         m_conv = mgrs.MGRS()
-        # 무기체계별 색상 및 반경 정의
-        weapon_info = {
-            "KM-SAM2": {"color": "#FF0000", "radius": 50000},
-            "PAC-2": {"color": "#0000FF", "radius": 70000},
-            "PAC-3": {"color": "#FFFF00", "radius": 20000},
-            "MSE": {"color": "#FF00FF", "radius": 45000},
-            "L-SAM": {"color": "#00FFFF", "radius": 180000},
-            "THAAD": {"color": "#FFA500", "radius": 200000}
+        # JSON 파일에서 무기 정보 불러오기
+        with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            weapon_info = json.load(file)
+        # 색상 정보 추가 (JSON 파일에 없으므로 기존 색상 정보 유지)
+        color_info = {
+            "KM-SAM2": "#FF0000",
+            "PAC-2": "#0000FF",
+            "PAC-3": "#FFFF00",
+            "MSE": "#FF00FF",
+            "L-SAM": "#00FFFF",
+            "THAAD": "#FFA500"
         }
+        # 무기 정보에 색상 추가
+        for weapon, data in weapon_info.items():
+            data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
+            data['radius'] = int(data['radius'])  # 반경을 정수로 변환
+            data['angle'] = int(data['angle'])
 
         defense_assets = self.tr("방어자산")
         weapon_systems = self.tr("무기체계")
@@ -149,9 +153,10 @@ class DefenseAssetCommonMapView(QObject):
                 lat, lon = m_conv.toLatLon(mgrs_full_str)
 
                 # 무기체계에 따른 색상 및 반경 선택
-                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0})
+                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0, "angle": 0})
                 color = info["color"]
                 radius = info["radius"]
+                angle = info["angle"]
                 # 커스텀 아이콘 생성
                 icon = folium.DivIcon(html=f"""
                                     <div style="
@@ -184,16 +189,14 @@ class DefenseAssetCommonMapView(QObject):
 
                 # 방어 반경 그리기
                 if self.show_defense_radius:
-                    self.draw_defense_radius(map_obj, lat, lon, weapon_system, threat_degree, color, radius)
+                    self.draw_defense_radius(map_obj, lat, lon, threat_degree, color, radius, angle)
 
             except Exception as e:
-                logging.error(self.tr(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}"))
+                logging.error(self.tr(f"오류발생: {e}"))
                 continue
 
-
-
-    def draw_defense_radius(self, map_obj, lat, lon, weapon_system, threat_degree, color, radius):
-        if weapon_system == "KM-SAM2":
+    def draw_defense_radius(self, map_obj, lat, lon, threat_degree, color, radius, angle):
+        if angle == 360:
             folium.Circle(
                 location=[lat, lon],
                 radius=radius,
@@ -203,10 +206,10 @@ class DefenseAssetCommonMapView(QObject):
                 fillColor=color,
                 fillOpacity=0.2
             ).add_to(map_obj)
+
         else:
-            # 위협방위를 기준으로 시작 각도와 끝 각도 계산
-            start_angle = (threat_degree - 60 + 360) % 360
-            end_angle = (threat_degree + 60 + 360) % 360
+            start_angle = (threat_degree - (angle / 2) + 360) % 360
+            end_angle = (threat_degree + (angle / 2) + 360) % 360
             self.draw_sector(map_obj, lat, lon, radius, start_angle, end_angle, color)
 
     def draw_sector(self, map_obj, lat, lon, radius, start_angle, end_angle, color):
@@ -214,13 +217,11 @@ class DefenseAssetCommonMapView(QObject):
 
         # 시계 방향으로 각도 계산
         if start_angle > end_angle:
-            angles = list(range(start_angle, 360)) + list(range(0, end_angle + 1))
+            angles = [i for i in range(int(start_angle), 360)] + [i for i in range(0, int(end_angle) + 1)]
         else:
-            angles = list(range(start_angle, end_angle + 1))
-
-        for angle in angles:
-            # 각도를 라디안으로 변환 (지도에서 진북이 000도)
-            rad = math.radians(90 - angle)
+            angles = [i for i in range(int(start_angle), int(end_angle) + 1)]
+        for ang in angles:
+            rad = math.radians(90 - ang)
             x = lon + (radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
             y = lat + (radius / 111000) * math.sin(rad)
             points.append((y, x))
@@ -235,5 +236,6 @@ class DefenseAssetCommonMapView(QObject):
             fillColor=color,
             fillOpacity=0.2
         ).add_to(map_obj)
+
 
 

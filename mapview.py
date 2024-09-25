@@ -1,11 +1,9 @@
 import sys, logging
 import folium
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox, QApplication
-import io
+import io, json
 import mgrs
 import re
-from branca.colormap import LinearColormap
-from PyQt5.QtWidgets import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -20,17 +18,21 @@ from PyQt5.QtCore import QUrl, QTemporaryFile, QSize, QTimer, QMarginsF
 from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
 import os
 from branca.colormap import LinearColormap
+import configparser
+import os
 
 class CalAssetMapView(QDialog):
-    """지도 보기 다이얼로그 창"""
-    def __init__(self, coordinates_list):
-        QDialog.__init__(self)
-        QObject.__init__(self)
+    def __init__(self, coordinates_list, settings):
+        super().__init__()
+        self.settings = settings
         self.setWindowTitle(self.tr("CAL 지도 보기"))
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
-        self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style'])
         self.initUI()
         self.load_map(coordinates_list)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
@@ -65,6 +67,10 @@ class CalAssetMapView(QDialog):
         return match.group(1), match.group(2), match.group(3), match.group(4)
 
     def load_map(self, coordinates_list):
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style'])
         if not coordinates_list:
             # 기본 한국 지도 표시
             data = io.BytesIO()
@@ -203,14 +209,18 @@ class CalAssetMapView(QDialog):
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
 
 class PriorityMapView(QDialog):
-    """지도 보기 다이얼로그 창"""
-    def __init__(self, coordinates_list):
+    def __init__(self, coordinates_list, settings):
         super().__init__()
+        self.settings = settings
         self.setWindowTitle("CAL 우선순위 지도 보기")
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
-        self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style']
+        )
         self.initUI()
         self.load_map(coordinates_list)
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
@@ -245,6 +255,10 @@ class PriorityMapView(QDialog):
         return match.group(1), match.group(2), match.group(3), match.group(4)
 
     def load_map(self, coordinates_list):
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style'])
         if not coordinates_list:
             # 기본 한국 지도 표시
             data = io.BytesIO()
@@ -374,14 +388,17 @@ class PriorityMapView(QDialog):
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
 
 class DefenseAssetMapView(QDialog):
-    def __init__(self, coordinates_list):
-        QDialog.__init__(self)
-        QObject.__init__(self)
+    def __init__(self, coordinates_list, settings):
+        super().__init__()
+        self.settings = settings
         self.setWindowTitle(self.tr("DAL 지도 보기"))
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(1200, 900)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
-        self.map = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style'])
         self.coordinates_list = coordinates_list
         self.show_defense_radius = False
         self.initUI()
@@ -423,6 +440,10 @@ class DefenseAssetMapView(QDialog):
         return match.group(1), match.group(2), match.group(3), match.group(4)
 
     def load_map(self, coordinates_list):
+        self.map = folium.Map(
+            location=[self.settings['latitude'], self.settings['longitude']],
+            zoom_start=self.settings['zoom'],
+            tiles=self.settings['style'])
         if not coordinates_list:
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
@@ -431,14 +452,24 @@ class DefenseAssetMapView(QDialog):
         defense_assets = self.tr("방어자산")
         weapon_systems = self.tr("무기체계")
         # 무기체계별 색상 및 반경 정의
-        weapon_info = {
-            "KM-SAM2": {"color": "#FF0000", "radius": 50000},
-            "PAC-2": {"color": "#0000FF", "radius": 70000},
-            "PAC-3": {"color": "#FFFF00", "radius": 20000},
-            "MSE": {"color": "#FF00FF", "radius": 45000},
-            "L-SAM": {"color": "#00FFFF", "radius": 180000},
-            "THAAD": {"color": "#FFA500", "radius": 200000}
+        # JSON 파일에서 무기 정보 불러오기
+        with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            weapon_info = json.load(file)
+        # 색상 정보 추가 (JSON 파일에 없으므로 기존 색상 정보 유지)
+        color_info = {
+            "KM-SAM2": "#FF0000",
+            "PAC-2": "#0000FF",
+            "PAC-3": "#FFFF00",
+            "MSE": "#FF00FF",
+            "L-SAM": "#00FFFF",
+            "THAAD": "#FFA500"
         }
+
+        # 무기 정보에 색상 추가
+        for weapon, data in weapon_info.items():
+            data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
+            data['radius'] = int(data['radius'])  # 반경을 정수로 변환
+            data['angle'] = int(data['angle'])
 
         # 범례 생성
         legend_html = f"""
@@ -458,9 +489,11 @@ class DefenseAssetMapView(QDialog):
                 mgrs_full_str = f'{zone}{square}{easting}{northing}'
                 lat, lon = m_conv.toLatLon(mgrs_full_str)
 
-                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0})
+                # 무기체계에 따른 색상 및 반경 선택
+                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0, "angle": 0})
                 color = info["color"]
                 radius = info["radius"]
+                angle = info["angle"]
 
                 # 커스텀 아이콘 생성
                 icon = folium.DivIcon(html=f"""
@@ -494,18 +527,18 @@ class DefenseAssetMapView(QDialog):
 
                 # 방어 반경 그리기
                 if self.show_defense_radius:
-                    self.draw_defense_radius(lat, lon, weapon_system, threat_degree, color, radius)
+                    self.draw_defense_radius(lat, lon, threat_degree, color, radius, angle)
 
             except Exception as e:
-                logging.error(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}")
+                logging.error(self.tr(f"오류발생: {e}"))
                 continue
         data = io.BytesIO()
         self.map.save(data, close_file=False)
         html = data.getvalue().decode()
         self.map_view.setHtml(html)
 
-    def draw_defense_radius(self, lat, lon, weapon_system, threat_degree, color, radius):
-        if weapon_system == "KM-SAM2":
+    def draw_defense_radius(self, lat, lon, threat_degree, color, radius, angle):
+        if angle == 360:
             folium.Circle(
                 location=[lat, lon],
                 radius=radius,
@@ -515,10 +548,10 @@ class DefenseAssetMapView(QDialog):
                 fillColor=color,
                 fillOpacity=0.2
             ).add_to(self.map)
+
         else:
-            # 위협방위를 기준으로 시작 각도와 끝 각도 계산
-            start_angle = (threat_degree - 60 + 360) % 360
-            end_angle = (threat_degree + 60 + 360) % 360
+            start_angle = (threat_degree - (angle / 2) + 360) % 360
+            end_angle = (threat_degree + (angle / 2) + 360) % 360
             self.draw_sector(lat, lon, radius, start_angle, end_angle, color)
 
     def draw_sector(self, lat, lon, radius, start_angle, end_angle, color):
@@ -526,13 +559,11 @@ class DefenseAssetMapView(QDialog):
 
         # 시계 방향으로 각도 계산
         if start_angle > end_angle:
-            angles = list(range(start_angle, 360)) + list(range(0, end_angle + 1))
+            angles = [i for i in range(int(start_angle), 360)] + [i for i in range(0, int(end_angle) + 1)]
         else:
-            angles = list(range(start_angle, end_angle + 1))
-
-        for angle in angles:
-            # 각도를 라디안으로 변환 (지도에서 진북이 000도)
-            rad = math.radians(90 - angle)
+            angles = [i for i in range(int(start_angle), int(end_angle) + 1)]
+        for ang in angles:
+            rad = math.radians(90 - ang)
             x = lon + (radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
             y = lat + (radius / 111000) * math.sin(rad)
             points.append((y, x))
@@ -607,11 +638,19 @@ class DefenseAssetMapView(QDialog):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
+    settings = {
+                'latitude': 37.5665,
+                'longitude': 126.9780,
+                'zoom': 7,
+                'style': 'OpenStreetMap',
+                'color_mode': '기본',
+                'night_mode': False
+            }
     # 서울 주변 예시 사용 (weapon_system과 threat_degree 추가)
     coordinates_list_example = [('해군', '원자력 발전소', 'N38.12345,E128.45321', '52S DH 52073 19653', 1),
                                 ('지상군', 'asdf', 'N39.11233,E127.12345', '52S CJ 37757 30918', 2)]
 
-    map_loader = PriorityMapView(coordinates_list_example)
+    map_loader = PriorityMapView(coordinates_list_example, settings)
     map_loader.show()
 
     sys.exit(app.exec_())

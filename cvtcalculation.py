@@ -17,6 +17,8 @@ from PyQt5.QtCore import Qt, pyqtSignal, QRect, QTimer
 import pandas as pd
 import traceback
 
+from setting import MapApp
+
 
 class MainWindow(QtWidgets.QMainWindow, QObject):
     """메인 창 클래스"""
@@ -27,6 +29,7 @@ class MainWindow(QtWidgets.QMainWindow, QObject):
         self.setMinimumSize(800, 600)
         self.conn = sqlite3.connect('assets_management.db')
         self.selected_language = "ko"  # 기본 언어 설정
+        self.map_app = MapApp()
         self.cursor = self.conn.cursor()
 
         self.initDB()
@@ -632,7 +635,7 @@ class CVTCalculationWindow(QDialog):
             QMessageBox.warning(self, self.tr("경고"), self.tr("선택된 자산이 없습니다."))
             return
 
-        map_view = PriorityMapView(selected_assets)
+        map_view = PriorityMapView(selected_assets, self.parent.map_app.loadSettings())
         map_view.exec_()
 
     def decision_priority(self):

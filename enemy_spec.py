@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QRect
 import json
 from PyQt5.QtWidgets import QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel
 
-class WeaponSystemWindow(QDialog):
+class EnemySpecWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("방공무기체계 제원 입력"))
@@ -29,12 +29,10 @@ class WeaponSystemWindow(QDialog):
         self.name_edit = QLineEdit()
         self.radius_edit = QLineEdit()
         self.radius_edit.setInputMask("9999999")
-        self.angle_edit = QLineEdit()
-        self.angle_edit.setInputMask("999")
         self.function_edit = QTextEdit()  # QLineEdit에서 QTextEdit로 변경
         self.function_edit.setMinimumHeight(100)  # 최소 높이 설정
 
-        for edit in [self.name_edit, self.radius_edit, self.angle_edit]:
+        for edit in [self.name_edit, self.radius_edit]:
             edit.setStyleSheet("QLineEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
 
         self.function_edit.setStyleSheet("QTextEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
@@ -43,19 +41,16 @@ class WeaponSystemWindow(QDialog):
         label_style = "QLabel { font-size: 14px; font-weight: bold; }"
 
         # 라벨 생성 및 스타일 적용
-        name_label = QLabel(self.tr("무기체계명:"))
+        name_label = QLabel(self.tr("미사일명:"))
         name_label.setStyleSheet(label_style)
-        radius_label = QLabel(self.tr("방어반경:"))
+        radius_label = QLabel(self.tr("위협반경:"))
         radius_label.setStyleSheet(label_style)
-        angle_label = QLabel(self.tr("방어각:"))
-        angle_label.setStyleSheet(label_style)
         function_label = QLabel(self.tr("주요기능:"))
         function_label.setStyleSheet(label_style)
 
         # 폼 레이아웃에 라벨과 입력 필드 추가
         form_layout.addRow(name_label, self.name_edit)
         form_layout.addRow(radius_label, self.radius_edit)
-        form_layout.addRow(angle_label, self.angle_edit)
         form_layout.addRow(function_label, self.function_edit)
 
         left_layout.addLayout(form_layout)
@@ -68,7 +63,7 @@ class WeaponSystemWindow(QDialog):
             "min-width: 150px; }"  # 버튼의 최소 너비를 150px로 설정
             "QPushButton:hover { background-color: #45a049; }"
         )
-        save_button.clicked.connect(self.save_weapon_system)
+        save_button.clicked.connect(self.save_missile_info)
         left_layout.addWidget(save_button, alignment=Qt.AlignCenter)
         save_button.setFixedWidth(200)  # 버튼의 너비를 200px로 고정
 
@@ -80,14 +75,13 @@ class WeaponSystemWindow(QDialog):
         right_layout = QVBoxLayout(right_widget)
 
         self.table = MyTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["", self.tr("무기체계명"), self.tr("방어반경"), self.tr("방어각"), self.tr("주요기능")])
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["", self.tr("미사일명"), self.tr("위협반경"), self.tr("주요기능")])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
         self.table.setColumnWidth(0, 60)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.setStyleSheet(
             "QTableWidget { background-color: #f8f9fa; border: 1px solid #dee2e6; }"
@@ -114,8 +108,8 @@ class WeaponSystemWindow(QDialog):
             button.setStyleSheet(button_style)
             button.setFixedSize(100, 35)
 
-        edit_button.clicked.connect(self.edit_weapon_system)
-        delete_button.clicked.connect(self.delete_weapon_system)
+        edit_button.clicked.connect(self.edit_missile_info)
+        delete_button.clicked.connect(self.delete_missile_info)
 
         button_layout.addStretch(1)
         button_layout.addWidget(edit_button)
@@ -130,47 +124,45 @@ class WeaponSystemWindow(QDialog):
 
         self.setMinimumSize(900, 600)
         self.setStyleSheet("QDialog { background-color: #ffffff; }")
-        self.load_weapon_systems()
+        self.load_missile_info()
 
-    def save_weapon_system(self):
+    def save_missile_info(self):
         name = self.name_edit.text()
         radius = self.radius_edit.text()
-        angle = self.angle_edit.text()
         function = self.function_edit.toPlainText()  # QTextEdit에서 텍스트를 가져오는 메서드 수정
 
-        if not all([name, radius, angle, function]):
+        if not all([name, radius, function]):
             QMessageBox.warning(self, self.tr("경고"), self.tr("모든 필드를 입력해주세요."))
             return
 
         try:
-            with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            with open('missile_info.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
         except FileNotFoundError:
             data = {}
 
         if name in data:
             reply = QMessageBox.question(self, self.tr('확인'),
-                                         self.tr('이미 존재하는 무기체계명입니다. 수정하시겠습니까?'),
+                                         self.tr('이미 존재하는 미사일 정보입니다. 수정하시겠습니까?'),
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if reply == QMessageBox.No:
                 return
 
         data[name] = {
             'radius': radius,
-            'angle': angle,
             'function': function
         }
 
-        with open('weapon_systems.json', 'w', encoding='utf-8') as file:
+        with open('missile_info.json', 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
 
-        self.load_weapon_systems()
+        self.load_missile_info()
         self.clear_inputs()
-        QMessageBox.information(self, self.tr("성공"), self.tr("무기체계 정보가 저장되었습니다."))
+        QMessageBox.information(self, self.tr("성공"), self.tr("미사일 정보가 저장되었습니다."))
 
-    def load_weapon_systems(self):
+    def load_missile_info(self):
         try:
-            with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            with open('missile_info.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
         except FileNotFoundError:
             data = {}
@@ -187,7 +179,7 @@ class WeaponSystemWindow(QDialog):
             self.table.insertRow(row)
             checkbox = CenteredCheckBox()
             self.table.setCellWidget(row, 0, checkbox)
-            for col, text in enumerate([name, info['radius'], info['angle'], info['function']], start=1):
+            for col, text in enumerate([name, info['radius'], info['function']], start=1):
                 item = QTableWidgetItem(str(text))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row, col, item)
@@ -205,10 +197,9 @@ class WeaponSystemWindow(QDialog):
     def clear_inputs(self):
         self.name_edit.clear()
         self.radius_edit.clear()
-        self.angle_edit.clear()
         self.function_edit.clear()
 
-    def edit_weapon_system(self):
+    def edit_missile_info(self):
         checked_rows = []
         for row in range(self.table.rowCount()):
             checkbox_widget = self.table.cellWidget(row, 0)
@@ -222,10 +213,9 @@ class WeaponSystemWindow(QDialog):
         row = checked_rows[0]
         self.name_edit.setText(self.table.item(row, 1).text())
         self.radius_edit.setText(self.table.item(row, 2).text())
-        self.angle_edit.setText(self.table.item(row, 3).text())
-        self.function_edit.setText(self.table.item(row, 4).text())
+        self.function_edit.setText(self.table.item(row, 3).text())
 
-    def delete_weapon_system(self):
+    def delete_missile_info(self):
         checked_rows = []
         for row in range(self.table.rowCount()):
             checkbox_widget = self.table.cellWidget(row, 0)
@@ -319,6 +309,6 @@ class MyTableWidget(QTableWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = WeaponSystemWindow()
+    window = EnemySpecWindow()
     window.show()
     sys.exit(app.exec_())
