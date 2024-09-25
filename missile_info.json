@@ -1,0 +1,14 @@
+{
+    "Scud-B": {
+        "radius": "270000",
+        "function": "단거리 탄도미사일 (SRBM)"
+    },
+    "Scud-C": {
+        "radius": "450000",
+        "function": "단거리 탄도미사일 (SRBM)"
+    },
+    "Nodong": {
+        "radius": "1000000",
+        "function": "중거리 탄도미사일 (MRBM)"
+    }
+}
