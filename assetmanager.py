@@ -23,6 +23,9 @@ from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QLabel, QPushButton, QHBoxLa
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, QTimer
 from datetime import datetime
+from bcrypt import hashpw, gensalt, checkpw # bcrypt 추가
+import secrets # secrets 모듈 추가
+import re, string
 
 
 
@@ -267,7 +270,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         center_layout.addWidget(summary_table)
 
         # 저작권 정보
-        copyright_label = QLabel("© Copyright by ROK AF LT.COL Jo Yongho and ROK Navy CDR(S) Cho Hyunchel")
+        copyright_label = QLabel("© 2024 ROK AF LT.COL Jo Yongho and ROK Navy CDR(S) Cho Hyunchel. All rights reserved")
         copyright_label.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
         center_layout.addWidget(copyright_label)
 
@@ -364,7 +367,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.defense_assets_page.refresh()
         self.stacked_widget.setCurrentWidget(self.defense_assets_page)
         self.defense_assets_page.load_all_assets()
-        self.titleBar.update_title(self.tr("DAL 관리"), None)
+        self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 입력/보기"))
 
     def show_weapon_system_page(self):
         # 방공무기체계 페이지 구현
@@ -917,9 +920,33 @@ class RightArea(QGroupBox):
     def update_password_in_db(self, username, new_password):
         conn = sqlite3.connect('user_credentials.db')
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET password=? WHERE username=?", (new_password, username))
+
+        # 시큐어 코딩 가이드에 따라 최소 길이 및 복잡성 검사 추가
+        if not self.check_password_complexity(new_password):
+            QMessageBox.warning(self, "오류", "비밀번호는 최소 8자 이상이어야 하며, 대문자, 소문자, 숫자 및 특수 문자를 포함해야 합니다.")
+            return False  # 비밀번호 변경 실패를 나타냄
+
+        # bcrypt를 사용하여 비밀번호 해싱 - work factor 조정
+        hashed_password = hashpw(new_password.encode('utf-8'), gensalt(rounds=12))  # work factor 12로 조정
+
+        cursor.execute("UPDATE users SET password=? WHERE username=?", (hashed_password, username))
         conn.commit()
         conn.close()
+        return True  # 비밀번호 변경 성공을 나타냄
+
+    def check_password_complexity(self, password):
+        # 최소 길이 8자, 대문자, 소문자, 숫자, 특수 문자 포함 여부 확인
+        if len(password) < 8:
+            return False
+        if not re.search("[a-z]", password):
+            return False
+        if not re.search("[A-Z]", password):
+            return False
+        if not re.search("[0-9]", password):
+            return False
+        if not re.search("[!@#$%^&*()]", password):  # 특수문자 범위 명시
+            return False
+        return True
 
 class ChangePasswordWindow(QDialog):
     def __init__(self, username, parent=None):
@@ -954,21 +981,31 @@ class ChangePasswordWindow(QDialog):
         new_pw = self.new_pw_input.text()
         confirm_pw = self.confirm_pw_input.text()
 
+        # 현재 비밀번호와 새 비밀번호가 같은지 확인
+        if current_pw == new_pw:
+            QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호와 다른 비밀번호를 입력해야됩니다."))
+            return
+
         conn = sqlite3.connect('user_credentials.db')
         cursor = conn.cursor()
         cursor.execute("SELECT password FROM users WHERE username=?", (self.username,))
         db_password = cursor.fetchone()[0]
         conn.close()
 
-        if current_pw == confirm_pw:
-            QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호와 다른 비밀번호를 입력해야됩니다."))
-
-        elif current_pw == db_password and new_pw == confirm_pw:
-            self.new_password = new_pw
-            self.accept()
+        # 비밀번호 복잡성 검사 추가 - RightArea의 메서드 활용
+        if self.parent().check_password_complexity(new_pw):
+            if new_pw == confirm_pw:
+                if checkpw(current_pw.encode('utf-8'), db_password):
+                    self.new_password = new_pw
+                    # RightArea에서 비밀번호 업데이트 및 결과 처리
+                    if self.parent().update_password_in_db(self.username, new_pw):
+                        self.accept()
+                else:
+                    QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호가 일치하지 않습니다."))
+            else:
+                QMessageBox.warning(self, self.tr("오류"), self.tr("새 비밀번호가 일치하지 않습니다."))
         else:
-            QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호가 일치하지 않거나 새 비밀번호가 일치하지 않습니다."))
-
+            QMessageBox.warning(self,self.tr("오류"), self.tr("비밀번호는 최소 8자 이상이어야 하며, 대문자, 소문자, 숫자 및 특수 문자를 포함해야 합니다."))
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)  # QApplication 인스턴스 생성

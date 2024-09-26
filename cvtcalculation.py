@@ -1,5 +1,8 @@
 import sys
 import sqlite3
+import hashlib  # hashlib 추가
+import secrets  # secrets 추가
+import html  # html 추가
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import *
 from PyQt5 import QtGui
@@ -16,86 +19,8 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QComboBox, QLineE
 from PyQt5.QtCore import Qt, pyqtSignal, QRect, QTimer
 import pandas as pd
 import traceback
-
 from setting import MapApp
-
-
-class MainWindow(QtWidgets.QMainWindow, QObject):
-    """메인 창 클래스"""
-    def __init__(self):
-        super(MainWindow, self).__init__()
-        self.setWindowTitle("CAL/DAL Management System")
-        self.setWindowIcon(QIcon("image/logo.png"))
-        self.setMinimumSize(800, 600)
-        self.conn = sqlite3.connect('assets_management.db')
-        self.selected_language = "ko"  # 기본 언어 설정
-        self.map_app = MapApp()
-        self.cursor = self.conn.cursor()
-
-        self.initDB()
-        self.central_widget = QtWidgets.QStackedWidget(self)
-        self.setCentralWidget(self.central_widget)
-
-        self.cvt_calculation_window = CVTCalculationWindow(self)
-        self.central_widget.addWidget(self.cvt_calculation_window)
-
-        # 초기 자산 불러오기
-        self.cvt_calculation_window.load_all_assets()
-
-    def show_main_page(self):
-        """메인 페이지를 표시하는 메서드"""
-        self.central_widget.setCurrentIndex(0)
-
-    def initDB(self):
-        """데이터베이스 테이블 초기화 메서드"""
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS cal_assets_ko (
-        id INTEGER PRIMARY KEY,
-        unit TEXT,
-        asset_number INT,
-        manager TEXT,
-        contact TEXT,
-        target_asset TEXT,
-        area TEXT,
-        coordinate TEXT,
-        mgrs TEXT,
-        description TEXT,
-        criticality REAL,
-        criticality_bonus_center REAL,
-        criticality_bonus_function REAL,
-        vulnerability_damage_protection REAL,
-        vulnerability_damage_dispersion REAL,
-        vulnerability_recovery_time REAL,
-        vulnerability_recovery_ability REAL,
-        threat_attack REAL,
-        threat_detection REAL
-        )
-        ''')
-        self.conn.commit()
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS cal_assets_en (
-        id INTEGER PRIMARY KEY,
-        unit TEXT,
-        asset_number INT,
-        manager TEXT,
-        contact TEXT,
-        target_asset TEXT,
-        area TEXT,
-        coordinate TEXT,
-        mgrs TEXT,
-        description TEXT,
-        criticality REAL,
-        criticality_bonus_center REAL,
-        criticality_bonus_function REAL,
-        vulnerability_damage_protection REAL,
-        vulnerability_damage_dispersion REAL,
-        vulnerability_recovery_time REAL,
-        vulnerability_recovery_ability REAL,
-        threat_attack REAL,
-        threat_detection REAL
-        )
-        ''')
-        self.conn.commit()  # 변경사항 커밋
+import re, os # re 모듈 추가
 
 
 class CVTCalculationWindow(QDialog):
@@ -108,6 +33,7 @@ class CVTCalculationWindow(QDialog):
         self.assets_data_ko = pd.DataFrame()
         self.assets_data_en = pd.DataFrame()
         self.deleted_ids = []
+        self.ALLOWED_EXTENSIONS = {'.txt', '.csv'}  # 허용된 확장자 세트
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -735,6 +661,9 @@ class CVTCalculationWindow(QDialog):
             QMessageBox.critical(self, self.tr("오류"), f"{self.tr('우선순위 정보 저장 중 오류가 발생했습니다:')} {str(e)}")
             self.parent.conn.rollback()
 
+    def allowed_file(self, filename):
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in self.ALLOWED_EXTENSIONS
+
     def print_data(self):
         try:
             document = QTextDocument()
@@ -776,7 +705,7 @@ class CVTCalculationWindow(QDialog):
 
             # 테이블 생성
             rows = self.results_table.rowCount() + 1
-            cols = self.results_table.columnCount() - 2
+            cols = self.results_table.columnCount() - 3
             table = cursor.insertTable(rows, cols, table_format)
 
             # 헤더 추가
@@ -805,11 +734,18 @@ class CVTCalculationWindow(QDialog):
 
             file_path, _ = QFileDialog.getSaveFileName(self, self.tr("PDF 저장"), "", "PDF Files (*.pdf)")
             if file_path:
+                # 파일 경로의 유효성 및 접근 권한 등을 검증합니다.
+                # 파일 경로가 쓰기 가능한 디렉토리인지 확인
+                if not os.path.isdir(os.path.dirname(file_path)):
+                    QMessageBox.warning(self, self.tr("경고"), self.tr("지정된 위치에 파일을 저장할 수 없습니다."))
+                    return
+
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(file_path)
                 document.print_(printer)
-                QMessageBox.information(self, self.tr("저장 완료"), f"{self.tr('자산 보고서가')} {file_path} {self.tr('파일로 저장되었습니다.')}")
+                QMessageBox.information(self, self.tr("저장 완료"),
+                                        f"{self.tr('자산 보고서가')} {file_path} {self.tr('파일로 저장되었습니다.')}")
 
             QCoreApplication.processEvents()
 
@@ -879,6 +815,85 @@ class MyTableWidget(QTableWidget):
         # 헤더 체크박스도 해제
         self.horizontalHeader().isOn = False
         self.horizontalHeader().updateSection(0)
+
+class MainWindow(QtWidgets.QMainWindow, QObject):
+    """메인 창 클래스"""
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setWindowTitle("CAL/DAL Management System")
+        self.setWindowIcon(QIcon("image/logo.png"))
+        self.setMinimumSize(800, 600)
+        self.conn = sqlite3.connect('assets_management.db')
+        self.selected_language = "ko"  # 기본 언어 설정
+        self.map_app = MapApp()
+        self.cursor = self.conn.cursor()
+
+        self.initDB()
+        self.central_widget = QtWidgets.QStackedWidget(self)
+        self.setCentralWidget(self.central_widget)
+
+        self.cvt_calculation_window = CVTCalculationWindow(self)
+        self.central_widget.addWidget(self.cvt_calculation_window)
+
+        # 초기 자산 불러오기
+        self.cvt_calculation_window.load_all_assets()
+
+    def show_main_page(self):
+        """메인 페이지를 표시하는 메서드"""
+        self.central_widget.setCurrentIndex(0)
+
+    def initDB(self):
+
+        """데이터베이스 테이블 초기화 메서드"""
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cal_assets_ko (
+        id INTEGER PRIMARY KEY,
+        unit TEXT,
+        asset_number INT,
+        manager TEXT,
+        contact TEXT,
+        target_asset TEXT,
+        area TEXT,
+        coordinate TEXT,
+        mgrs TEXT,
+        description TEXT,
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
+        )
+        ''')
+        self.conn.commit()
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cal_assets_en (
+        id INTEGER PRIMARY KEY,
+        unit TEXT,
+        asset_number INT,
+        manager TEXT,
+        contact TEXT,
+        target_asset TEXT,
+        area TEXT,
+        coordinate TEXT,
+        mgrs TEXT,
+        description TEXT,
+        criticality REAL,
+        criticality_bonus_center REAL,
+        criticality_bonus_function REAL,
+        vulnerability_damage_protection REAL,
+        vulnerability_damage_dispersion REAL,
+        vulnerability_recovery_time REAL,
+        vulnerability_recovery_ability REAL,
+        threat_attack REAL,
+        threat_detection REAL
+        )
+        ''')
+        self.conn.commit()  # 변경사항 커밋
+
 
 
 if __name__ == '__main__':

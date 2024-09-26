@@ -21,6 +21,15 @@ from branca.colormap import LinearColormap
 import configparser
 import os
 
+def logger_decorator(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Error in {func.__name__}: {e}")
+            raise
+    return wrapper
+
 class CalAssetMapView(QDialog):
     def __init__(self, coordinates_list, settings):
         super().__init__()
@@ -57,6 +66,7 @@ class CalAssetMapView(QDialog):
 
         self.setLayout(layout)
 
+    @logger_decorator
     def parse_mgrs(self, mgrs_string):
         """MGRS 문자열을 파싱하고 유효성을 검사하는 메서드"""
         mgrs_string = re.sub(r'\s+', '', mgrs_string)
@@ -75,7 +85,7 @@ class CalAssetMapView(QDialog):
             # 기본 한국 지도 표시
             data = io.BytesIO()
             self.map.save(data, close_file=False)
-            self.map_view.setHtml(data.getvalue().decode())
+            self.map_view.setHtml(data.getvalue().decode(), QUrl())
             return
         composition_group = self.tr('구성군')
         assets_name = self.tr('자산명')
@@ -145,7 +155,7 @@ class CalAssetMapView(QDialog):
                 ).add_to(self.map)
 
             except Exception as e:
-                print(self.tr(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}"))
+                logging.error(self.tr(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}"))
                 continue
 
         # 범례 추가
@@ -155,7 +165,8 @@ class CalAssetMapView(QDialog):
         self.map.save(data, close_file=False)
         self.map_view.setHtml(data.getvalue().decode())
 
-    def print_map(self):
+    @logger_decorator
+    def print_map(self, *args):  # *args를 추가하여 추가 인자를 무시합니다.
         self.printer = QPrinter(QPrinter.HighResolution)
         self.printer.setPageOrientation(QPageLayout.Landscape)
         self.printer.setPageSize(QPageSize(QPageSize.A4))
@@ -187,7 +198,7 @@ class CalAssetMapView(QDialog):
 
             x = int(content_rect.left() + (content_rect.width() - scaled_image.width()) / 2)
             y = int(content_rect.top() + (content_rect.height() - scaled_image.height()) / 2)
-            painter.drawImage(x, y, scaled_image.toImage())  # QPixmap을 QImage로 변환
+            painter.drawImage(x, y, scaled_image.toImage())
 
             info_font = QFont("Arial", 8)
             painter.setFont(info_font)
@@ -197,12 +208,12 @@ class CalAssetMapView(QDialog):
 
             painter.end()
         except Exception as e:
-            print(f"인쇄 중 오류 발생: {str(e)}")
+            logging.error(f"인쇄 중 오류 발생: {str(e)}")
             self.print_success = False
         else:
             self.print_success = True
 
-    def print_finished(self, result):
+    def print_finished(self):
         if self.print_success:
             QMessageBox.information(self, self.tr("인쇄 완료"), self.tr("지도가 성공적으로 출력되었습니다."))
         else:
@@ -245,6 +256,7 @@ class PriorityMapView(QDialog):
 
         self.setLayout(layout)
 
+    @logger_decorator
     def parse_mgrs(self, mgrs_string):
         """MGRS 문자열을 파싱하고 유효성을 검사하는 메서드"""
         mgrs_string = re.sub(r'\s+', '', mgrs_string)
@@ -263,7 +275,7 @@ class PriorityMapView(QDialog):
             # 기본 한국 지도 표시
             data = io.BytesIO()
             self.map.save(data, close_file=False)
-            self.map_view.setHtml(data.getvalue().decode())
+            self.map_view.setHtml(data.getvalue().decode(), QUrl())
             return
 
         m_conv = mgrs.MGRS()
@@ -327,14 +339,15 @@ class PriorityMapView(QDialog):
                 ).add_to(self.map)
 
             except Exception as e:
-                print(self.tr(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}"))
+                logging.error(self.tr(f"MGRS 좌표 변환 오류 {mgrs_coord}: {e}"))
                 continue
 
         data = io.BytesIO()
         self.map.save(data, close_file=False)
         self.map_view.setHtml(data.getvalue().decode())
 
-    def print_map(self):
+    @logger_decorator
+    def print_map(self, *args):  # *args를 추가하여 추가 인자를 무시합니다.
         self.printer = QPrinter(QPrinter.HighResolution)
         self.printer.setPageOrientation(QPageLayout.Landscape)
         self.printer.setPageSize(QPageSize(QPageSize.A4))
@@ -371,12 +384,12 @@ class PriorityMapView(QDialog):
             info_font = QFont("Arial", 8)
             painter.setFont(info_font)
             current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-            info_text = f"인쇄 일시: {current_time}"
+            info_text = self.tr(f"인쇄 일시: {current_time}")
             painter.drawText(page_rect.adjusted(10, -20, -10, -10), Qt.AlignBottom | Qt.AlignRight, info_text)
 
             painter.end()
         except Exception as e:
-            print(f"인쇄 중 오류 발생: {str(e)}")
+            logging.error(self.tr(f"인쇄 중 오류 발생: {str(e)}"))
             self.print_success = False
         else:
             self.print_success = True
@@ -430,6 +443,7 @@ class DefenseAssetMapView(QDialog):
         self.show_defense_radius = state == Qt.Checked
         self.load_map(self.coordinates_list)
 
+    @logger_decorator
     def parse_mgrs(self, mgrs_string):
         """MGRS 문자열을 파싱하고 유효성을 검사하는 메서드"""
         mgrs_string = re.sub(r'\s+', '', mgrs_string)
@@ -579,7 +593,8 @@ class DefenseAssetMapView(QDialog):
             fillOpacity=0.2
         ).add_to(self.map)
 
-    def print_map(self):
+    @logger_decorator
+    def print_map(self, *args):  # *args를 추가하여 추가 인자를 무시합니다.
         self.printer = QPrinter(QPrinter.HighResolution)
         self.printer.setPageOrientation(QPageLayout.Landscape)
         self.printer.setPageSize(QPageSize(QPageSize.A4))
@@ -623,7 +638,7 @@ class DefenseAssetMapView(QDialog):
 
             painter.end()
         except Exception as e:
-            print(self.tr(f"인쇄 중 오류 발생: {str(e)}"))
+            logging.error(self.tr(f"인쇄 중 오류 발생: {str(e)}"))
             self.print_success = False
         else:
             self.print_success = True

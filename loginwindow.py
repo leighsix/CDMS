@@ -5,6 +5,30 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTranslator, QLocale, QLibraryInfo, QObject, QPoint, QRectF, QRect, QSize, QPointF
 from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QPushButton, QVBoxLayout
 from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
+import bcrypt
+import os
+import time
+
+
+def escape_filter_chars(input_string):
+    try:
+        from ldap3.utils.conv import escape_filter_chars
+        return escape_filter_chars(input_string)
+    except ImportError:
+        filtered_string = input_string.replace("'", "''")
+        filtered_string = filtered_string.replace(";", "")
+        filtered_string = filtered_string.replace("--", "")
+        filtered_string = filtered_string.replace("/*", "")
+        filtered_string = filtered_string.replace("*/", "")
+        return filtered_string
+
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password.hex(), salt.hex()
+
+def verify_password(password, hashed_password, salt):
+    return bcrypt.checkpw(password.encode('utf-8'), bytes.fromhex(hashed_password))
 
 class TitleLabel(QLabel):
     def __init__(self, title, subtitle, parent=None):
@@ -201,46 +225,74 @@ class LoginWindow(QDialog, QObject):
     def init_database(self):
         conn = sqlite3.connect('user_credentials.db')
         cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                username TEXT PRIMARY KEY,
-                password TEXT,
-                db_name TEXT
-            )
-        ''')
-        conn = sqlite3.connect('user_credentials.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
-        count = cursor.fetchone()[0]
-        if count == 0:
-            id_list = ['navy', 'army', 'airforce']
-            cursor.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", ('admin', 'admin', 'assets_management.db'))
-            for id in id_list:
-                cursor.execute("INSERT OR REPLACE INTO users VALUES (?, ?, ?)", (id, id, f'assets_{id}.db'))
-            conn.commit()
-        conn.close()
+        try:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    username TEXT PRIMARY KEY,
+                    password TEXT,
+                    salt TEXT,
+                    db_name TEXT,
+                    failed_login_attempts INTEGER DEFAULT 0,
+                    last_failed_login REAL DEFAULT 0
+                )
+            ''')
+            cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                id_list = ['navy', 'army', 'airforce']
+                for id in ['admin'] + id_list:
+                    hashed_password, salt = hash_password(id)
+                    db_name = 'assets_management.db' if id == 'admin' else f'assets_{id}.db'
+                    cursor.execute("INSERT INTO users (username, password, salt, db_name) VALUES (?, ?, ?, ?)",
+                                   (id, hashed_password, salt, db_name))
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"데이터베이스 오류: {e}")
+            conn.rollback()
+        finally:
+            conn.close()
+
 
     def login(self):
         username = self.username_input.text()
         password = self.password_input.text()
-
         conn = sqlite3.connect('user_credentials.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
-        user = cursor.fetchone()
-        conn.close()
-
-        if user:
-            self.show_message(self.tr("로그인 성공"), self.tr("로그인에 성공했습니다."), QMessageBox.Information)
-            self.username = username
-            self.db_name = user[2]  # 데이터베이스 파일명 저장
-            self.accept()
-        else:
-            self.show_message(self.tr("로그인 실패"), self.tr("아이디 또는 비밀번호가 잘못되었습니다."), QMessageBox.Critical)
-            # 로그인 실패 시 입력 필드 초기화
+        try:
+            username = escape_filter_chars(username)
+            cursor.execute(
+                "SELECT password, salt, db_name, failed_login_attempts, last_failed_login FROM users WHERE username = ?",
+                (username,))
+            result = cursor.fetchone()
+            if result:
+                stored_password, salt, self.db_name, failed_attempts, last_failed = result
+                if failed_attempts >= 5 and time.time() - last_failed < 600:
+                    raise ValueError("로그인 시도 횟수 초과. 10분 후 다시 시도하세요.")
+                if verify_password(password, stored_password, salt):
+                    cursor.execute(
+                        "UPDATE users SET failed_login_attempts = 0, last_failed_login = 0 WHERE username = ?",
+                        (username,))
+                    conn.commit()
+                    self.show_message(self.tr("로그인 성공"), self.tr("로그인에 성공했습니다."), QMessageBox.Information)
+                    self.username = username
+                    self.accept()
+                else:
+                    cursor.execute(
+                        "UPDATE users SET failed_login_attempts = failed_login_attempts + 1, last_failed_login = ? WHERE username = ?",
+                        (time.time(), username,))
+                    conn.commit()
+                    raise ValueError("비밀번호가 일치하지 않습니다.")
+            else:
+                raise ValueError("존재하지 않는 사용자입니다.")
+        except (sqlite3.Error, ValueError) as e:
+            print(f"로그인 오류: {e}")
+            self.show_message(self.tr("로그인 실패"), self.tr(str(e)), QMessageBox.Critical)
             self.username_input.clear()
             self.password_input.clear()
             self.username_input.setFocus()
+        finally:
+            conn.close()
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = LoginWindow()

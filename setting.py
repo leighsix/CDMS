@@ -2,61 +2,103 @@ import sys
 from PyQt5.QtWidgets import QMainWindow, QApplication, QLabel, QVBoxLayout, QWidget, QDialog, QHBoxLayout, QCheckBox, QPushButton, QLineEdit, QComboBox
 import os
 import configparser
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton, QGridLayout, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton, QGridLayout, QMessageBox, QGroupBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import folium
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
 
 
 
 class SettingWindow(QDialog):
     settingsChanged = pyqtSignal(dict)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("지도 설정"))
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f0f0f0;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #2c3e50;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QLineEdit, QComboBox {
+                background-color: white;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                padding: 5px;
+                font-size: 13px;
+            }
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
         self.initUI()
         self.loadSettings()
 
     def initUI(self):
         layout = QVBoxLayout()
+        layout.setSpacing(15)
 
         # 초기 위치 설정
+        location_group = QGroupBox(self.tr("초기 위치"))
         location_layout = QHBoxLayout()
-        location_layout.addWidget(QLabel(self.tr("초기 위치:")))
         self.lat_input = QLineEdit()
         self.lon_input = QLineEdit()
+        location_layout.addWidget(QLabel(self.tr("위도:")))
         location_layout.addWidget(self.lat_input)
+        location_layout.addWidget(QLabel(self.tr("경도:")))
         location_layout.addWidget(self.lon_input)
-        layout.addLayout(location_layout)
+        location_group.setLayout(location_layout)
+        layout.addWidget(location_group)
 
         # 줌 레벨 설정
+        zoom_group = QGroupBox(self.tr("줌 레벨"))
         zoom_layout = QHBoxLayout()
-        zoom_layout.addWidget(QLabel(self.tr("줌 레벨:")))
         self.zoom_input = QLineEdit()
+        zoom_layout.addWidget(QLabel(self.tr("줌:")))
         zoom_layout.addWidget(self.zoom_input)
-        layout.addLayout(zoom_layout)
+        zoom_group.setLayout(zoom_layout)
+        layout.addWidget(zoom_group)
 
         # 지도 스타일 설정
-        map_style_layout = QGridLayout()
-        map_style_layout.addWidget(QLabel(self.tr("지도 스타일:")), 0, 0)
+        style_group = QGroupBox(self.tr("지도 스타일"))
+        style_layout = QHBoxLayout()
         self.style_combo = QComboBox()
         self.style_combo.addItems(
-            ["OpenStreetMap", "Cartodb Positron", "CartoDB Voyager", "Stamen Terrain", "Stamen Watercolor"])
-        map_style_layout.addWidget(self.style_combo, 0, 1)
-
-        layout.addLayout(map_style_layout)
+            ["OpenStreetMap", "Cartodb Positron", "CartoDB Voyager"])
+        style_layout.addWidget(QLabel(self.tr("스타일:")))
+        style_layout.addWidget(self.style_combo)
+        style_group.setLayout(style_layout)
+        layout.addWidget(style_group)
 
         # 저장 및 취소 버튼
         button_layout = QHBoxLayout()
         save_button = QPushButton(self.tr("저장"))
         save_button.clicked.connect(self.saveSettings)
+        save_button.setIcon(QIcon("image/save.png"))
         cancel_button = QPushButton(self.tr("취소"))
         cancel_button.clicked.connect(self.reject)
+        cancel_button.setIcon(QIcon("image/cancel.png"))
         button_layout.addWidget(save_button)
         button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+
+    # loadSettings 및 saveSettings 메서드는 이전과 동일하게 유지
 
     def loadSettings(self):
         config = configparser.ConfigParser()
@@ -169,10 +211,6 @@ class MapApp(QMainWindow):
             "OpenStreetMap": {"tiles": "OpenStreetMap", "attr": "© OpenStreetMap contributors"},
             "Cartodb Positron": {"tiles": "cartodbpositron", "attr": "© OpenStreetMap contributors © CARTO"},
             "CartoDB Voyager": {"tiles": "cartodbvoyager", "attr": "© OpenStreetMap contributors © CARTO"},
-            "Stamen Terrain": {"tiles": "Stamen Terrain",
-                               "attr": "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."},
-            "Stamen Watercolor": {"tiles": "Stamen Watercolor",
-                                  "attr": "Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL."}
         }
 
 

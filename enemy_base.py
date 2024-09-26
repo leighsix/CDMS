@@ -30,14 +30,24 @@ class EnemyBaseInputDialog(QDialog):
         self.parent = parent
         self.edit_mode = edit_mode
         self.enemy_data = enemy_data
-        self.setWindowTitle(self.tr("적 미사일 발사기지 입력"))
+        self.setWindowIcon(QIcon("image/logo.png"))
         self.setMinimumSize(800, 600)
         self.enemy_id = None
         self.enemy_base_fields = {}
         self.initUI()
+        self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
+
 
     def initUI(self):
+        # 창 제목 및 아이콘 설정
+        if self.edit_mode:
+            self.setWindowTitle(self.tr("적 미사일 기지 정보 수정"))
+            if hasattr(self, 'enemy_data') and self.enemy_data:
+                self.populate_fields()
+        else:
+            self.setWindowTitle(self.tr("적 미사일 기지 정보 입력"))
         # 메인 레이아웃 설정
+
         layout = QVBoxLayout()
         layout.setSpacing(20)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -162,24 +172,23 @@ class EnemyBaseInputDialog(QDialog):
         # 메인 레이아웃 설정
         self.setLayout(layout)
 
-        # 창 제목 및 아이콘 설정
-        if self.edit_mode:
-            self.setWindowTitle(self.tr("적 미사일 기지 정보 수정"))
-            self.setWindowIcon(QIcon("logo.png"))
-            if hasattr(self, 'enemy_data') and self.enemy_data:
-                self.populate_fields()
-        else:
-            self.setWindowTitle(self.tr("적 미사일 기지 정보 입력"))
-            self.setWindowIcon(QIcon("logo.png"))
-
     def convert_to_mgrs(self):
         lat_widget, lon_widget = self.enemy_base_fields[(self.tr("위도"), self.tr("경도"))]
         lat_input = lat_widget.text()
         lon_input = lon_widget.text()
 
+        # 입력 형식 검증
+        lat_pattern = r'^[NS]\d{2}\.\d{5}'
+        lon_pattern = r'^[EW]\d{3}\.\d{5}'
+
+        if not re.match(lat_pattern, lat_input) or not re.match(lon_pattern, lon_input):
+            QMessageBox.warning(self, "입력 오류",
+                                "위도와 경도 형식이 올바르지 않습니다.\n올바른 형식: N##.##### 또는 S##.#####, E###.##### 또는 W###.#####")
+            return
+
         try:
-            lat = float(lat_input[1:])  # 'N' 또는 'S' 제거
-            lon = float(lon_input[1:])  # 'E' 또는 'W' 제거
+            lat = float(lat_input[1:])  # 'N' 또는 'S'
+            lon = float(lon_input[1:])  # 'E' 또는 'W'
 
             if lat_input.startswith('S'):
                 lat = -lat
@@ -190,7 +199,9 @@ class EnemyBaseInputDialog(QDialog):
             mgrs_coord = m.toMGRS(lat, lon)
             self.enemy_base_fields[self.tr("군사좌표(MGRS)")].setText(mgrs_coord)
         except ValueError as e:
-            print(f"좌표 변환 오류: {e}")
+            QMessageBox.warning(self, "변환 오류", f"좌표 변환 중 오류가 발생했습니다: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"예기치 않은 오류가 발생했습니다: {e}")
 
     def save_data(self):
         try:
@@ -207,9 +218,14 @@ class EnemyBaseInputDialog(QDialog):
                     enemy_data[label] = tuple(
                         f.text().strip() if isinstance(f, QLineEdit) else f.toPlainText().strip() for f in field)
 
-            # 새로운 형식으로 변경
+            # 경위도 검증
             lat_lon_key = (self.tr("위도"), self.tr("경도"))
             lat, lon = enemy_data[lat_lon_key]
+            if not self.validate_latitude(lat) or not self.validate_longitude(lon):
+                QMessageBox.warning(self, self.tr("경고"), self.tr(
+                    "올바른 경위도 형식을 입력해주세요.\n위도: N##.##### 또는 S##.#####\n경도: E###.##### 또는 W###.#####"))
+                return
+
             lat_lon = f"{lat},{lon}"
 
             try:
@@ -287,6 +303,14 @@ class EnemyBaseInputDialog(QDialog):
                         stored_weapons = self.enemy_data[5].split(", ")
                         for checkbox in self.weapon_checkboxes:
                             checkbox.setChecked(checkbox.text() in stored_weapons)
+
+    def validate_latitude(self, lat):
+        pattern = r'^[NS]\d{2}\.\d{5}'
+        return bool(re.match(pattern, lat))
+
+    def validate_longitude(self, lon):
+        pattern = r'^[EW]\d{3}\.\d{5}'
+        return bool(re.match(pattern, lon))
 
 class EnemyBaseWindow(QDialog):
     def __init__(self, parent):
@@ -821,68 +845,6 @@ class CoordinateEdit(UnderlineEdit):
         super().__init__(parent)
         self.coordinate_type = coordinate_type
         self.setPlaceholderText(f"예: {'N39.99999' if coordinate_type == '위도' else 'E128.99999'}")
-        self.other_edit = None
-
-    def set_other_edit(self, other_edit):
-        self.other_edit = other_edit
-
-    def focusOutEvent(self, event):
-        super().focusOutEvent(event)
-        self.validate_input()
-
-    def validate_input(self):
-        if not self.text():
-            return
-
-        pattern = r'^[NS]?\d{1,2}\.\d{5}$' if self.coordinate_type == '위도' else r'^[EW]?\d{1,3}\.\d{5}$'
-        if not re.match(pattern, self.text()):
-            self.show_warning(f"{self.coordinate_type} 형식이 올바르지 않습니다.\n예시: {'N39.99999' if self.coordinate_type == '위도' else 'E128.99999'}")
-        else:
-            if self.other_edit and self.other_edit.text():
-                other_pattern = r'^[EW]?\d{1,3}\.\d{5}$' if self.coordinate_type == '위도' else r'^[NS]?\d{1,2}\.\d{5}$'
-                if not re.match(other_pattern, self.other_edit.text()):
-                    self.other_edit.show_warning(f"{'경도' if self.coordinate_type == '위도' else '위도'} 형식이 올바르지 않습니다.\n예시: {'E128.99999' if self.coordinate_type == '위도' else 'N39.99999'}")
-
-    def show_warning(self, message):
-        dialog = WarningDialog(message, self)
-        dialog.exec_()
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-
-class WarningDialog(QDialog):
-    def __init__(self, message, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("경고")
-        self.setWindowIcon(QIcon("warning_icon.png"))  # 경고 아이콘 추가 (아이콘 파일 필요)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.setStyleSheet("background-color: #FFF0F0;")
-
-        layout = QVBoxLayout()
-
-        warning_label = QLabel(message)
-        warning_label.setStyleSheet("color: #D32F2F; font-size: 14px;")
-        warning_label.setWordWrap(True)
-        warning_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(warning_label)
-
-        ok_button = QPushButton("확인")
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #D32F2F;
-                color: white;
-                border: none;
-                padding: 5px 15px;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #FF5252;
-            }
-        """)
-        ok_button.clicked.connect(self.accept)
-        layout.addWidget(ok_button, alignment=Qt.AlignCenter)
-
-        self.setLayout(layout)
 
 class MainWindow(QtWidgets.QMainWindow, QObject):
     def __init__(self):

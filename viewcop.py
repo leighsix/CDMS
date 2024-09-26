@@ -638,13 +638,31 @@ class ViewCopWindow(QDialog):
 
     @staticmethod
     def get_weapon_radius(weapon):
-        # 무기 종류에 따른 위협 반경 반환
-        weapon_radii = {
-            "Scud-B": 270000,
-            "Scud-C": 450000,
-            "Nodong": 1000000
-        }
-        return weapon_radii.get(weapon, 0)
+        # JSON 파일 경로
+        json_file_path = 'missile_info.json'
+
+        # JSON 파일이 존재하는지 확인
+        if not os.path.exists(json_file_path):
+            print(f"오류: {json_file_path} 파일을 찾을 수 없습니다.")
+            return 0
+
+        try:
+            # JSON 파일 읽기
+            with open(json_file_path, 'r', encoding='utf-8') as file:
+                weapon_data = json.load(file)
+
+            # 무기 정보 가져오기
+            weapon_info = weapon_data.get(weapon, {})
+
+            # 반경 정보 반환 (정수로 변환)
+            return int(weapon_info.get('radius', 0))
+
+        except json.JSONDecodeError:
+            print(f"오류: {json_file_path} 파일의 JSON 형식이 올바르지 않습니다.")
+            return 0
+        except Exception as e:
+            print(f"오류 발생: {str(e)}")
+            return 0
 
     @staticmethod
     def get_defense_radius(weapon):
