@@ -388,7 +388,7 @@ class ViewDefenseAssetWindow(QWidget):
             weapon_systems = json.load(file)
 
         # '전체' 항목을 포함한 무기체계 목록 생성
-        weapon_system_list = ['전체'] + list(weapon_systems.keys())
+        weapon_system_list = [self.tr('전체')] + list(weapon_systems.keys())
         # 무기체계 이름들을 콤보박스에 추가
         self.weapon_filter.addItems(weapon_system_list)
         self.weapon_filter.setFixedSize(150, 30)

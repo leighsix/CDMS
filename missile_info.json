@@ -1,14 +1,61 @@
 {
     "Scud-B": {
-        "radius": "270000",
-        "function": "단거리 탄도미사일 (SRBM)"
+        "min_radius": 100,
+        "max_radius": 270,
+        "function": "단거리 탄도미사일 (SRBM)",
+        "trajectory_coefficients": {
+            "alpha": {
+                "a1": -0.0974,
+                "a2": -0.0262,
+                "b1": -0.0215,
+                "b2": -0.006
+
+            },
+            "beta": {
+                "a1": 2.75,
+                "a2": -0.0323,
+                "b1": 2.27,
+                "b2": -0.00246
+            }
+        }
     },
     "Scud-C": {
-        "radius": "450000",
-        "function": "단거리 탄도미사일 (SRBM)"
+        "min_radius": 270,
+        "max_radius": 450,
+        "function": "단거리 탄도미사일 (SRBM)",
+        "trajectory_coefficients": {
+            "alpha": {
+                "a1": -0.0955,
+                "a2": -0.0208,
+                "b1": -0.0177,
+                "b2": -0.00435
+            },
+            "beta": {
+                "a1": 2.457,
+                "a2": -0.023,
+                "b1": 2.48,
+                "b2": -0.00174
+
+            }
+        }
     },
     "Nodong": {
-        "radius": "1000000",
-        "function": "중거리 탄도미사일 (MRBM)"
+        "min_radius": 450,
+        "max_radius": 1000,
+        "function": "중거리 탄도미사일 (MRBM)",
+        "trajectory_coefficients": {
+            "alpha": {
+                "a1": -0.0152,
+                "a2": -0.0062,
+                "b1": -0.00426,
+                "b2": -0.00149
+            },
+            "beta": {
+                "a1": 41.44,
+                "a2": -0.0164,
+                "b1": 1.797,
+                "b2": -0.00059
+            }
+        }
     }
 }

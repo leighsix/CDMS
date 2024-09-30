@@ -270,7 +270,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         center_layout.addWidget(summary_table)
 
         # 저작권 정보
-        copyright_label = QLabel("© 2024 ROK AF LT.COL Jo Yongho and ROK Navy CDR(S) Cho Hyunchel. All rights reserved")
+        copyright_label = QLabel("© 2024 ROK AF LT.COL Jo Yongho and ROK Navy CDR Cho Hyunchel. All rights reserved.")
         copyright_label.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
         center_layout.addWidget(copyright_label)
 

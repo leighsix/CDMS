@@ -482,7 +482,7 @@ class DefenseAssetMapView(QDialog):
         # 무기 정보에 색상 추가
         for weapon, data in weapon_info.items():
             data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
-            data['radius'] = int(data['radius'])  # 반경을 정수로 변환
+            data['max_radius'] = int(data['max_radius'])  # 반경을 정수로 변환
             data['angle'] = int(data['angle'])
 
         # 범례 생성
@@ -504,9 +504,9 @@ class DefenseAssetMapView(QDialog):
                 lat, lon = m_conv.toLatLon(mgrs_full_str)
 
                 # 무기체계에 따른 색상 및 반경 선택
-                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0, "angle": 0})
+                info = weapon_info.get(weapon_system, {"color": "#000000", "max_radius": 0, "angle": 0})
                 color = info["color"]
-                radius = info["radius"]
+                radius = info["max_radius"]
                 angle = info["angle"]
 
                 # 커스텀 아이콘 생성
@@ -551,11 +551,11 @@ class DefenseAssetMapView(QDialog):
         html = data.getvalue().decode()
         self.map_view.setHtml(html)
 
-    def draw_defense_radius(self, lat, lon, threat_degree, color, radius, angle):
+    def draw_defense_radius(self, lat, lon, threat_degree, color, max_radius, angle):
         if angle == 360:
             folium.Circle(
                 location=[lat, lon],
-                radius=radius,
+                radius=max_radius,
                 color=color,
                 weight=1,
                 fill=True,
@@ -566,9 +566,9 @@ class DefenseAssetMapView(QDialog):
         else:
             start_angle = (threat_degree - (angle / 2) + 360) % 360
             end_angle = (threat_degree + (angle / 2) + 360) % 360
-            self.draw_sector(lat, lon, radius, start_angle, end_angle, color)
+            self.draw_sector(lat, lon, max_radius, start_angle, end_angle, color)
 
-    def draw_sector(self, lat, lon, radius, start_angle, end_angle, color):
+    def draw_sector(self, lat, lon, max_radius, start_angle, end_angle, color):
         points = [(lat, lon)]  # 중심점 추가
 
         # 시계 방향으로 각도 계산
@@ -578,8 +578,8 @@ class DefenseAssetMapView(QDialog):
             angles = [i for i in range(int(start_angle), int(end_angle) + 1)]
         for ang in angles:
             rad = math.radians(90 - ang)
-            x = lon + (radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
-            y = lat + (radius / 111000) * math.sin(rad)
+            x = lon + (max_radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
+            y = lat + (max_radius / 111000) * math.sin(rad)
             points.append((y, x))
 
         points.append((lat, lon))  # 중심점 다시 추가하여 폐곡선 만들기

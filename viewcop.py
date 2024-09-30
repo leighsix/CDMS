@@ -282,7 +282,11 @@ class ViewCopWindow(QDialog):
 
         # 미사일 타입 콤보박스
         self.missile_type_combo = QComboBox()
-        self.missile_type_combo.addItems(["전체", "Scud-B", "Scud-C", "Nodong"])
+        with open('missile_info.json', 'r', encoding='utf-8') as file:
+            missile_types = json.load(file)
+        missile_types_list = [self.tr('전체')] + list(missile_types.keys())
+        # 무기체계 이름들을 콤보박스에 추가
+        self.missile_type_combo.addItems(missile_types_list)
         self.missile_type_combo.currentTextChanged.connect(self.load_enemy_missile_sites)
         self.enemy_filter_layout.addWidget(self.missile_type_combo)
 
@@ -424,7 +428,6 @@ class ViewCopWindow(QDialog):
 
         self.assets_table.uncheckAllRows()
         self.assets_table.setRowCount(len(page_df))
-        self.update_map()
         for row, (_, asset) in enumerate(page_df.iterrows()):
             checkbox = CenteredCheckBox()
             self.assets_table.setCellWidget(row, 0, checkbox)
@@ -434,6 +437,7 @@ class ViewCopWindow(QDialog):
                 item.setTextAlignment(Qt.AlignCenter)
                 self.assets_table.setItem(row, col, item)
 
+        self.update_map()
         self.update_pagination()
 
     def load_enemy_missile_sites(self):
@@ -454,7 +458,6 @@ class ViewCopWindow(QDialog):
 
         self.enemy_sites_table.uncheckAllRows()
         self.enemy_sites_table.setRowCount(len(filtered_df))
-        self.update_map()
         for row, (_, base) in enumerate(filtered_df.iterrows()):
             checkbox = CenteredCheckBox()
             self.enemy_sites_table.setCellWidget(row, 0, checkbox)
@@ -463,6 +466,7 @@ class ViewCopWindow(QDialog):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.enemy_sites_table.setItem(row, col, item)
+        self.update_map()
 
     def load_threat_cal(self):
         self.threat_cal_table.clearContents()

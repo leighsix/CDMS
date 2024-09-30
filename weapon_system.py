@@ -27,14 +27,20 @@ class WeaponSystemWindow(QDialog):
 
         form_layout = QFormLayout()
         self.name_edit = QLineEdit()
-        self.radius_edit = QLineEdit()
-        self.radius_edit.setInputMask("9999999")
+        self.min_altitude_edit = QLineEdit()
+        self.min_altitude_edit.setInputMask("9999999")
+        self.max_altitude_edit = QLineEdit()
+        self.max_altitude_edit.setInputMask("9999999")
+        self.min_radius_edit = QLineEdit()
+        self.min_radius_edit.setInputMask("9999999")
+        self.max_radius_edit = QLineEdit()
+        self.max_radius_edit.setInputMask("9999999")
         self.angle_edit = QLineEdit()
         self.angle_edit.setInputMask("999")
         self.function_edit = QTextEdit()  # QLineEdit에서 QTextEdit로 변경
         self.function_edit.setMinimumHeight(100)  # 최소 높이 설정
 
-        for edit in [self.name_edit, self.radius_edit, self.angle_edit]:
+        for edit in [self.name_edit, self.min_altitude_edit, self.max_altitude_edit, self.min_radius_edit, self.max_radius_edit, self.angle_edit]:
             edit.setStyleSheet("QLineEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
 
         self.function_edit.setStyleSheet("QTextEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
@@ -45,8 +51,14 @@ class WeaponSystemWindow(QDialog):
         # 라벨 생성 및 스타일 적용
         name_label = QLabel(self.tr("무기체계명:"))
         name_label.setStyleSheet(label_style)
-        radius_label = QLabel(self.tr("방어반경:"))
-        radius_label.setStyleSheet(label_style)
+        min_altitude_label = QLabel(self.tr("최저요격고도:"))
+        min_altitude_label.setStyleSheet(label_style)
+        max_altitude_label = QLabel(self.tr("최고요격고도:"))
+        max_altitude_label.setStyleSheet(label_style)
+        min_radius_label = QLabel(self.tr("최소방어반경:"))
+        min_radius_label.setStyleSheet(label_style)
+        max_radius_label = QLabel(self.tr("최대방어반경:"))
+        max_radius_label.setStyleSheet(label_style)
         angle_label = QLabel(self.tr("방어각:"))
         angle_label.setStyleSheet(label_style)
         function_label = QLabel(self.tr("주요기능:"))
@@ -54,7 +66,10 @@ class WeaponSystemWindow(QDialog):
 
         # 폼 레이아웃에 라벨과 입력 필드 추가
         form_layout.addRow(name_label, self.name_edit)
-        form_layout.addRow(radius_label, self.radius_edit)
+        form_layout.addRow(min_altitude_label, self.min_altitude_edit)
+        form_layout.addRow(max_altitude_label, self.max_altitude_edit)
+        form_layout.addRow(min_radius_label, self.min_radius_edit)
+        form_layout.addRow(max_radius_label, self.max_radius_edit)
         form_layout.addRow(angle_label, self.angle_edit)
         form_layout.addRow(function_label, self.function_edit)
 
@@ -80,8 +95,8 @@ class WeaponSystemWindow(QDialog):
         right_layout = QVBoxLayout(right_widget)
 
         self.table = MyTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["", self.tr("무기체계명"), self.tr("방어반경"), self.tr("방어각"), self.tr("주요기능")])
+        self.table.setColumnCount(8)
+        self.table.setHorizontalHeaderLabels(["", self.tr("무기체계명"), self.tr("최저요격고도"), self.tr("최고요격고도"), self.tr("최소방어반경"), self.tr("최대방어반경"), self.tr("방어각"), self.tr("주요기능")])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
         self.table.setColumnWidth(0, 60)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
@@ -134,12 +149,24 @@ class WeaponSystemWindow(QDialog):
 
     def save_weapon_system(self):
         name = self.name_edit.text()
-        radius = self.radius_edit.text()
-        angle = self.angle_edit.text()
+        min_altitude = int(self.min_altitude_edit.text())
+        max_altitude = int(self.max_altitude_edit.text())
+        min_radius = int(self.min_radius_edit.text())
+        max_radius = int(self.max_radius_edit.text())
+        angle = int(self.angle_edit.text())
         function = self.function_edit.toPlainText()  # QTextEdit에서 텍스트를 가져오는 메서드 수정
 
-        if not all([name, radius, angle, function]):
+        if not all([name, min_altitude, max_altitude, min_radius, max_radius, angle, function]):
             QMessageBox.warning(self, self.tr("경고"), self.tr("모든 필드를 입력해주세요."))
+            return
+        try:
+            min_altitude = int(min_altitude)
+            max_altitude = int(max_altitude)
+            min_radius = int(min_radius)
+            max_radius = int(max_radius)
+            angle = int(angle)
+        except ValueError:
+            QMessageBox.warning(self, self.tr("경고"), self.tr("숫자 필드에 올바른 값을 입력해주세요."))
             return
 
         try:
@@ -156,9 +183,13 @@ class WeaponSystemWindow(QDialog):
                 return
 
         data[name] = {
-            'radius': radius,
-            'angle': angle,
-            'function': function
+            "min_radius": min_radius,
+            "max_radius": max_radius,
+            "min_altitude": min_altitude,
+            "max_altitude": max_altitude,
+            "angle": angle,
+            "function": function
+
         }
 
         with open('weapon_systems.json', 'w', encoding='utf-8') as file:
@@ -187,7 +218,7 @@ class WeaponSystemWindow(QDialog):
             self.table.insertRow(row)
             checkbox = CenteredCheckBox()
             self.table.setCellWidget(row, 0, checkbox)
-            for col, text in enumerate([name, info['radius'], info['angle'], info['function']], start=1):
+            for col, text in enumerate([name, info['min_altitude'], info['max_altitude'], info['min_radius'], info['max_radius'], info['angle'], info['function']], start=1):
                 item = QTableWidgetItem(str(text))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row, col, item)
@@ -200,11 +231,12 @@ class WeaponSystemWindow(QDialog):
         # 체크박스 열은 고정 너비 유지
         self.table.setColumnWidth(0, 60)
 
-
-
     def clear_inputs(self):
         self.name_edit.clear()
-        self.radius_edit.clear()
+        self.min_altitude_edit.clear()
+        self.max_altitude_edit.clear()
+        self.min_radius_edit.clear()
+        self.max_radius_edit.clear()
         self.angle_edit.clear()
         self.function_edit.clear()
 
@@ -221,9 +253,13 @@ class WeaponSystemWindow(QDialog):
 
         row = checked_rows[0]
         self.name_edit.setText(self.table.item(row, 1).text())
-        self.radius_edit.setText(self.table.item(row, 2).text())
-        self.angle_edit.setText(self.table.item(row, 3).text())
-        self.function_edit.setText(self.table.item(row, 4).text())
+        self.min_altitude_edit.setText(self.table.item(row, 2).text())
+        self.max_altitude_edit.setText(self.table.item(row, 3).text())
+        self.min_radius_edit.setText(self.table.item(row, 4).text())
+        self.max_radius_edit.setText(self.table.item(row, 5).text())
+        self.angle_edit.setText(self.table.item(row, 6).text())
+        self.function_edit.setText(self.table.item(row, 7).text())
+
 
     def delete_weapon_system(self):
         checked_rows = []

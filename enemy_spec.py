@@ -27,12 +27,17 @@ class EnemySpecWindow(QDialog):
 
         form_layout = QFormLayout()
         self.name_edit = QLineEdit()
-        self.radius_edit = QLineEdit()
-        self.radius_edit.setInputMask("9999999")
+        self.min_radius_edit = QLineEdit()
+        self.min_radius_edit.setInputMask("9999999")
+        self.min_radius_edit.setPlaceholderText("99999km")
+
+        self.max_radius_edit = QLineEdit()
+        self.max_radius_edit.setInputMask("9999999")
+        self.max_radius_edit.setPlaceholderText("99999km")
         self.function_edit = QTextEdit()  # QLineEdit에서 QTextEdit로 변경
         self.function_edit.setMinimumHeight(100)  # 최소 높이 설정
 
-        for edit in [self.name_edit, self.radius_edit]:
+        for edit in [self.name_edit, self.min_radius_edit, self.max_radius_edit]:
             edit.setStyleSheet("QLineEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
 
         self.function_edit.setStyleSheet("QTextEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
@@ -43,14 +48,17 @@ class EnemySpecWindow(QDialog):
         # 라벨 생성 및 스타일 적용
         name_label = QLabel(self.tr("미사일명:"))
         name_label.setStyleSheet(label_style)
-        radius_label = QLabel(self.tr("위협반경:"))
-        radius_label.setStyleSheet(label_style)
+        min_radius_label = QLabel(self.tr("최소위협반경:"))
+        min_radius_label.setStyleSheet(label_style)
+        max_radius_label = QLabel(self.tr("최대위협반경:"))
+        max_radius_label.setStyleSheet(label_style)
         function_label = QLabel(self.tr("주요기능:"))
         function_label.setStyleSheet(label_style)
 
         # 폼 레이아웃에 라벨과 입력 필드 추가
         form_layout.addRow(name_label, self.name_edit)
-        form_layout.addRow(radius_label, self.radius_edit)
+        form_layout.addRow(min_radius_label, self.min_radius_edit)
+        form_layout.addRow(max_radius_label, self.max_radius_edit)
         form_layout.addRow(function_label, self.function_edit)
 
         left_layout.addLayout(form_layout)
@@ -75,13 +83,15 @@ class EnemySpecWindow(QDialog):
         right_layout = QVBoxLayout(right_widget)
 
         self.table = MyTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["", self.tr("미사일명"), self.tr("위협반경"), self.tr("주요기능")])
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["", self.tr("미사일명"), self.tr("최소위협반경"), self.tr("최대위협반경"), self.tr("주요기능")])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
         self.table.setColumnWidth(0, 60)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+
         self.table.setAlternatingRowColors(True)
         self.table.setStyleSheet(
             "QTableWidget { background-color: #f8f9fa; border: 1px solid #dee2e6; }"
@@ -128,10 +138,11 @@ class EnemySpecWindow(QDialog):
 
     def save_missile_info(self):
         name = self.name_edit.text()
-        radius = self.radius_edit.text()
+        min_radius = int(self.min_radius_edit.text())
+        max_radius = int(self.max_radius_edit.text())
         function = self.function_edit.toPlainText()  # QTextEdit에서 텍스트를 가져오는 메서드 수정
 
-        if not all([name, radius, function]):
+        if not all([name, min_radius, max_radius, function]):
             QMessageBox.warning(self, self.tr("경고"), self.tr("모든 필드를 입력해주세요."))
             return
 
@@ -149,7 +160,8 @@ class EnemySpecWindow(QDialog):
                 return
 
         data[name] = {
-            'radius': radius,
+            'min_radius': min_radius,
+            'max_radius': max_radius,
             'function': function
         }
 
@@ -179,7 +191,7 @@ class EnemySpecWindow(QDialog):
             self.table.insertRow(row)
             checkbox = CenteredCheckBox()
             self.table.setCellWidget(row, 0, checkbox)
-            for col, text in enumerate([name, info['radius'], info['function']], start=1):
+            for col, text in enumerate([name, info['min_radius'], info['max_radius'], info['function']], start=1):
                 item = QTableWidgetItem(str(text))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row, col, item)
@@ -196,7 +208,8 @@ class EnemySpecWindow(QDialog):
 
     def clear_inputs(self):
         self.name_edit.clear()
-        self.radius_edit.clear()
+        self.min_radius_edit.clear()
+        self.max_radius_edit.clear()
         self.function_edit.clear()
 
     def edit_missile_info(self):
@@ -212,8 +225,9 @@ class EnemySpecWindow(QDialog):
 
         row = checked_rows[0]
         self.name_edit.setText(self.table.item(row, 1).text())
-        self.radius_edit.setText(self.table.item(row, 2).text())
-        self.function_edit.setText(self.table.item(row, 3).text())
+        self.min_radius_edit.setText(self.table.item(row, 2).text())
+        self.max_radius_edit.setText(self.table.item(row, 3).text())
+        self.function_edit.setText(self.table.item(row, 4).text())
 
     def delete_missile_info(self):
         checked_rows = []

@@ -127,7 +127,7 @@ class DefenseAssetCommonMapView(QObject):
         # 무기 정보에 색상 추가
         for weapon, data in weapon_info.items():
             data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
-            data['radius'] = int(data['radius'])  # 반경을 정수로 변환
+            data['max_radius'] = int(data['max_radius'])  # 반경을 정수로 변환
             data['angle'] = int(data['angle'])
 
         defense_assets = self.tr("방어자산")
@@ -153,9 +153,9 @@ class DefenseAssetCommonMapView(QObject):
                 lat, lon = m_conv.toLatLon(mgrs_full_str)
 
                 # 무기체계에 따른 색상 및 반경 선택
-                info = weapon_info.get(weapon_system, {"color": "#000000", "radius": 0, "angle": 0})
+                info = weapon_info.get(weapon_system, {"color": "#000000", "max_radius": 0, "angle": 0})
                 color = info["color"]
-                radius = info["radius"]
+                max_radius = info["max_radius"]
                 angle = info["angle"]
                 # 커스텀 아이콘 생성
                 icon = folium.DivIcon(html=f"""
@@ -189,17 +189,17 @@ class DefenseAssetCommonMapView(QObject):
 
                 # 방어 반경 그리기
                 if self.show_defense_radius:
-                    self.draw_defense_radius(map_obj, lat, lon, threat_degree, color, radius, angle)
+                    self.draw_defense_radius(map_obj, lat, lon, threat_degree, color, max_radius, angle)
 
             except Exception as e:
                 logging.error(self.tr(f"오류발생: {e}"))
                 continue
 
-    def draw_defense_radius(self, map_obj, lat, lon, threat_degree, color, radius, angle):
+    def draw_defense_radius(self, map_obj, lat, lon, threat_degree, color, max_radius, angle):
         if angle == 360:
             folium.Circle(
                 location=[lat, lon],
-                radius=radius,
+                radius=max_radius,
                 color=color,
                 weight=1,
                 fill=True,
@@ -210,9 +210,9 @@ class DefenseAssetCommonMapView(QObject):
         else:
             start_angle = (threat_degree - (angle / 2) + 360) % 360
             end_angle = (threat_degree + (angle / 2) + 360) % 360
-            self.draw_sector(map_obj, lat, lon, radius, start_angle, end_angle, color)
+            self.draw_sector(map_obj, lat, lon, max_radius, start_angle, end_angle, color)
 
-    def draw_sector(self, map_obj, lat, lon, radius, start_angle, end_angle, color):
+    def draw_sector(self, map_obj, lat, lon, max_radius, start_angle, end_angle, color):
         points = [(lat, lon)]  # 중심점 추가
 
         # 시계 방향으로 각도 계산
@@ -222,8 +222,8 @@ class DefenseAssetCommonMapView(QObject):
             angles = [i for i in range(int(start_angle), int(end_angle) + 1)]
         for ang in angles:
             rad = math.radians(90 - ang)
-            x = lon + (radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
-            y = lat + (radius / 111000) * math.sin(rad)
+            x = lon + (max_radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
+            y = lat + (max_radius / 111000) * math.sin(rad)
             points.append((y, x))
 
         points.append((lat, lon))  # 중심점 다시 추가하여 폐곡선 만들기
