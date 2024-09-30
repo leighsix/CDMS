@@ -1,0 +1,12 @@
+type,name,latitude,longitude,range,altitude,angle
+missile_base,미사일 기지 1,39.0,127.0,,,
+missile_base,미사일 기지 2,39.5,126.5,,,
+missile_base,미사일 기지 3,40.0,127.5,,,
+defense_unit,방어 유닛 1,37.0,127.0,100,30,90
+defense_unit,방어 유닛 2,36.5,126.5,100,30,90
+defense_unit,방어 유닛 3,37.5,127.5,100,30,90
+defense_unit,방어 유닛 4,37.0,128.0,100,30,90
+defense_unit,방어 유닛 5,36.5,127.5,100,30,90
+core_defense_facility,핵심 방어 시설 1,37.5,127.0,,,
+core_defense_facility,핵심 방어 시설 2,37.0,126.5,,,
+core_defense_facility,핵심 방어 시설 3,36.5,127.5,,,
