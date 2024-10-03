@@ -26,6 +26,9 @@ import folium
 from branca.element import Figure
 import os
 import numpy as np
+import math
+from geopy import distance
+from geopy.point import Point
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -47,6 +50,7 @@ class MissileDefenseApp(QDialog):
         self.setMinimumSize(1200, 800)
         self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.load_dataframes()
+        self.trajectory_calculator = MissileTrajectoryCalculator()
         self.initUI()
         self.show_defense_radius = False
         self.show_threat_radius = False
@@ -535,7 +539,6 @@ class MissileDefenseApp(QDialog):
         with open("weapon_systems.json", "r", encoding="utf-8") as f:
             self.weapon_systems_info = json.load(f)
 
-
         self.load_cal_assets()
         self.load_enemy_missile_sites()
         self.load_dal_assets()
@@ -858,7 +861,7 @@ class MissileDefenseApp(QDialog):
                             target_mgrs_full = self.get_mgrs_from_dict(cal_asset_dic)
                             target_lat, target_lon = m_conv.toLatLon(target_mgrs_full)
 
-                            distance = self.calculate_distance(missile_lat, missile_lon, target_lat, target_lon)
+                            distance = self.trajectory_calculator.calculate_distance(missile_lat, missile_lon, target_lat, target_lon)
                             missile_type = self.determine_missile_type(distance, enemy_base_dic.get(self.tr('발사기지')))
 
                             if missile_type:
@@ -881,10 +884,16 @@ class MissileDefenseApp(QDialog):
                         except ValueError as e:
                             print(self.tr(f"MGRS 변환 오류: {e}"))
 
-            #QMessageBox.information(self, self.tr("성공"), self.tr("궤적 계산이 완료되었습니다."))
-
         except Exception as e:
             QMessageBox.critical(self, self.tr("에러"), self.tr(f"궤적 계산 중 오류 발생: {str(e)}"))
+
+    def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
+        """미사일 궤적을 계산하는 메서드 (MissileTrajectoryCalculator 사용)"""
+        try:
+            return self.trajectory_calculator.calculate_trajectory(missile_base, target, missile_type, defense_unit)
+        except Exception as e:
+            print(f"Error calculating trajectory: {e}")
+            return None
 
     def determine_missile_type(self, distance, base_name):
         """거리와 기지명에 따라 미사일 종류를 결정하는 메서드"""
@@ -902,6 +911,15 @@ class MissileDefenseApp(QDialog):
             return None
 
     @staticmethod
+    def calculate_bearing(lat1, lon1, lat2, lon2):
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlon = lon2 - lon1
+        y = math.sin(dlon) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+        bearing = math.atan2(y, x)
+        return math.degrees(bearing)
+
+    @staticmethod
     def calculate_distance(lat1, lon1, lat2, lon2):
         """두 지점 간의 거리를 계산하는 메서드 (km 단위)"""
         R = 6371  # 지구 반지름 (km)
@@ -912,42 +930,6 @@ class MissileDefenseApp(QDialog):
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         distance = R * c
         return distance
-
-    def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
-        """미사일 궤적을 계산하는 메서드 (수정됨 - 포물선 궤적 계산)"""
-        try:
-            B_lat, B_lon = missile_base
-            T_lat, T_lon = target
-
-            # 두 지점 간의 거리 계산 (km)
-            L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
-
-            # 미사일 계수 계산
-            coeff = self.missile_info[missile_type]["trajectory_coefficients"]
-            alpha = coeff["alpha"]["a1"] * math.exp(coeff["alpha"]["a2"] * L) + \
-                    coeff["alpha"]["b1"] * math.exp(coeff["alpha"]["b2"] * L)
-            beta = coeff["beta"]["a1"] * math.exp(coeff["beta"]["a2"] * L) + \
-                   coeff["beta"]["b1"] * math.exp(coeff["beta"]["b2"] * L)
-
-            # 탄도미사일 최대 고도 계산
-            Mz = (-(beta**2))/(4*alpha)
-
-            # 탄도미사일 궤적 계산 (포물선 형태)
-            x = np.linspace(0, L, 100)
-            y = alpha * (x**2) + beta * x
-            # 좌표 변환
-            trajectory = []
-            for i in range(len(x)):
-                # 발사 지점에서 x, y 거리만큼 떨어진 지점의 경위도 계산
-                lat = B_lat + (y[i] / 6371) * (180 / math.pi)
-                lon = B_lon + (x[i] / 6371) * (180 / math.pi) / math.cos(B_lat * math.pi / 180)
-                trajectory.append((lat, lon, y[i]))
-
-            return (missile_base, target, defense_unit, trajectory)
-
-        except Exception as e:
-            print(f"Error calculating trajectory: {e}")
-            return None
 
     def check_engagement_possibility(self, trajectory):
         """미사일 궤적이 방어 가능한지 확인하는 메서드"""
@@ -1062,6 +1044,7 @@ class MissileDefenseApp(QDialog):
             self.result_table.setItem(0, 1, QTableWidgetItem(str(defensible_trajectories)))
             self.result_table.setItem(0, 2, QTableWidgetItem(f"{defense_rate:.2f}%"))
             self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.result_table.verticalHeader().setVisible(False)
 
             # 지도 업데이트 (미사일 궤적 및 방어 궤적 표시)
             self.update_map_with_trajectories()
@@ -1080,7 +1063,7 @@ class MissileDefenseApp(QDialog):
             self.result_table.setColumnCount(2)
             self.result_table.setHorizontalHeaderLabels(["최적 위치", "방어 가능 자산 우선순위"])
             self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
+            self.result_table.verticalHeader().setVisible(False)
 
             for i, location in enumerate(self.optimized_locations):
                 # ... (최적 위치별 방어 가능 자산 우선순위 계산 및 테이블 업데이트)
@@ -1096,18 +1079,147 @@ class MissileDefenseApp(QDialog):
 
     def update_map_with_trajectories(self):
         """미사일 궤적 및 방어 궤적을 지도에 표시하는 메서드"""
+        # 새로운 지도 객체를 생성합니다.
         self.map = folium.Map(
             location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
             zoom_start=self.parent.map_app.loadSettings()['zoom'],
             tiles=self.parent.map_app.loadSettings()['style'])
 
+        # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
+        selected_assets = self.get_selected_assets()
+        selected_defense_assets = self.get_selected_defense_assets()
+        selected_enemy_bases = self.get_selected_enemy_bases()
+        if selected_assets:
+            CommonMapView(selected_assets, self.map)
+        if selected_defense_assets:
+            DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
+        if selected_enemy_bases:
+            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+        print(self.trajectories)
+        # 궤적을 지도에 추가합니다.
+        if hasattr(self, 'trajectories'):
+            for trajectory_data in self.trajectories:
+                # 데이터 구조에 따라 필요한 정보만 추출
+                missile_base = trajectory_data[0]
+                target = trajectory_data[1]
+                defense_unit = trajectory_data[2]
+                trajectory = trajectory_data[3]
+
+                # 미사일 궤적 (고도 정보를 이용한 곡선)
+                points = [(float(lat), float(lon), float(alt)) for lat, lon, alt in trajectory]
+
+                # 고도를 이용하여 강화된 곡선 효과 생성
+                curved_points = []
+                max_alt = max(alt for _, _, alt in points)
+                for i in range(len(points)):
+                    lat, lon, alt = points[i]
+                    # 고도에 따라 위도와 경도를 더 크게 조정하여 강한 곡선 효과 생성
+                    curve_factor = (alt / max_alt) * 0.05  # 최대 고도의 5%까지 곡률 적용
+                    if i > 0 and i < len(points) - 1:
+                        prev_lat, prev_lon, _ = points[i - 1]
+                        next_lat, next_lon, _ = points[i + 1]
+                        mid_lat = (prev_lat + next_lat) / 2
+                        mid_lon = (prev_lon + next_lon) / 2
+                        lat = lat + (mid_lat - lat) * curve_factor
+                        lon = lon + (mid_lon - lon) * curve_factor
+                    curved_points.append((lat, lon))
+
+                folium.PolyLine(
+                    locations=curved_points,
+                    color="red",
+                    weight=0.5,
+                    opacity=0.8
+                ).add_to(self.map)
+
+                # # 방어 가능한 궤적 표시
+                # if self.check_engagement_possibility(trajectory):
+                #     intercept_point = self.find_intercept_point(trajectory, defense_unit)
+                #     if intercept_point:
+                #         folium.PolyLine(
+                #             locations=[defense_unit[:2], intercept_point[:2]],
+                #             color="blue",
+                #             weight=1,
+                #             opacity=0.8
+                #         ).add_to(self.map)
+                #
+                #         # 방어 가능한 미사일 궤적 강조
+                #         folium.PolyLine(
+                #             locations=points,
+                #             color="green",
+                #             weight=2,
+                #             opacity=1
+                #         ).add_to(self.map)
+
+        # 지도를 HTML로 렌더링하고 웹뷰에 로드합니다.
+        data = io.BytesIO()
+        self.map.save(data, close_file=False)
+        html_content = data.getvalue().decode()
+        self.map_view.setHtml(html_content)
+
+        # 지도 로딩이 완료되었는지 확인합니다.
+        self.map_view.loadFinished.connect(self.on_map_load_finished)
+
+        # 지도 업데이트 후 화면을 갱신합니다.
+        self.map_view.update()
+
+    def find_intercept_point(self, trajectory, defense_unit):
+        """방어 가능한 교전 지점을 찾는 메서드"""
+        defense_lat, defense_lon, defense_altitude, defense_range, defense_altitude_range, defense_angle = defense_unit
+
+        for point in trajectory:
+            lat, lon, altitude = point
+            distance = self.calculate_distance(defense_lat, defense_lon, lat, lon)
+            if (defense_range[0] <= distance <= defense_range[1] and
+                    defense_altitude_range[0] <= altitude <= defense_altitude_range[1]):
+                return (lat, lon, altitude)
+
+        return None
+
+    def on_map_load_finished(self, result):
+        if result:
+            print("지도가 성공적으로 로드되었습니다.")
+        else:
+            print("지도 로딩에 실패했습니다.")
+
+    def update_map_with_optimized_locations(self):
+        """미사일 궤적, 방어 궤적, 격자, 최적 위치를 지도에 표시하는 메서드"""
+        # 새로운 지도 객체를 생성합니다.
+        self.map = folium.Map(
+            location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
+            zoom_start=self.parent.map_app.loadSettings()['zoom'],
+            tiles=self.parent.map_app.loadSettings()['style'])
+
+        # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
+        selected_assets = self.get_selected_assets()
+        selected_defense_assets = self.get_selected_defense_assets()
+        selected_enemy_bases = self.get_selected_enemy_bases()
+        if selected_assets:
+            CommonMapView(selected_assets, self.map)
+        if selected_defense_assets:
+            DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
+        if selected_enemy_bases:
+            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+
+        # 궤적을 지도에 추가합니다.
         for missile_base, target, defense_unit, trajectory in self.trajectories:
             # 미사일 궤적
             folium.PolyLine(
-                locations=[(lat, lon) for lat, lon, _ in trajectory],
+                locations=[(float(lat), float(lon)) for lat, lon, _ in trajectory],
                 color="red",
                 weight=2,
-                opacity=1
+                opacity=0.8
+            ).add_to(self.map)
+
+            # 발사 지점 마커
+            folium.Marker(
+                location=missile_base,
+                icon=folium.Icon(color='red', icon='rocket', prefix='fa')
+            ).add_to(self.map)
+
+            # 목표 지점 마커
+            folium.Marker(
+                location=target,
+                icon=folium.Icon(color='orange', icon='crosshairs', prefix='fa')
             ).add_to(self.map)
 
             # 방어 궤적
@@ -1115,14 +1227,14 @@ class MissileDefenseApp(QDialog):
                 locations=[defense_unit[:2], target],
                 color="blue",
                 weight=2,
-                opacity=1
+                opacity=0.8
             ).add_to(self.map)
 
-        self.update_map()
-
-    def update_map_with_optimized_locations(self):
-        """미사일 궤적, 방어 궤적, 격자, 최적 위치를 지도에 표시하는 메서드"""
-        self.update_map_with_trajectories()
+            # 방어 유닛 마커
+            folium.Marker(
+                location=defense_unit[:2],
+                icon=folium.Icon(color='green', icon='shield', prefix='fa')
+            ).add_to(self.map)
 
         # 격자 표시
         for location in self.engagement_zones.keys():
@@ -1143,8 +1255,13 @@ class MissileDefenseApp(QDialog):
                 icon=folium.Icon(color='green', icon='star')
             ).add_to(self.map)
 
-        self.update_map()
+        data = io.BytesIO()
+        self.map.save(data, close_file=False)
+        html_content = data.getvalue().decode()
+        self.map_view.setHtml(html_content)
 
+        # 지도 로딩이 완료되었는지 확인합니다.
+        self.map_view.loadFinished.connect(self.on_map_load_finished)
 
     def get_mgrs_from_dict(self, data_dict):
         try:
@@ -1294,6 +1411,116 @@ class SimulationResultWindow(QDialog):
         except Exception as e:
             QMessageBox.critical(self, self.tr("에러"), str(e))
 
+
+
+class MissileTrajectoryCalculator:
+    def __init__(self):
+        self.EARTH_RADIUS = 6371  # 지구 반지름 (km)
+        self.G = 9.81  # 중력 가속도 (m/s^2)
+
+    def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
+        """미사일 궤적을 계산하는 메서드 (개선된 버전)"""
+        try:
+            B_lat, B_lon = missile_base
+            T_lat, T_lon = target
+
+            # 두 지점 간의 거리 계산 (km)
+            L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
+
+            # 미사일 특성 (예시 값, 실제 데이터로 대체 필요)
+            initial_velocity = 2000  # m/s
+            launch_angle = self.calculate_optimal_launch_angle(L, initial_velocity)
+
+            # 시간 간격 설정
+            time_steps = np.linspace(0, 2000, 2000)  # 2000초 동안 2000개의 시간 단계
+
+            # 궤적 계산
+            x, y, z = self.calculate_ballistic_trajectory(L, initial_velocity, launch_angle, time_steps)
+
+            # 방위각 계산
+            bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
+
+            # 좌표 변환
+            trajectory = []
+            start = Point(B_lat, B_lon)
+            for i in range(len(x)):
+                if z[i] < 0:  # 지표면 아래로 내려가지 않도록
+                    break
+                # 대권 거리 계산을 통한 정확한 위치 결정
+                point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
+                trajectory.append((point[0], point[1], z[i]))
+
+            return missile_base, target, defense_unit, trajectory
+
+        except Exception as e:
+            print(f"Error calculating trajectory: {e}")
+            return None
+
+    def calculate_ballistic_trajectory(self, distance, initial_velocity, launch_angle, time_steps):
+        """탄도 미사일의 궤적을 계산하는 함수 (지구 곡률 고려)"""
+        angle_rad = math.radians(launch_angle)
+
+        v0x = initial_velocity * math.cos(angle_rad)
+        v0y = initial_velocity * math.sin(angle_rad)
+
+        x = []
+        y = []
+        z = []
+
+        for t in time_steps:
+            x_t = v0x * t
+            y_t = v0y * t - 0.5 * self.G * t ** 2
+
+            # 지구 곡률을 고려한 실제 고도 계산
+            z_t = self.calculate_altitude(x_t / 1000, y_t / 1000)
+
+            x.append(x_t / 1000)  # km 단위로 변환
+            y.append(y_t / 1000)  # km 단위로 변환
+            z.append(z_t)
+
+            if z_t < 0:
+                break
+
+        return np.array(x), np.array(y), np.array(z)
+
+    def calculate_altitude(self, x, y):
+        """지구 곡률을 고려한 실제 고도 계산"""
+        return math.sqrt((self.EARTH_RADIUS + y) ** 2 - x ** 2) - self.EARTH_RADIUS
+
+    def calculate_optimal_launch_angle(self, distance, initial_velocity):
+        """최적의 발사 각도 계산"""
+        return math.degrees(0.5 * math.asin(self.G * distance * 1000 / initial_velocity ** 2))
+
+    def calculate_distance(self, lat1, lon1, lat2, lon2):
+        """두 지점 간의 대권 거리를 계산 (km)"""
+        return distance.great_circle((lat1, lon1), (lat2, lon2)).km
+
+    def calculate_bearing(self, lat1, lon1, lat2, lon2):
+        """두 지점 간의 초기 방위각을 계산"""
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlon = lon2 - lon1
+        y = math.sin(dlon) * math.cos(lat2)
+        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+        initial_bearing = math.atan2(y, x)
+        return math.degrees(initial_bearing)
+
+    def calculate_point_at_distance_and_bearing(self, start, distance, bearing):
+        """주어진 시작점에서 거리와 방위각으로 새로운 점의 위치를 계산"""
+        start_lat = math.radians(start.latitude)
+        start_lon = math.radians(start.longitude)
+        bearing = math.radians(bearing)
+        angular_distance = distance / self.EARTH_RADIUS
+
+        end_lat = math.asin(
+            math.sin(start_lat) * math.cos(angular_distance) +
+            math.cos(start_lat) * math.sin(angular_distance) * math.cos(bearing)
+        )
+        end_lon = start_lon + math.atan2(
+            math.sin(bearing) * math.sin(angular_distance) * math.cos(start_lat),
+            math.cos(angular_distance) - math.sin(start_lat) * math.sin(end_lat)
+        )
+
+        return math.degrees(end_lat), math.degrees(end_lon)
 
 class CenteredCheckBox(QWidget):
     def __init__(self, parent=None):

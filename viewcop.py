@@ -545,7 +545,7 @@ class ViewCopWindow(QDialog):
                     print(f"경고: {defense_weapon}에 대한 정보가 없습니다.")
                     continue
 
-                defense_radius = int(weapon_systems[defense_weapon]['radius'])
+                defense_radius = int(weapon_systems[defense_weapon]['max_radius'])
                 defense_angle = int(weapon_systems[defense_weapon]['angle'])
 
                 distance = self.calculate_distance(asset_lat, asset_lon, defense_lat, defense_lon)
@@ -628,7 +628,7 @@ class ViewCopWindow(QDialog):
     def calculate_distance(lat1, lon1, lat2, lon2):
         # 두 지점 간의 거리를 계산하는 함수 (Haversine 공식 사용)
 
-        R = 6371000  # 지구의 반경 (미터)
+        R = 6371 # 지구의 반경 (킬로미터)
 
         lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
 
@@ -659,7 +659,7 @@ class ViewCopWindow(QDialog):
             weapon_info = weapon_data.get(weapon, {})
 
             # 반경 정보 반환 (정수로 변환)
-            return int(weapon_info.get('radius', 0))
+            return int(weapon_info.get('max_radius', 0))
 
         except json.JSONDecodeError:
             print(f"오류: {json_file_path} 파일의 JSON 형식이 올바르지 않습니다.")
@@ -676,7 +676,7 @@ class ViewCopWindow(QDialog):
 
         # 방어 무기 종류에 따른 방어 반경 반환
         if weapon in weapon_systems:
-            return int(weapon_systems[weapon]['radius'])
+            return int(weapon_systems[weapon]['max_radius'])
         else:
             return 0
 
@@ -731,6 +731,7 @@ class ViewCopWindow(QDialog):
         self.map.save(data, close_file=False)
         html_content = data.getvalue().decode()
         self.map_view.setHtml(html_content)
+
         if selected_assets and selected_enemy_weapons and self.show_threat_radius:
             self.load_threat_cal()
         if selected_assets and selected_defense_assets and self.show_defense_radius:

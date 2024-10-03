@@ -165,7 +165,7 @@ class EnemyWeaponMapView(QObject):
     def draw_threat_radius(self, map_obj, lat, lon, color, max_radius):
         folium.Circle(
             location=[lat, lon],
-            radius=max_radius,
+            radius=max_radius*1000,
             color=color,
             weight=1,
             fill=True,
@@ -310,7 +310,7 @@ class EnemyBaseWeaponMapView(QObject):
     def draw_threat_radius(self, map_obj, lat, lon, m_color, max_radius):
         folium.Circle(
             location=[lat, lon],
-            radius=max_radius,
+            radius=max_radius*1000,
             color=m_color,
             weight=1,
             fill=True,

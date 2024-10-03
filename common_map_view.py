@@ -127,8 +127,6 @@ class DefenseAssetCommonMapView(QObject):
         # 무기 정보에 색상 추가
         for weapon, data in weapon_info.items():
             data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
-            data['max_radius'] = int(data['max_radius'])  # 반경을 정수로 변환
-            data['angle'] = int(data['angle'])
 
         defense_assets = self.tr("방어자산")
         weapon_systems = self.tr("무기체계")
@@ -199,7 +197,7 @@ class DefenseAssetCommonMapView(QObject):
         if angle == 360:
             folium.Circle(
                 location=[lat, lon],
-                radius=max_radius,
+                radius=max_radius * 1000,
                 color=color,
                 weight=1,
                 fill=True,
@@ -222,8 +220,8 @@ class DefenseAssetCommonMapView(QObject):
             angles = [i for i in range(int(start_angle), int(end_angle) + 1)]
         for ang in angles:
             rad = math.radians(90 - ang)
-            x = lon + (max_radius / 111000) * math.cos(rad) / math.cos(math.radians(lat))
-            y = lat + (max_radius / 111000) * math.sin(rad)
+            x = lon + (max_radius*1000 / 111000) * math.cos(rad) / math.cos(math.radians(lat))
+            y = lat + (max_radius*1000 / 111000) * math.sin(rad)
             points.append((y, x))
 
         points.append((lat, lon))  # 중심점 다시 추가하여 폐곡선 만들기
