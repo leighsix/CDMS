@@ -841,8 +841,6 @@ class MissileDefenseApp(QDialog):
     def calculate_trajectories(self):
         """미사일 궤적을 계산하는 메서드 (수정됨)"""
         try:
-            m_conv = mgrs.MGRS()
-
             selected_enemy_bases = self.get_selected_items(self.enemy_sites_table)
             selected_defense_assets = self.get_selected_items(self.defense_assets_table)
             selected_cal_assets = self.get_selected_items(self.cal_assets_table)
@@ -856,25 +854,30 @@ class MissileDefenseApp(QDialog):
                 for enemy_base_dic in selected_enemy_bases:
                     for cal_asset_dic in selected_cal_assets:
                         try:
-                            missile_mgrs_full = self.get_mgrs_from_dict(enemy_base_dic)
-                            missile_lat, missile_lon = m_conv.toLatLon(missile_mgrs_full)
-                            target_mgrs_full = self.get_mgrs_from_dict(cal_asset_dic)
-                            target_lat, target_lon = m_conv.toLatLon(target_mgrs_full)
+                            missile_lat, missile_lon = self.parse_coordinates(enemy_base_dic.get('경위도'))
+                            target_lat, target_lon = self.parse_coordinates(cal_asset_dic.get('경위도'))
 
-                            distance = self.trajectory_calculator.calculate_distance(missile_lat, missile_lon, target_lat, target_lon)
+                            distance = self.trajectory_calculator.calculate_distance(missile_lat, missile_lon,
+                                                                                     target_lat, target_lon)
                             missile_type = self.determine_missile_type(distance, enemy_base_dic.get(self.tr('발사기지')))
 
                             if missile_type:
-                                defense_mgrs_full = self.get_mgrs_from_dict(defense_asset_dic)
-                                defense_lat, defense_lon = m_conv.toLatLon(defense_mgrs_full)
+                                defense_lat, defense_lon = self.parse_coordinates(defense_asset_dic.get('경위도'))
                                 defense_altitude = 0
 
                                 defense_weapon = defense_asset_dic.get(self.tr('무기체계'))
-                                defense_info = (defense_lat, defense_lon, defense_altitude, (self.weapon_systems_info.get(defense_weapon, {}).get('min_radius', 0), self.weapon_systems_info.get(defense_weapon, {}).get('max_radius', 0)),
-                                                (self.weapon_systems_info.get(defense_weapon, {}).get('min_altitude', 0),  self.weapon_systems_info.get(defense_weapon, {}).get('max_altitude', 0)),
+                                defense_info = (defense_lat, defense_lon, defense_altitude, (
+                                self.weapon_systems_info.get(defense_weapon, {}).get('min_radius', 0),
+                                self.weapon_systems_info.get(defense_weapon, {}).get('max_radius', 0)),
+                                                (
+                                                self.weapon_systems_info.get(defense_weapon, {}).get('min_altitude', 0),
+                                                self.weapon_systems_info.get(defense_weapon, {}).get('max_altitude',
+                                                                                                     0)),
                                                 self.weapon_systems_info.get(defense_weapon, {}).get('angle', 0))
 
-                                trajectory = self.calculate_trajectory((missile_lat, missile_lon), (target_lat, target_lon), missile_type, defense_info)
+                                trajectory = self.calculate_trajectory((missile_lat, missile_lon),
+                                                                       (target_lat, target_lon), missile_type,
+                                                                       defense_info)
                                 if trajectory:
                                     self.trajectories.append(trajectory)
                                     # 방어 가능한 궤적 따로 저장
@@ -882,10 +885,18 @@ class MissileDefenseApp(QDialog):
                                         self.defense_trajectories.append(trajectory)
 
                         except ValueError as e:
-                            print(self.tr(f"MGRS 변환 오류: {e}"))
+                            print(self.tr(f"좌표 변환 오류: {e}"))
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("에러"), self.tr(f"궤적 계산 중 오류 발생: {str(e)}"))
+
+    @staticmethod
+    def parse_coordinates(coord_string):
+        """경위도 문자열을 파싱하여 위도와 경도를 반환합니다."""
+        lat_str, lon_str = coord_string.split(',')
+        lat = float(lat_str[1:])  # 'N' 제거
+        lon = float(lon_str[1:])  # 'E' 제거
+        return lat, lon
 
     def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
         """미사일 궤적을 계산하는 메서드 (MissileTrajectoryCalculator 사용)"""
@@ -898,13 +909,20 @@ class MissileDefenseApp(QDialog):
     def determine_missile_type(self, distance, base_name):
         """거리와 기지명에 따라 미사일 종류를 결정하는 메서드"""
         available_missiles = []
-        self.cursor.execute("SELECT weapon_system FROM enemy_bases_ko WHERE base_name = ?", (base_name,))
-        weapons = self.cursor.fetchone()
-        if weapons:
-            weapons = weapons[0].split(', ')
+
+        # 현재 선택된 언어에 따라 적절한 DataFrame 선택
+        df = self.enemy_bases_df_ko if self.parent.selected_language == 'ko' else self.enemy_bases_df_en
+
+        # 해당 기지의 무기 시스템 정보 가져오기
+        base_info = df[df['base_name'] == base_name]
+
+        if not base_info.empty:
+            weapons = base_info.iloc[0]['weapon_system'].split(', ')
+
             for missile_type, info in self.missile_info.items():
                 if missile_type in weapons and int(info["min_radius"]) <= distance <= int(info["max_radius"]):
                     available_missiles.append(missile_type)
+
         if available_missiles:
             return random.choice(available_missiles)
         else:
@@ -1338,57 +1356,46 @@ class MissileTrajectoryCalculator:
     def __init__(self):
         self.EARTH_RADIUS = 6371  # 지구 반지름 (km)
         self.G = 9.81  # 중력 가속도 (m/s^2)
-        self.missile_types = {
-            "Scud-B": {"min_radius": 100, "max_radius": 270},
-            "Scud-C": {"min_radius": 270, "max_radius": 450},
-            "Nodong": {"min_radius": 450, "max_radius": 1000}
-        }
-        self.trajectory_coefficients = {
-            "Scud-B": {"alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
-                       "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}},
-            "Scud-C": {"alpha": {"a1": -0.0955, "a2": -0.0208, "b1": -0.0177, "b2": -0.00435},
-                       "beta": {"a1": 2.457, "a2": -0.023, "b1": 2.48, "b2": -0.00174}},
-            "Nodong": {"alpha": {"a1": -0.0152, "a2": -0.0062, "b1": -0.00426, "b2": -0.00149},
-                       "beta": {"a1": 41.44, "a2": -0.0164, "b1": 1.797, "b2": -0.00059}}
-        }
 
-    def calculate_trajectory(self, missile_base, target, defense_unit):
+        with open('missile_info.json', 'r', encoding='utf-8') as f:
+            self.missile_info = json.load(f)
+
+    def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
         B_lat, B_lon = missile_base
         T_lat, T_lon = target
 
         L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
-        missile_type = self.select_missile_type(L)
 
-        if missile_type is None:
-            return None
+        # 미사일 타입에 따른 계수 선택
+        coeffs = self.missile_info[missile_type]['trajectory_coefficients']
+
+        # 논문 3.1절의 계산식 사용
+        alpha = coeffs['alpha']['a1'] * L + coeffs['alpha']['a2']
+        beta = coeffs['beta']['a1'] * L + coeffs['beta']['b1']
 
         try:
-            x, y, z = self.calculate_ballistic_trajectory(L, missile_type)
+            x, y, z = self.calculate_ballistic_trajectory(L, alpha, beta)
             bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
             trajectory = self.convert_trajectory_to_coordinates(B_lat, B_lon, T_lat, T_lon, bearing, x, y, z)
 
-            return missile_base, target, defense_unit, trajectory
+            # 반환값 형식에 맞춰 데이터 저장
+            result = {
+                'base_name': f"{B_lat}, {B_lon}",
+                'target_name': f"{T_lat}, {T_lon}",
+                'missile_type': missile_type,
+                'trajectory': trajectory
+            }
+
+            return result
 
         except Exception as e:
             print(f"궤적 계산 중 오류 발생: {e}")
             return None
 
-    def select_missile_type(self, distance):
-        for missile_type, range_info in self.missile_types.items():
-            if range_info["min_radius"] <= distance <= range_info["max_radius"]:
-                return missile_type
-        return None
-
-    def calculate_ballistic_trajectory(self, distance, missile_type):
-        coeff = self.trajectory_coefficients[missile_type]
-        alpha = coeff["alpha"]["a1"] + coeff["alpha"]["a2"] * distance + \
-                coeff["alpha"]["b1"] * math.exp(coeff["alpha"]["b2"] * distance)
-        beta = coeff["beta"]["a1"] + coeff["beta"]["a2"] * distance + \
-               coeff["beta"]["b1"] * math.exp(coeff["beta"]["b2"] * distance)
-
+    def calculate_ballistic_trajectory(self, distance, alpha, beta):
         t = np.linspace(0, 1, 1000)
         x = distance * t
-        y = alpha * distance * (t - t**2) + beta * distance * t**2 * (1 - t)
+        y = alpha * x * (1 - x / distance) + beta * x * (1 - x / distance) * (x / distance)
         z = np.zeros_like(x)
 
         return x, y, z
@@ -1406,18 +1413,6 @@ class MissileTrajectoryCalculator:
             trajectory[-1] = (end_lat, end_lon, 0)
 
         return trajectory
-
-    def calculate_optimal_launch_angle(self, distance, initial_velocity):
-        g = self.G
-        v = initial_velocity
-        d = distance * 1000
-        sin_angle = (g * d) / (v ** 2)
-
-        if abs(sin_angle) > 1:
-            return None
-
-        angle = 0.5 * math.asin(sin_angle)
-        return math.degrees(angle)
 
     def calculate_distance(self, lat1, lon1, lat2, lon2):
         return distance.great_circle((lat1, lon1), (lat2, lon2)).km
@@ -1451,6 +1446,7 @@ class MissileTrajectoryCalculator:
         )
 
         return math.degrees(end_lat), math.degrees(end_lon)
+
 
 class CenteredCheckBox(QWidget):
     def __init__(self, parent=None):
