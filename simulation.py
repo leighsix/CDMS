@@ -1095,7 +1095,6 @@ class MissileDefenseApp(QDialog):
             DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
         if selected_enemy_bases:
             EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
-        print(self.trajectories)
         # 궤적을 지도에 추가합니다.
         if hasattr(self, 'trajectories'):
             for trajectory_data in self.trajectories:
@@ -1131,7 +1130,7 @@ class MissileDefenseApp(QDialog):
                     opacity=0.8
                 ).add_to(self.map)
 
-                # # 방어 가능한 궤적 표시
+                # 방어 가능한 궤적 표시
                 # if self.check_engagement_possibility(trajectory):
                 #     intercept_point = self.find_intercept_point(trajectory, defense_unit)
                 #     if intercept_point:
@@ -1149,7 +1148,7 @@ class MissileDefenseApp(QDialog):
                 #             weight=2,
                 #             opacity=1
                 #         ).add_to(self.map)
-
+                #
         # 지도를 HTML로 렌더링하고 웹뷰에 로드합니다.
         data = io.BytesIO()
         self.map.save(data, close_file=False)
@@ -1335,168 +1334,95 @@ class SimulationResultWindow(QDialog):
         self.get_selected_items = self.parent.get_selected_items
         self.get_lat_lon_from_mgrs = self.parent.get_lat_lon_from_mgrs
 
-        self.visualize_results()
-
-    def visualize_results(self):
-        """결과를 Folium 지도에 시각화하는 메서드"""
-        try:
-            # 지도 크기 설정
-            fig = Figure(width=800, height=600)
-
-            # 한반도 중심 좌표로 지도 초기화
-            m = folium.Map(location=[37.5665, 126.9780], zoom_start=7)
-            fig.add_child(m)
-
-            # 미사일 궤적 표시 (가는 실선으로 변경)
-            for missile_base, target, defense_unit, _ in self.trajectories:
-                folium.PolyLine(
-                    locations=[missile_base[:2], target[:2]],
-                    color="red",
-                    weight=0.5,  # 선 두께 더 감소
-                    opacity=0.6,
-                    dash_array=None  # 실선으로 변경
-                ).add_to(m)
-                folium.PolyLine(
-                    locations=[defense_unit[:2], target[:2]],
-                    color="blue",
-                    weight=0.5,  # 선 두께 더 감소
-                    opacity=0.6,
-                    dash_array=None  # 실선으로 변경
-                ).add_to(m)
-
-            # 최적 위치 표시 (아이콘 변경)
-            for location in self.optimized_locations:
-                folium.Marker(
-                    location=location[:2],
-                    icon=folium.Icon(color='green', icon='bullseye', prefix='fa', icon_size=(16, 16))
-                ).add_to(m)
-
-            # 핵심 방어 시설 표시 (아이콘 변경)
-            selected_cal_assets = self.get_selected_items(self.cal_assets_table)
-            for asset in selected_cal_assets:
-                lat, lon = self.get_lat_lon_from_mgrs(asset['군사좌표(MGRS)'])
-                folium.Marker(
-                    location=[lat, lon],
-                    icon=folium.Icon(color='red', icon='shield-alt', prefix='fa', icon_size=(14, 14))
-                ).add_to(m)
-
-            # 미사일 기지 표시 (아이콘 변경)
-            selected_enemy_bases = self.get_selected_items(self.enemy_sites_table)
-            for base in selected_enemy_bases:
-                lat, lon = self.get_lat_lon_from_mgrs(base['군사좌표(MGRS)'])
-                folium.Marker(
-                    location=[lat, lon],
-                    icon=folium.Icon(color='black', icon='fighter-jet', prefix='fa', icon_size=(14, 14))
-                ).add_to(m)
-
-            # 범례 추가
-            legend_html = """
-            <div style="position: fixed; bottom: 50px; left: 50px; width: 120px; height: 90px; 
-            border:2px solid grey; z-index:9999; font-size:14px; background-color:white;
-            ">&nbsp;<b>범례:</b><br>
-            &nbsp;<i class="fa fa-bullseye fa-1x" style="color:green"></i> 최적 위치<br>
-            &nbsp;<i class="fa fa-shield-alt fa-1x" style="color:red"></i> 방어 시설<br>
-            &nbsp;<i class="fa fa-fighter-jet fa-1x" style="color:black"></i> 미사일 기지
-            </div>
-            """
-            m.get_root().html.add_child(folium.Element(legend_html))
-
-            # 지도를 HTML 파일로 저장
-            map_file = 'simulation_result_map.html'
-            m.save(map_file)
-
-            # HTML 파일을 QWebEngineView에 로드
-            self.web_view.load(QUrl.fromLocalFile(os.path.abspath(map_file)))
-
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("에러"), str(e))
-
-
-
 class MissileTrajectoryCalculator:
     def __init__(self):
         self.EARTH_RADIUS = 6371  # 지구 반지름 (km)
         self.G = 9.81  # 중력 가속도 (m/s^2)
+        self.missile_types = {
+            "Scud-B": {"min_radius": 100, "max_radius": 270},
+            "Scud-C": {"min_radius": 270, "max_radius": 450},
+            "Nodong": {"min_radius": 450, "max_radius": 1000}
+        }
+        self.trajectory_coefficients = {
+            "Scud-B": {"alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
+                       "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}},
+            "Scud-C": {"alpha": {"a1": -0.0955, "a2": -0.0208, "b1": -0.0177, "b2": -0.00435},
+                       "beta": {"a1": 2.457, "a2": -0.023, "b1": 2.48, "b2": -0.00174}},
+            "Nodong": {"alpha": {"a1": -0.0152, "a2": -0.0062, "b1": -0.00426, "b2": -0.00149},
+                       "beta": {"a1": 41.44, "a2": -0.0164, "b1": 1.797, "b2": -0.00059}}
+        }
 
-    def calculate_trajectory(self, missile_base, target, missile_type, defense_unit):
-        """미사일 궤적을 계산하는 메서드 (개선된 버전)"""
+    def calculate_trajectory(self, missile_base, target, defense_unit):
+        B_lat, B_lon = missile_base
+        T_lat, T_lon = target
+
+        L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
+        missile_type = self.select_missile_type(L)
+
+        if missile_type is None:
+            return None
+
         try:
-            B_lat, B_lon = missile_base
-            T_lat, T_lon = target
-
-            # 두 지점 간의 거리 계산 (km)
-            L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
-
-            # 미사일 특성 (예시 값, 실제 데이터로 대체 필요)
-            initial_velocity = 2000  # m/s
-            launch_angle = self.calculate_optimal_launch_angle(L, initial_velocity)
-
-            # 시간 간격 설정
-            time_steps = np.linspace(0, 2000, 2000)  # 2000초 동안 2000개의 시간 단계
-
-            # 궤적 계산
-            x, y, z = self.calculate_ballistic_trajectory(L, initial_velocity, launch_angle, time_steps)
-
-            # 방위각 계산
+            x, y, z = self.calculate_ballistic_trajectory(L, missile_type)
             bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
-
-            # 좌표 변환
-            trajectory = []
-            start = Point(B_lat, B_lon)
-            for i in range(len(x)):
-                if z[i] < 0:  # 지표면 아래로 내려가지 않도록
-                    break
-                # 대권 거리 계산을 통한 정확한 위치 결정
-                point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
-                trajectory.append((point[0], point[1], z[i]))
+            trajectory = self.convert_trajectory_to_coordinates(B_lat, B_lon, T_lat, T_lon, bearing, x, y, z)
 
             return missile_base, target, defense_unit, trajectory
 
         except Exception as e:
-            print(f"Error calculating trajectory: {e}")
+            print(f"궤적 계산 중 오류 발생: {e}")
             return None
 
-    def calculate_ballistic_trajectory(self, distance, initial_velocity, launch_angle, time_steps):
-        """탄도 미사일의 궤적을 계산하는 함수 (지구 곡률 고려)"""
-        angle_rad = math.radians(launch_angle)
+    def select_missile_type(self, distance):
+        for missile_type, range_info in self.missile_types.items():
+            if range_info["min_radius"] <= distance <= range_info["max_radius"]:
+                return missile_type
+        return None
 
-        v0x = initial_velocity * math.cos(angle_rad)
-        v0y = initial_velocity * math.sin(angle_rad)
+    def calculate_ballistic_trajectory(self, distance, missile_type):
+        coeff = self.trajectory_coefficients[missile_type]
+        alpha = coeff["alpha"]["a1"] + coeff["alpha"]["a2"] * distance + \
+                coeff["alpha"]["b1"] * math.exp(coeff["alpha"]["b2"] * distance)
+        beta = coeff["beta"]["a1"] + coeff["beta"]["a2"] * distance + \
+               coeff["beta"]["b1"] * math.exp(coeff["beta"]["b2"] * distance)
 
-        x = []
-        y = []
-        z = []
+        t = np.linspace(0, 1, 1000)
+        x = distance * t
+        y = alpha * distance * (t - t**2) + beta * distance * t**2 * (1 - t)
+        z = np.zeros_like(x)
 
-        for t in time_steps:
-            x_t = v0x * t
-            y_t = v0y * t - 0.5 * self.G * t ** 2
+        return x, y, z
 
-            # 지구 곡률을 고려한 실제 고도 계산
-            z_t = self.calculate_altitude(x_t / 1000, y_t / 1000)
+    def convert_trajectory_to_coordinates(self, start_lat, start_lon, end_lat, end_lon, bearing, x, y, z):
+        trajectory = []
+        start = Point(start_lat, start_lon)
 
-            x.append(x_t / 1000)  # km 단위로 변환
-            y.append(y_t / 1000)  # km 단위로 변환
-            z.append(z_t)
+        for i in range(len(x)):
+            point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
+            if point:
+                trajectory.append((point[0], point[1], y[i]))
 
-            if z_t < 0:
-                break
+        if trajectory:
+            trajectory[-1] = (end_lat, end_lon, 0)
 
-        return np.array(x), np.array(y), np.array(z)
-
-    def calculate_altitude(self, x, y):
-        """지구 곡률을 고려한 실제 고도 계산"""
-        return math.sqrt((self.EARTH_RADIUS + y) ** 2 - x ** 2) - self.EARTH_RADIUS
+        return trajectory
 
     def calculate_optimal_launch_angle(self, distance, initial_velocity):
-        """최적의 발사 각도 계산"""
-        return math.degrees(0.5 * math.asin(self.G * distance * 1000 / initial_velocity ** 2))
+        g = self.G
+        v = initial_velocity
+        d = distance * 1000
+        sin_angle = (g * d) / (v ** 2)
+
+        if abs(sin_angle) > 1:
+            return None
+
+        angle = 0.5 * math.asin(sin_angle)
+        return math.degrees(angle)
 
     def calculate_distance(self, lat1, lon1, lat2, lon2):
-        """두 지점 간의 대권 거리를 계산 (km)"""
         return distance.great_circle((lat1, lon1), (lat2, lon2)).km
 
     def calculate_bearing(self, lat1, lon1, lat2, lon2):
-        """두 지점 간의 초기 방위각을 계산"""
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlon = lon2 - lon1
         y = math.sin(dlon) * math.cos(lat2)
@@ -1505,7 +1431,6 @@ class MissileTrajectoryCalculator:
         return math.degrees(initial_bearing)
 
     def calculate_point_at_distance_and_bearing(self, start, distance, bearing):
-        """주어진 시작점에서 거리와 방위각으로 새로운 점의 위치를 계산"""
         start_lat = math.radians(start.latitude)
         start_lon = math.radians(start.longitude)
         bearing = math.radians(bearing)
@@ -1515,6 +1440,11 @@ class MissileTrajectoryCalculator:
             math.sin(start_lat) * math.cos(angular_distance) +
             math.cos(start_lat) * math.sin(angular_distance) * math.cos(bearing)
         )
+
+        cos_end_lat = math.cos(end_lat)
+        if abs(cos_end_lat) < 1e-10:
+            return None
+
         end_lon = start_lon + math.atan2(
             math.sin(bearing) * math.sin(angular_distance) * math.cos(start_lat),
             math.cos(angular_distance) - math.sin(start_lat) * math.sin(end_lat)
