@@ -6,12 +6,16 @@ from PyQt5.QtWidgets import *
 from enemy_base import EnemyBaseWindow
 from languageselection import LanguageSelectionWindow, Translator
 from loginwindow import LoginWindow
+from commander_guidance import BmdPriorityWindow, EngagementEffectWindow
 from addasset import AddAssetWindow
-from cvtcalculation import CVTCalculationWindow
+from cal_priority import CalPriorityWindow
 from setting import SettingWindow, MapApp
-from viewasset import ViewAssetsWindow
-from defenseasset import ViewDefenseAssetWindow
-from viewcop import ViewCopWindow
+from cal_view import CalViewWindow
+from dal_view import DalViewWindow
+from dal_priority import DalPriorityWindow
+from weapon_assets import WeaponAssetWindow
+from copview import CopViewWindow
+from simulation import MissileDefenseApp
 from weapon_system import WeaponSystemWindow
 from enemy_spec import EnemySpecWindow
 from database_merge import DatabaseIntegrationWindow
@@ -26,7 +30,6 @@ from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw # bcrypt 추가
 import secrets # secrets 모듈 추가
 import re, string
-
 
 
 class AssetManager(QtWidgets.QMainWindow, QObject):
@@ -106,7 +109,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
         # 좌측 영역 (버튼 영역)
         button_widget = QWidget()
-        button_widget.setMinimumWidth(330)  # 왼쪽 섹터 너비 증가
+        button_widget.setMinimumWidth(400)  # 왼쪽 섹터 너비 증가
         button_layout = QVBoxLayout(button_widget)
         self.create_buttons(button_layout)
         main_page_layout.addWidget(button_widget)
@@ -125,20 +128,30 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.stacked_widget.addWidget(self.main_page)
 
         # 다른 페이지들 추가
+        self.bmd_priority_page = BmdPriorityWindow(self)
+        self.engagement_effect_page = EngagementEffectWindow(self)
         self.add_asset_page = AddAssetWindow(self)
-        self.view_assets_page = ViewAssetsWindow(self)
-        self.cvt_calculation_page = CVTCalculationWindow(self)
-        self.defense_assets_page = ViewDefenseAssetWindow(self)
-        self.view_cop_page = ViewCopWindow(self)
+        self.cal_view_page = CalViewWindow(self)
+        self.cal_priority_page = CalPriorityWindow(self)
+        self.dal_view_page = DalViewWindow(self)
+        self.dal_priority_page = DalPriorityWindow(self)
+        self.weapon_assets_page = WeaponAssetWindow(self)
+        self.cop_view_page = CopViewWindow(self)
+        self.simulation_page = MissileDefenseApp(self)
         self.weapon_system_page = WeaponSystemWindow(self)
         self.enemy_base_page = EnemyBaseWindow(self)
         self.enemy_spec_page = EnemySpecWindow(self)
         self.setting_page = SettingWindow(self)
+        self.stacked_widget.addWidget(self.bmd_priority_page)
+        self.stacked_widget.addWidget(self.engagement_effect_page)
         self.stacked_widget.addWidget(self.add_asset_page)
-        self.stacked_widget.addWidget(self.view_assets_page)
-        self.stacked_widget.addWidget(self.cvt_calculation_page)
-        self.stacked_widget.addWidget(self.defense_assets_page)
-        self.stacked_widget.addWidget(self.view_cop_page)
+        self.stacked_widget.addWidget(self.cal_view_page)
+        self.stacked_widget.addWidget(self.cal_priority_page)
+        self.stacked_widget.addWidget(self.dal_view_page)
+        self.stacked_widget.addWidget(self.dal_priority_page)
+        self.stacked_widget.addWidget(self.weapon_assets_page)
+        self.stacked_widget.addWidget(self.cop_view_page)
+        self.stacked_widget.addWidget(self.simulation_page)
         self.stacked_widget.addWidget(self.weapon_system_page)
         self.stacked_widget.addWidget(self.enemy_base_page)
         self.stacked_widget.addWidget(self.enemy_spec_page)
@@ -151,20 +164,30 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def create_buttons(self, layout):
         buttons = [
+            (self.tr("지휘관 지침"), [
+                (self.tr("연합사령관 BMD 전력배치 우선순위"), self.show_bmd_priority_page),
+                (self.tr("교전효과 수준"), self.show_engagement_effect_page),
+            ]),
+
             (self.tr("CAL 관리"), [
                 (self.tr("CAL 입력"), self.show_add_asset_page),
-                (self.tr("CAL 보기"), self.show_view_assets_page),
-                (self.tr("CVT 산출"), self.show_cvt_calculation_page)
+                (self.tr("CAL 보기"), self.show_cal_view_page),
+                (self.tr("CAL 우선순위"), self.show_cal_priority_page)
             ]),
             (self.tr("DAL 관리"), [
-                (self.tr("DAL 입력/보기"), self.show_defense_assets_page),
+                (self.tr("DAL 보기"), self.show_dal_view_page),
+                (self.tr("DAL 우선순위"), self.show_dal_priority_page)
+            ]),
+            (self.tr("미사일 방공포대 관리"), [
+                (self.tr("미사일 방공포대 입력/보기"), self.show_weapon_assets_page),
                 (self.tr("방공무기체계"), self.show_weapon_system_page)
             ]),
             (self.tr("적 정보"), [
                 (self.tr("적 미사일 발사기지"), self.show_enemy_base_page),
                 (self.tr("적 미사일 제원"), self.show_enemy_spec_page)
             ]),
-            (self.tr("공통상황도"), self.show_view_cop_page),
+            (self.tr("공통상황도"), self.show_cop_view_page),
+            (self.tr("시뮬레이션"), self.show_simulation_page),
             (self.tr("종  료"), self.close)
         ]
 
@@ -279,21 +302,23 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def create_summary_table(self):
         table = QTableWidget()
-        table.setColumnCount(3)
+        table.setColumnCount(4)
         table.setRowCount(1)
 
         # 테이블 헤더 설정
-        table.setHorizontalHeaderLabels([self.tr("CAL 자산"), self.tr("DAL 자산"), self.tr("적 기지")])
+        table.setHorizontalHeaderLabels([self.tr("CAL 자산"), self.tr("DAL 자산"), self.tr("미사일 방공포대"), self.tr("적 기지")])
 
         # 데이터 가져오기
         cal_assets_count = self.get_count("cal_assets_en")
-        dal_assets_count = self.get_count("dal_assets_en")
+        dal_assets_count = self.get_count("dal_assets_priority_en")
+        weapon_assets_count = self.get_count("weapon_assets_en")
         enemy_bases_count = self.get_count("enemy_bases_en")
 
         # 데이터 설정
         table.setItem(0, 0, QTableWidgetItem(str(cal_assets_count)))
         table.setItem(0, 1, QTableWidgetItem(str(dal_assets_count)))
-        table.setItem(0, 2, QTableWidgetItem(str(enemy_bases_count)))
+        table.setItem(0, 2, QTableWidgetItem(str(weapon_assets_count)))
+        table.setItem(0, 3, QTableWidgetItem(str(enemy_bases_count)))
 
         # 테이블 스타일 설정
         table.setStyleSheet("""
@@ -337,6 +362,17 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.stacked_widget.setCurrentWidget(self.main_page)
         self.titleBar.update_title(self.tr("C D M S"), self.tr("CAL/DAL Management System"))
 
+    def show_bmd_priority_page(self):
+        self.refresh_database()
+        self.stacked_widget.setCurrentWidget(self.bmd_priority_page)
+        self.titleBar.update_title(self.tr("지휘관 지침"), self.tr("연합사령관 BMD 전력배치 우선순위"))
+
+    def show_engagement_effect_page(self):
+        self.refresh_database()
+        self.engagement_effect_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.engagement_effect_page)
+        self.titleBar.update_title(self.tr("지휘관 지침"), self.tr("교전효과 수준"))
+
     def show_add_asset_page(self):
         self.refresh_database()
         self.add_asset_page.refresh()
@@ -348,26 +384,40 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.stacked_widget.setCurrentWidget(self.add_asset_page)
         self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 수정"))
 
-    def show_view_assets_page(self):
+    def show_cal_view_page(self):
         self.refresh_database()
-        self.view_assets_page.refresh()
-        self.stacked_widget.setCurrentWidget(self.view_assets_page)
-        self.view_assets_page.load_assets()
+        self.cal_view_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.cal_view_page)
+        self.cal_view_page.load_assets()
         self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 보기"))
 
-    def show_cvt_calculation_page(self):
+    def show_cal_priority_page(self):
         self.refresh_database()
-        self.cvt_calculation_page.refresh()
-        self.stacked_widget.setCurrentWidget(self.cvt_calculation_page)
-        self.cvt_calculation_page.load_all_assets()
-        self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CVT 산출"))
+        self.cal_priority_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.cal_priority_page)
+        self.cal_priority_page.load_assets()
+        self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 우선순위"))
 
-    def show_defense_assets_page(self):
+    def show_dal_view_page(self):
         self.refresh_database()
-        self.defense_assets_page.refresh()
-        self.stacked_widget.setCurrentWidget(self.defense_assets_page)
-        self.defense_assets_page.load_all_assets()
-        self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 입력/보기"))
+        self.dal_view_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.dal_view_page)
+        self.dal_view_page.load_assets()
+        self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 보기"))
+
+    def show_dal_priority_page(self):
+        self.refresh_database()
+        self.dal_priority_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.dal_priority_page)
+        self.dal_priority_page.load_assets()
+        self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 우선순위"))
+
+    def show_weapon_assets_page(self):
+        self.refresh_database()
+        self.weapon_assets_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.weapon_assets_page)
+        self.weapon_assets_page.load_all_assets()
+        self.titleBar.update_title(self.tr("미사일 방공포대 관리"), )
 
     def show_weapon_system_page(self):
         # 방공무기체계 페이지 구현
@@ -385,12 +435,19 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         enemy_spec_window = EnemySpecWindow(self)
         enemy_spec_window.show()
 
-    def show_view_cop_page(self):
+    def show_cop_view_page(self):
         self.refresh_database()
-        self.view_cop_page.refresh()
-        self.stacked_widget.setCurrentWidget(self.view_cop_page)
-        self.view_cop_page.load_assets()
+        self.cop_view_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.cop_view_page)
+        self.cop_view_page.load_assets()
         self.titleBar.update_title(self.tr("공통상황도"), self.tr("Common Operational Picture"))
+
+    def show_simulation_page(self):
+        self.refresh_database()
+        # self.simulation_page.refresh()
+        self.stacked_widget.setCurrentWidget(self.simulation_page)
+        # self.simulation_page.load_assets()
+        self.titleBar.update_title(self.tr("시뮬레이션"), self.tr("미사일궤적 및 최적배치 산출"))
 
     def create_database(self):
         """SQLite 데이터베이스 생성 및 테이블 설정"""
@@ -409,6 +466,12 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         coordinate TEXT,
         mgrs TEXT,
         description TEXT,
+        dal_select BOOLEAN,
+        weapon_system TEXT,
+        ammo_count INTEGER,
+        threat_degree INTEGER,
+        engagement_effectiveness TEXT,
+        bmd_priority TEXT,
         criticality REAL,
         criticality_bonus_center REAL,
         criticality_bonus_function REAL,
@@ -422,7 +485,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         ''')
         self.conn.commit()  # 변경사항 커밋
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS dal_assets_ko (
+            CREATE TABLE IF NOT EXISTS weapon_assets_ko (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 unit TEXT,
                 area TEXT,
@@ -431,7 +494,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                 mgrs TEXT,
                 weapon_system TEXT,
                 ammo_count INTEGER,
-                threat_degree INTEGER
+                threat_degree INTEGER,
+                dal_select BOOLEAN
             )
         ''')
         self.conn.commit()
@@ -440,14 +504,49 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             priority INTEGER,
                             unit TEXT,
+                            asset_number TEXT,
+                            manager TEXT,
+                            contact TEXT,
                             target_asset TEXT,
                             area TEXT,
                             coordinate TEXT,
                             mgrs TEXT,
+                            description TEXT,
+                            dal_select BOOLEAN,
+                            weapon_system TEXT,
+                            ammo_count INTEGER,
+                            threat_degree INTEGER,
+                            engagement_effectiveness TEXT,
+                            bmd_priority TEXT,
                             criticality REAL,
                             vulnerability REAL,
                             threat REAL,
-                            bonus REAL,
+                            total_score REAL
+                        )
+                    ''')
+        self.conn.commit()
+        self.cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS dal_assets_priority_ko (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            priority INTEGER,
+                            unit TEXT,
+                            asset_number TEXT,
+                            manager TEXT,
+                            contact TEXT,
+                            target_asset TEXT,
+                            area TEXT,
+                            coordinate TEXT,
+                            mgrs TEXT,
+                            description TEXT,
+                            dal_select BOOLEAN,
+                            weapon_system TEXT,
+                            ammo_count INTEGER,
+                            threat_degree INTEGER,
+                            engagement_effectiveness TEXT,
+                            bmd_priority TEXT,
+                            criticality REAL,
+                            vulnerability REAL,
+                            threat REAL,
                             total_score REAL
                         )
                     ''')
@@ -467,7 +566,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         CREATE TABLE IF NOT EXISTS cal_assets_en (
         id INTEGER PRIMARY KEY,
         unit TEXT,
-        asset_number INT,
+        asset_number TEXT,
         manager TEXT,
         contact TEXT,
         target_asset TEXT,
@@ -475,6 +574,12 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         coordinate TEXT,
         mgrs TEXT,
         description TEXT,
+        dal_select BOOLEAN,
+        weapon_system TEXT,
+        ammo_count INTEGER,
+        threat_degree INTEGER,
+        engagement_effectiveness TEXT,
+        bmd_priority TEXT,
         criticality REAL,
         criticality_bonus_center REAL,
         criticality_bonus_function REAL,
@@ -488,7 +593,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         ''')
         self.conn.commit()  # 변경사항 커밋
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS dal_assets_en (
+            CREATE TABLE IF NOT EXISTS weapon_assets_en (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 unit TEXT,
                 area TEXT,
@@ -497,7 +602,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                 mgrs TEXT,
                 weapon_system TEXT,
                 ammo_count INTEGER,
-                threat_degree INTEGER
+                threat_degree INTEGER,
+                dal_select BOOLEAN
             )
         ''')
         self.conn.commit()
@@ -506,14 +612,49 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             priority INTEGER,
                             unit TEXT,
+                            asset_number TEXT,
+                            manager TEXT,
+                            contact TEXT,
                             target_asset TEXT,
                             area TEXT,
                             coordinate TEXT,
                             mgrs TEXT,
+                            description TEXT,
+                            dal_select BOOLEAN,
+                            weapon_system TEXT,
+                            ammo_count INTEGER,
+                            threat_degree INTEGER,
+                            engagement_effectiveness TEXT,
+                            bmd_priority TEXT,
                             criticality REAL,
                             vulnerability REAL,
                             threat REAL,
-                            bonus REAL,
+                            total_score REAL
+                        )
+                    ''')
+        self.conn.commit()
+        self.cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS dal_assets_priority_en (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            priority INTEGER,
+                            unit TEXT,
+                            asset_number TEXT,
+                            manager TEXT,
+                            contact TEXT,
+                            target_asset TEXT,
+                            area TEXT,
+                            coordinate TEXT,
+                            mgrs TEXT,
+                            description TEXT,
+                            dal_select BOOLEAN,
+                            weapon_system TEXT,
+                            ammo_count INTEGER,
+                            threat_degree INTEGER,
+                            engagement_effectiveness TEXT,
+                            bmd_priority TEXT,
+                            criticality REAL,
+                            vulnerability REAL,
+                            threat REAL,
                             total_score REAL
                         )
                     ''')
@@ -543,7 +684,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def load_assets(self):
         self.refresh_database()  # 데이터 갱신
-        self.view_assets_page.load_assets()
+        self.cal_view_page.load_assets()
 
     def logoff(self):
         reply = QMessageBox.question(self, self.tr('로그아웃'), self.tr("정말 로그아웃하시겠습니까?"),
@@ -897,7 +1038,8 @@ class RightArea(QGroupBox):
         minutes, seconds = divmod(remainder, 60)
         self.duration_label.setText(f"경과 시간: {hours:02d}:{minutes:02d}:{seconds:02d}")
 
-    def toggle_sub_buttons(self, widget):
+    @staticmethod
+    def toggle_sub_buttons(widget):
         widget.setVisible(not widget.isVisible())
 
     # 새로운 페이지 표시 메서드
@@ -934,7 +1076,8 @@ class RightArea(QGroupBox):
         conn.close()
         return True  # 비밀번호 변경 성공을 나타냄
 
-    def check_password_complexity(self, password):
+    @staticmethod
+    def check_password_complexity(password):
         # 최소 길이 8자, 대문자, 소문자, 숫자, 특수 문자 포함 여부 확인
         if len(password) < 8:
             return False

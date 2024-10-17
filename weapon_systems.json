@@ -3,7 +3,7 @@
         "min_radius": 10,
         "max_radius": 60,
         "min_altitude": 10,
-        "max_altitude": 25,
+        "max_altitude": 30,
         "angle": 360,
         "function": "한국형 중거리 지대공 유도무기체계로, 항공기 및 단거리 탄도미사일을 요격하기 위해 설계됨.\n"
     },
@@ -11,7 +11,7 @@
         "min_radius": 10,
         "max_radius": 70,
         "min_altitude": 10,
-        "max_altitude": 25,
+        "max_altitude": 30,
         "angle": 120,
         "function": "기존 PATRIOT 시스템의 개량형으로, 강력한 파괴력과 높은 정확성을 자랑"
     },
@@ -19,7 +19,7 @@
         "min_radius": 10,
         "max_radius": 20,
         "min_altitude": 10,
-        "max_altitude": 25,
+        "max_altitude": 30,
         "angle": 120,
         "function": "PATRIOT 시스템의 최신 개량형으로, 작은 크기와 높은 기동성을 자랑하며, 주로 탄도미사일 요격에 특화됨.\n"
     },
@@ -27,23 +27,23 @@
         "min_radius": 10,
         "max_radius": 45,
         "min_altitude": 10,
-        "max_altitude": 25,
+        "max_altitude": 30,
         "angle": 120,
         "function": "PAC-3의 진화형으로, 더 긴 사거리와 향상된 요격 능력을 제공.\n"
     },
     "L-SAM": {
         "min_radius": 10,
         "max_radius": 180,
-        "min_altitude": 10,
-        "max_altitude": 25,
+        "min_altitude": 40,
+        "max_altitude": 150,
         "angle": 120,
         "function": "한국이 개발 중인 장거리 지대공 미사일로 탄도미사일 및 항공기 요격에 사용될 예정임.\n"
     },
     "THAAD": {
         "min_radius": 10,
         "max_radius": 200,
-        "min_altitude": 10,
-        "max_altitude": 25,
+        "min_altitude": 40,
+        "max_altitude": 150,
         "angle": 120,
         "function": "미국의 고고도 미사일 방어 시스템으로, 중거리 및 고고도 탄도미사일을 요격하기 위해 설계.\n"
     }

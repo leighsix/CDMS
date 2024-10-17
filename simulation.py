@@ -11,8 +11,7 @@ from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QFont
 import matplotlib.pyplot as plt
-from common_map_view import CommonMapView, DefenseAssetCommonMapView
-from enemy_map_view import EnemyBaseWeaponMapView
+from simulation_map_view import SimulationCalMapView, SimulationWeaponMapView, SimulationEnemyBaseWeaponMapView
 from setting import MapApp
 import mgrs
 import io
@@ -29,6 +28,8 @@ import numpy as np
 import math
 from geopy import distance
 from geopy.point import Point
+from simplification.cutil import simplify_coords
+
 
 # 한글 폰트 설정
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -73,9 +74,9 @@ class MissileDefenseApp(QDialog):
 
 
             try:
-                query = "SELECT * FROM dal_assets_ko"
+                query = "SELECT * FROM dal_assets_priority_ko"
                 self.dal_df_ko = pd.read_sql_query(query, conn,)
-                query = "SELECT * FROM dal_assets_en"
+                query = "SELECT * FROM dal_assets_priority_en"
                 self.dal_df_en = pd.read_sql_query(query, conn,)
             except sqlite3.OperationalError:
                 print("defense_assets 테이블이 존재하지 않습니다.")
@@ -637,7 +638,7 @@ class MissileDefenseApp(QDialog):
         search_filter_text = self.search_defense_filter.text()
         if search_filter_text:
             filtered_df = filtered_df[
-                (filtered_df['asset_name'].str.contains(search_filter_text, case=False)) |
+                (filtered_df['target_asset'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['unit'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['area'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['weapon_system'].str.contains(search_filter_text, case=False))
@@ -647,7 +648,6 @@ class MissileDefenseApp(QDialog):
         if weapon_filter_text != self.tr("전체"):
             filtered_df = filtered_df[
                 filtered_df['weapon_system'].apply(lambda x: weapon_filter_text in x.split(', '))]
-
 
         # 페이지네이션 설정
         self.dal_rows_per_page = int(self.display_dal_count_combo.currentText())
@@ -664,7 +664,8 @@ class MissileDefenseApp(QDialog):
             checkbox = CenteredCheckBox()
             self.defense_assets_table.setCellWidget(row, 0, checkbox)
             checkbox.checkbox.stateChanged.connect(self.update_map)
-            for col, value in enumerate(base[['unit', 'area', 'asset_name', 'weapon_system', 'threat_degree', 'ammo_count', 'coordinate', 'mgrs']], start=1):
+            for col, value in enumerate(base[['unit', 'area', 'target_asset', 'weapon_system', 'threat_degree',
+                                              'ammo_count', 'coordinate', 'mgrs']], start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.defense_assets_table.setItem(row, col, item)
@@ -683,11 +684,11 @@ class MissileDefenseApp(QDialog):
         selected_defense_assets = self.get_selected_defense_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
         if selected_assets:
-            CommonMapView(selected_assets, self.map)
+            SimulationCalMapView(selected_assets, self.map)
         if selected_defense_assets:
-            DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
+            SimulationWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
         if selected_enemy_bases:
-            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+            SimulationEnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
 
         data = io.BytesIO()
         self.map.save(data, close_file=False)
@@ -844,8 +845,8 @@ class MissileDefenseApp(QDialog):
             selected_enemy_bases = self.get_selected_items(self.enemy_sites_table)
             selected_defense_assets = self.get_selected_items(self.defense_assets_table)
             selected_cal_assets = self.get_selected_items(self.cal_assets_table)
-            if not selected_enemy_bases or not selected_defense_assets or not selected_cal_assets:
-                QMessageBox.warning(self, self.tr("경고"), self.tr("미사일 기지, 방어 자산 또는 방어 대상 자산을 선택하세요."))
+            if not selected_enemy_bases or not selected_cal_assets:
+                QMessageBox.warning(self, self.tr("경고"), self.tr("미사일 기지 또는 방어 대상 자산을 선택하세요."))
                 return
 
             self.trajectories = []
@@ -855,7 +856,7 @@ class MissileDefenseApp(QDialog):
                     try:
                         base_name = enemy_base_dic.get(self.tr('발사기지'))
                         missile_lat, missile_lon = self.parse_coordinates(enemy_base_dic.get('경위도'))
-                        target_name = cal_asset_dic.get(self.tr('방어대상자산명'))
+                        target_name = cal_asset_dic.get(self.tr('방어대상자산'))
                         target_lat, target_lon = self.parse_coordinates(cal_asset_dic.get('경위도'))
 
                         distance = self.trajectory_calculator.calculate_distance(missile_lat, missile_lon,
@@ -868,36 +869,127 @@ class MissileDefenseApp(QDialog):
                             if trajectory:
                                 # 반환값 형식에 맞춰 데이터 저장
                                 result = {
-                                    base_name : (missile_lat, missile_lon),
-                                    target_name :(target_lat, target_lon),
+                                    'base_name' :base_name,
+                                    'base_coordinate': (missile_lat, missile_lon),
+                                    'target_name' : target_name,
+                                    'target_coordinate' :(target_lat, target_lon),
                                     'missile_type': missile_type,
                                     'trajectory': trajectory
                                 }
 
                                 self.trajectories.append(result)
                                 # 방어 가능한 궤적 따로 저장
-                                if selected_defense_assets :
-                                    for defense_assets_dic in selected_defense_assets:
-                                        defense_name = defense_assets_dic.get(self.tr('방어자산'))
-                                        defense_lat, defense_lon = self.parse_coordinates(defense_assets_dic.get('경위도'))
-                                        weapon_type = defense_assets_dic.get(self.tr('무기체계'))
-                                        if self.check_engagement_possibility(trajectory):
+                                if selected_defense_assets:
+                                    for defense_asset_dic in selected_defense_assets:
+                                        defense_name = defense_asset_dic.get(self.tr('방어자산명'))
+                                        defense_lat, defense_lon = self.parse_coordinates(defense_asset_dic.get('경위도'))
+                                        weapon_type = defense_asset_dic.get(self.tr('무기체계'))
+                                        threat_azimuth =  int(defense_asset_dic.get(self.tr('위협방위')))
+                                        if self.check_engagement_possibility(defense_lat, defense_lon, weapon_type,
+                                                                             trajectory, threat_azimuth):
                                             defense_result = {
-                                            base_name : (missile_lat, missile_lon),
-                                            target_name : (target_lat, target_lon),
-                                            defense_name : (defense_lat, defense_lon),
-                                            'weapon_type' : weapon_type,
-                                            'missile_type': missile_type,
-                                            'trajectory': trajectory
-                                        }
+                                                'base_name': base_name,
+                                                'base_coordinate': (missile_lat, missile_lon),
+                                                'target_name': target_name,
+                                                'target_coordinate': (target_lat, target_lon),
+                                                'defense_name' : defense_name,
+                                                'defense_coordinate': (defense_lat, defense_lon),
+                                                'weapon_type': weapon_type,
+                                                'missile_type': missile_type,
+                                                'trajectory': trajectory
+                                            }
                                             self.defense_trajectories.append(defense_result)
 
                     except ValueError as e:
-                        print(self.tr(f"좌표 변환 오류: {e}"))
-
+                        print(self.tr(f"오류 발생: {e}"))
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("에러"), self.tr(f"궤적 계산 중 오류 발생: {str(e)}"))
+
+    def calculate_trajectory(self, missile_base, target, missile_type):
+        """미사일 궤적을 계산하는 메서드 (MissileTrajectoryCalculator 사용)"""
+        try:
+            return self.trajectory_calculator.calculate_trajectory(missile_base, target, missile_type)
+        except Exception as e:
+            print(f"Error calculating trajectory: {e}")
+            return None
+
+    def update_map_with_trajectories(self):
+        """미사일 궤적 및 방어 궤적을 지도에 표시하는 메서드"""
+        # 새로운 지도 객체를 생성합니다.
+        self.map = folium.Map(
+            location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
+            zoom_start=self.parent.map_app.loadSettings()['zoom'],
+            tiles=self.parent.map_app.loadSettings()['style'])
+
+        # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
+        selected_assets = self.get_selected_assets()
+        selected_defense_assets = self.get_selected_defense_assets()
+        selected_enemy_bases = self.get_selected_enemy_bases()
+        if selected_assets:
+            CommonCalMapView(selected_assets, self.map)
+        if selected_defense_assets:
+            CommonWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
+        if selected_enemy_bases:
+            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+
+        # 궤적을 지도에 추가합니다.
+        if hasattr(self, 'trajectories'):
+            trajectory_groups = {}
+            for trajectory_data in self.trajectories:
+                trajectory = trajectory_data['trajectory']
+                start = tuple(trajectory[0][:2])
+                end = tuple(trajectory[-1][:2])
+                key = (start, end)
+                if key not in trajectory_groups:
+                    trajectory_groups[key] = []
+                trajectory_groups[key].append(trajectory)
+
+            for (start, end), trajectories in trajectory_groups.items():
+                # 그룹의 대표 궤적 선택
+                representative_trajectory = trajectories[0]
+                points = [(float(lat), float(lon)) for lat, lon, _ in representative_trajectory]
+
+                # 궤적 간소화
+                simplified_points = simplify_coords(points, 0.001)
+
+                # 방어 가능한 궤적 여부 확인
+                is_defended = self.is_trajectory_defended(representative_trajectory)
+
+                # 간소화된 궤적 표시 (방어 가능한 경우 녹색, 그렇지 않은 경우 빨간색)
+                color = "green" if is_defended else "red"
+                folium.PolyLine(
+                    locations=simplified_points,
+                    color=color,
+                    weight=0.5,
+                    opacity=0.8
+                ).add_to(self.map)
+
+                # 방어 가능한 궤적에 대해 교전 지점 표시
+                if is_defended:
+                    for defense_tr_dic in self.defense_trajectories:
+                        if self.is_same_trajectory(representative_trajectory, defense_tr_dic['trajectory']):
+                            defense_coordinate = defense_tr_dic['defense_coordinate']
+                            intercept_point = self.find_intercept_point(defense_tr_dic)
+                            if intercept_point:
+                                folium.PolyLine(
+                                    locations=[defense_coordinate, intercept_point[:2]],
+                                    color="blue",
+                                    weight=0.5,
+                                    opacity=0.8
+                                ).add_to(self.map)
+
+        # 지도를 HTML로 렌더링하고 웹뷰에 로드합니다.
+        data = io.BytesIO()
+        self.map.save(data, close_file=False)
+        html_content = data.getvalue().decode()
+        self.map_view.setHtml(html_content)
+
+        # 지도 로딩이 완료되었는지 확인합니다.
+        self.map_view.loadFinished.connect(self.on_map_load_finished)
+
+        # 지도 업데이트 후 화면을 갱신합니다.
+        self.map_view.update()
 
     @staticmethod
     def parse_coordinates(coord_string):
@@ -907,13 +999,49 @@ class MissileDefenseApp(QDialog):
         lon = float(lon_str[1:])  # 'E' 제거
         return lat, lon
 
-    def calculate_trajectory(self, missile_base, target, missile_type):
-        """미사일 궤적을 계산하는 메서드 (MissileTrajectoryCalculator 사용)"""
+    def run_trajectory_analysis(self):
+        """미사일 궤적 분석 실행 메서드"""
         try:
-            return self.trajectory_calculator.calculate_trajectory(missile_base, target, missile_type)
+            self.calculate_trajectories()
+            total_trajectories = len(self.trajectories)  # 총 미사일 궤적 수
+
+            # 중복을 제거한 유니크한 방어 가능 궤적 계산
+            unique_defensible_trajectories = set()
+            for defense_trajectory in self.defense_trajectories:
+                # 궤적을 식별할 수 있는 고유한 키 생성 (예: 시작점과 끝점 좌표)
+                base_lat, base_lon = defense_trajectory['base_coordinate']
+                target_lat, target_lon = defense_trajectory['target_coordinate']
+                trajectory_key = (base_lat, base_lon, target_lat, target_lon)
+                unique_defensible_trajectories.add(trajectory_key)
+
+            defensible_trajectories = len(unique_defensible_trajectories)  # 유니크한 방어 가능 궤적 수
+
+            # 방어율 계산
+            if total_trajectories > 0:
+                defense_rate = (defensible_trajectories / total_trajectories) * 100
+            else:
+                defense_rate = 0
+
+            # 결과 테이블 업데이트
+            self.result_table.setRowCount(1)
+            self.result_table.setColumnCount(3)
+            self.result_table.setHorizontalHeaderLabels(["총 미사일 궤적", "방어 가능 궤적", "방어율"])
+            self.result_table.setItem(0, 0, QTableWidgetItem(str(total_trajectories)))
+            self.result_table.setItem(0, 1, QTableWidgetItem(str(defensible_trajectories)))
+            self.result_table.setItem(0, 2, QTableWidgetItem(f"{defense_rate:.2f}%"))
+            self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.result_table.verticalHeader().setVisible(False)
+
+            # 지도 업데이트 (미사일 궤적 및 방어 궤적 표시)
+            self.update_map_with_trajectories()
+
         except Exception as e:
-            print(f"Error calculating trajectory: {e}")
-            return None
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"미사일 궤적 분석 오류: {e}"))
+
+    def is_trajectory_defended(self, trajectory):
+        """주어진 궤적이 방어 가능한지 확인하는 메서드"""
+        return any(self.is_same_trajectory(trajectory, defense_tr_dic['trajectory']) for defense_tr_dic in
+                   self.defense_trajectories)
 
     def determine_missile_type(self, distance, base_name):
         """거리와 기지명에 따라 미사일 종류를 결정하는 메서드"""
@@ -958,254 +1086,83 @@ class MissileDefenseApp(QDialog):
         distance = R * c
         return distance
 
-    def check_engagement_possibility(self, trajectory):
+    def check_engagement_possibility(self, defense_lat, defense_lon, weapon_type, trajectory, threat_azimuth):
         """미사일 궤적이 방어 가능한지 확인하는 메서드"""
-        missile_base, target, defense_unit, missile_path = trajectory
-        K_lat, K_lon, _ = defense_unit[:3]  # 방어 유닛 위치 (x, y, z)
-        range_tuple = defense_unit[3]  # 방어 유닛 사거리 (최소, 최대)
-        altitude_tuple = defense_unit[4]  # 방어 유닛 요격 고도 (최소, 최대)
-        angle = defense_unit[5]  # 방어 유닛 방위각
+        range_tuple = (self.weapon_systems_info[weapon_type].get('min_radius'),
+                       self.weapon_systems_info[weapon_type].get('max_radius'))  # 방어 유닛 사거리 (최소, 최대)
+        altitude_tuple = (self.weapon_systems_info[weapon_type].get('min_altitude'),
+                          self.weapon_systems_info[weapon_type].get('max_altitude'))  # 방어 유닛 요격 고도 (최소, 최대)
+        angle = self.weapon_systems_info[weapon_type].get('angle')  # 방어 유닛 방위각
 
-        for M_lat, M_lon, Mz in missile_path:
-            distance = self.calculate_distance(K_lat, K_lon, M_lat, M_lon)  # 방어 유닛과 미사일 간 거리 계산
+        for M_lat, M_lon, Mz in trajectory:
+            distance = self.calculate_distance(defense_lat, defense_lon, M_lat, M_lon)  # 방어 유닛과 미사일 간 거리 계산
+
+            # 미사일의 방위각 계산
+            missile_azimuth = math.atan2(M_lat - defense_lat, M_lon - defense_lon)
+
+            # 위협방위와의 각도 차이 계산
+            azimuth_diff = abs(missile_azimuth - math.radians(threat_azimuth))
 
             # 논문의 식 (4)~(6)을 적용하여 교전 가능성 판단
-            if M_lat >= K_lat and abs(math.atan2(M_lat - K_lat, M_lon - K_lon) - math.atan2(target[0] - missile_base[0],
-                                                                                             target[1] - missile_base[
-                                                                                                 1])) <= math.radians(
-                    angle / 2) and range_tuple[0] <= distance <= range_tuple[1] and altitude_tuple[0] <= Mz <= \
-                    altitude_tuple[1]:
+            if (azimuth_diff <= math.radians(angle / 2) or azimuth_diff >= math.radians(360 - angle / 2)) and \
+                    range_tuple[0] <= distance <= range_tuple[1] and \
+                    altitude_tuple[0] <= Mz <= altitude_tuple[1]:
                 return True  # 교전 가능한 경우 True 반환
-        return False  # 궤적 boyunca 방어 가능한 지점이 없는 경우 False 반환
+
+        return False  # 궤적 전체에서 방어 가능한 지점이 없는 경우 False 반환
 
     def calculate_engagement_zones(self):
         """방공포대 교전가능 공간을 계산하는 메서드 (수정됨)"""
         try:
-            self.engagement_zones = {}
-            grid_size = 20  # 격자 크기 (km)
-            for lat in np.arange(34.31, 38.31, grid_size / 111.111):  # 위도 범위 (격자 크기 고려)
-                for lon in np.arange(126.13, 129.58, grid_size / (111.111 * math.cos(lat * math.pi / 180))):  # 경도 범위 (격자 크기 및 위도 고려)
-                    self.engagement_zones[(lat, lon)] = []  # 격자 중심 좌표를 키로, 방어 가능한 자산 목록을 값으로 갖는 딕셔너리 초기화
+            self.engagement_zones = []
+            self.grid_center={}
+            lat_step = 0.2  # 위도 간격 (도)
+            lon_step = 0.2  # 경도 간격 (도)
 
-            for missile_base, target, defense_unit, _ in self.trajectories:
-                for grid_center in self.engagement_zones.keys():
+            # 격자 이름 생성을 위한 알파벳과 숫자 리스트
+            alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            numbers = range(1, 27)  # 1부터 26까지
+
+            lat_index = 0
+            for lat in np.arange(38.5, 33.5, -lat_step):  # 위도 범위 (북에서 남으로)
+                lon_index = 0
+                for lon in np.arange(125.5, 129.5, lon_step):  # 경도 범위
+                    grid_name = f"{alphabet[lon_index]}{numbers[lat_index]}"
+                    self.grid_center[grid_name] = {'center': (lat, lon)}
+                    lon_index += 1
+                lat_index += 1
+
+            for trajectory_dic in self.trajectories:
+                for grid_name, grid_info in self.grid_center.items():
+                    grid_center = grid_info['center']
                     # 각 격자 중심 위치를 방어 자산 위치로 임시 설정하여 교전 가능성 확인
-                    temp_defense_unit = (grid_center[0], grid_center[1], 0, defense_unit[3], defense_unit[4],
-                                         defense_unit[5])
-                    trajectory = (missile_base, target, temp_defense_unit, _)
-                    if self.check_engagement_possibility(trajectory):
-                        # 해당 격자에서 방어 가능한 경우, 자산 정보를 딕셔너리에 추가
-                        self.engagement_zones[grid_center].append(target)
+                    for weapon_type in self.weapon_systems_info.keys():
+                        for threat_azimuth in range(0, 360, 30):  # 30도 간격으로 변경
+                            base_name = trajectory_dic.get('base_name')
+                            missile_lat, missile_lon = trajectory_dic.get('base_coordinate')
+                            target_name = trajectory_dic.get('target_name')
+                            target_lat, target_lon = trajectory_dic.get('target_coordinate')
+                            missile_type = trajectory_dic.get('missile_type')
+                            trajectory = trajectory_dic.get('trajectory')
+
+                            if self.check_engagement_possibility(grid_center[0], grid_center[1], weapon_type,
+                                                                 trajectory, threat_azimuth):
+                                temp_defense_result = {
+                                    'base_name': base_name,
+                                    'base_coordinate': (missile_lat, missile_lon),
+                                    'target_name': target_name,
+                                    'target_coordinate': (target_lat, target_lon),
+                                    'defense_name': grid_name,
+                                    'defense_coordinate': grid_center,
+                                    'weapon_type': weapon_type,
+                                    'missile_type': missile_type,
+                                    'trajectory': trajectory,
+                                    'threat_azimuth': threat_azimuth
+                                }
+                                self.engagement_zones.append(temp_defense_result)
 
         except Exception as e:
             QMessageBox.critical(self, "에러", f"교전 가능 공간 계산 중 오류 발생: {str(e)}")
-
-    def optimize_locations(self):
-        """최적의 방공포대 위치를 선정하는 메서드 (수정됨)"""
-        try:
-            self.calculate_engagement_zones()
-
-            # 이진 정수 계획법을 위한 변수 및 제약 조건 설정
-            candidate_locations = list(self.engagement_zones.keys())  # 후보 위치 목록
-            num_candidate_locations = len(candidate_locations)
-            targets = set()
-            for target_list in self.engagement_zones.values():
-                targets.update(target_list)
-            num_targets = len(targets)
-
-            # 목적 함수 계수 (모든 위치의 비용을 1로 동일하게 설정)
-            c = [1] * num_candidate_locations
-
-            # 제약 조건 계수 행렬 (A) 및 우변 벡터 (b) 초기화
-            A = []
-            b = []
-
-            # 각 target에 대해 최소 하나 이상의 방어 유닛이 커버하도록 제약 조건 추가
-            for target in targets:
-                constraint = [0] * num_candidate_locations
-                for i, location in enumerate(candidate_locations):
-                    if target in self.engagement_zones[location]:
-                        constraint[i] = 1
-                A.append(constraint)
-                b.append(1)
-
-            # 경계 조건 (모든 변수는 0 또는 1)
-            bounds = [(0, 1)] * num_candidate_locations
-
-            # 이진 정수 계획법 해결 (scipy.optimize.linprog 사용)
-            res = linprog(c, A_ub=A, b_ub=b, bounds=bounds, integrality=[1] * num_candidate_locations)
-
-            # 최적 위치 저장
-            self.optimized_locations = []
-            if res.success:
-                for i, x in enumerate(res.x):
-                    if round(x) == 1:
-                        self.optimized_locations.append(candidate_locations[i])
-            else:
-                QMessageBox.warning(self, "경고", "최적해를 찾지 못했습니다.")
-                return
-
-            #QMessageBox.information(self, "성공", "위치 최적화가 완료되었습니다.")
-
-        except Exception as e:
-            QMessageBox.critical(self, "에러", f"위치 최적화 중 오류 발생: {str(e)}")
-
-    def run_trajectory_analysis(self):
-        """미사일 궤적 분석 실행 메서드"""
-        try:
-            self.calculate_trajectories()
-            total_trajectories = len(self.trajectories)  # 총 미사일 궤적 수
-            defensible_trajectories = len(self.defense_trajectories)  # 방어 가능한 궤적 수
-
-            # 방어율 계산
-            if total_trajectories > 0:
-                defense_rate = (defensible_trajectories / total_trajectories) * 100
-            else:
-                defense_rate = 0
-
-            # 결과 테이블 업데이트
-            self.result_table.setRowCount(1)
-            self.result_table.setColumnCount(3)
-            self.result_table.setHorizontalHeaderLabels(["총 미사일 궤적", "방어 가능 궤적", "방어율"])
-            self.result_table.setItem(0, 0, QTableWidgetItem(str(total_trajectories)))
-            self.result_table.setItem(0, 1, QTableWidgetItem(str(defensible_trajectories)))
-            self.result_table.setItem(0, 2, QTableWidgetItem(f"{defense_rate:.2f}%"))
-            self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.result_table.verticalHeader().setVisible(False)
-
-            # 지도 업데이트 (미사일 궤적 및 방어 궤적 표시)
-            self.update_map_with_trajectories()
-
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"미사일 궤적 분석 오류: {e}"))
-
-    def run_location_optimization(self):
-        """최적 방공포대 위치 산출 실행 메서드"""
-        try:
-            self.calculate_trajectories()
-            self.optimize_locations()
-
-            # 결과 테이블 업데이트 (최적 위치별 방어 가능 자산 우선순위)
-            self.result_table.setRowCount(len(self.optimized_locations))
-            self.result_table.setColumnCount(2)
-            self.result_table.setHorizontalHeaderLabels(["최적 위치", "방어 가능 자산 우선순위"])
-            self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.result_table.verticalHeader().setVisible(False)
-
-            for i, location in enumerate(self.optimized_locations):
-                # ... (최적 위치별 방어 가능 자산 우선순위 계산 및 테이블 업데이트)
-                self.result_table.setItem(i, 0, QTableWidgetItem(f"({location[0]:.2f}, {location[1]:.2f})"))
-                defensible_assets = len(self.engagement_zones[location])
-                self.result_table.setItem(i, 1, QTableWidgetItem(str(defensible_assets)))
-
-            # 지도 업데이트 (미사일 궤적, 방어 궤적, 격자, 최적 위치 표시)
-            self.update_map_with_optimized_locations()
-
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 산출 오류: {e}"))
-
-    def update_map_with_trajectories(self):
-        """미사일 궤적 및 방어 궤적을 지도에 표시하는 메서드"""
-        # 새로운 지도 객체를 생성합니다.
-        self.map = folium.Map(
-            location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
-            zoom_start=self.parent.map_app.loadSettings()['zoom'],
-            tiles=self.parent.map_app.loadSettings()['style'])
-
-        # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
-        selected_assets = self.get_selected_assets()
-        selected_defense_assets = self.get_selected_defense_assets()
-        selected_enemy_bases = self.get_selected_enemy_bases()
-        if selected_assets:
-            CommonMapView(selected_assets, self.map)
-        if selected_defense_assets:
-            DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
-        if selected_enemy_bases:
-            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
-        # 궤적을 지도에 추가합니다.
-        if hasattr(self, 'trajectories'):
-            for trajectory_data in self.trajectories:
-                # 데이터 구조에 따라 필요한 정보만 추출
-                missile_base = trajectory_data[0]
-                target = trajectory_data[1]
-                defense_unit = trajectory_data[2]
-                trajectory = trajectory_data[3]
-
-                # 미사일 궤적 (고도 정보를 이용한 곡선)
-                points = [(float(lat), float(lon), float(alt)) for lat, lon, alt in trajectory]
-
-                # 고도를 이용하여 강화된 곡선 효과 생성
-                curved_points = []
-                max_alt = max(alt for _, _, alt in points)
-                for i in range(len(points)):
-                    lat, lon, alt = points[i]
-                    # 고도에 따라 위도와 경도를 더 크게 조정하여 강한 곡선 효과 생성
-                    curve_factor = (alt / max_alt) * 0.05  # 최대 고도의 5%까지 곡률 적용
-                    if i > 0 and i < len(points) - 1:
-                        prev_lat, prev_lon, _ = points[i - 1]
-                        next_lat, next_lon, _ = points[i + 1]
-                        mid_lat = (prev_lat + next_lat) / 2
-                        mid_lon = (prev_lon + next_lon) / 2
-                        lat = lat + (mid_lat - lat) * curve_factor
-                        lon = lon + (mid_lon - lon) * curve_factor
-                    curved_points.append((lat, lon))
-
-                folium.PolyLine(
-                    locations=curved_points,
-                    color="red",
-                    weight=0.5,
-                    opacity=0.8
-                ).add_to(self.map)
-
-                # 방어 가능한 궤적 표시
-                # if self.check_engagement_possibility(trajectory):
-                #     intercept_point = self.find_intercept_point(trajectory, defense_unit)
-                #     if intercept_point:
-                #         folium.PolyLine(
-                #             locations=[defense_unit[:2], intercept_point[:2]],
-                #             color="blue",
-                #             weight=1,
-                #             opacity=0.8
-                #         ).add_to(self.map)
-                #
-                #         # 방어 가능한 미사일 궤적 강조
-                #         folium.PolyLine(
-                #             locations=points,
-                #             color="green",
-                #             weight=2,
-                #             opacity=1
-                #         ).add_to(self.map)
-                #
-        # 지도를 HTML로 렌더링하고 웹뷰에 로드합니다.
-        data = io.BytesIO()
-        self.map.save(data, close_file=False)
-        html_content = data.getvalue().decode()
-        self.map_view.setHtml(html_content)
-
-        # 지도 로딩이 완료되었는지 확인합니다.
-        self.map_view.loadFinished.connect(self.on_map_load_finished)
-
-        # 지도 업데이트 후 화면을 갱신합니다.
-        self.map_view.update()
-
-    def find_intercept_point(self, trajectory, defense_unit):
-        """방어 가능한 교전 지점을 찾는 메서드"""
-        defense_lat, defense_lon, defense_altitude, defense_range, defense_altitude_range, defense_angle = defense_unit
-
-        for point in trajectory:
-            lat, lon, altitude = point
-            distance = self.calculate_distance(defense_lat, defense_lon, lat, lon)
-            if (defense_range[0] <= distance <= defense_range[1] and
-                    defense_altitude_range[0] <= altitude <= defense_altitude_range[1]):
-                return (lat, lon, altitude)
-
-        return None
-
-    def on_map_load_finished(self, result):
-        if result:
-            print("지도가 성공적으로 로드되었습니다.")
-        else:
-            print("지도 로딩에 실패했습니다.")
 
     def update_map_with_optimized_locations(self):
         """미사일 궤적, 방어 궤적, 격자, 최적 위치를 지도에 표시하는 메서드"""
@@ -1220,65 +1177,110 @@ class MissileDefenseApp(QDialog):
         selected_defense_assets = self.get_selected_defense_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
         if selected_assets:
-            CommonMapView(selected_assets, self.map)
+            CommonCalMapView(selected_assets, self.map)
         if selected_defense_assets:
-            DefenseAssetCommonMapView(selected_defense_assets, self.show_defense_radius, self.map)
+            CommonWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
         if selected_enemy_bases:
             EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
 
-        # 궤적을 지도에 추가합니다.
-        for missile_base, target, defense_unit, trajectory in self.trajectories:
-            # 미사일 궤적
+        # 격자 및 라벨 표시
+        lat_step = 0.2
+        lon_step = 0.2
+        grid_color = "gray"
+        grid_opacity = 0.5
+
+        for lat in np.arange(33.5, 38.7, lat_step):
             folium.PolyLine(
-                locations=[(float(lat), float(lon)) for lat, lon, _ in trajectory],
-                color="red",
-                weight=2,
-                opacity=0.8
+                locations=[(lat, 125.5), (lat, 129.5)],
+                color=grid_color,
+                weight=1,
+                opacity=grid_opacity
             ).add_to(self.map)
 
-            # 발사 지점 마커
-            folium.Marker(
-                location=missile_base,
-                icon=folium.Icon(color='red', icon='rocket', prefix='fa')
-            ).add_to(self.map)
-
-            # 목표 지점 마커
-            folium.Marker(
-                location=target,
-                icon=folium.Icon(color='orange', icon='crosshairs', prefix='fa')
-            ).add_to(self.map)
-
-            # 방어 궤적
+        for lon in np.arange(125.5, 129.7, lon_step):
             folium.PolyLine(
-                locations=[defense_unit[:2], target],
-                color="blue",
-                weight=2,
-                opacity=0.8
+                locations=[(33.5, lon), (38.5, lon)],
+                color=grid_color,
+                weight=1,
+                opacity=grid_opacity
             ).add_to(self.map)
 
-            # 방어 유닛 마커
-            folium.Marker(
-                location=defense_unit[:2],
-                icon=folium.Icon(color='green', icon='shield', prefix='fa')
-            ).add_to(self.map)
+        # 격자 라벨 추가
+        # letters = 'ABCDEFGHIJKLMN'
+        # for i, lat in enumerate(np.arange(33.5, 38.7, lat_step)):
+        #     folium.Marker(
+        #         [lat, 125.4],
+        #         icon=folium.DivIcon(html=f'<div style="font-size: 10pt; color:{grid_color}">{i + 1}</div>')
+        #     ).add_to(self.map)
+        #
+        # for i, lon in enumerate(np.arange(125.5, 129.7, lon_step)):
+        #     folium.Marker(
+        #         [38.6, lon],
+        #         icon=folium.DivIcon(html=f'<div style="font-size: 10pt; color:{grid_color}">{letters[i]}</div>')
+        #     ).add_to(self.map)
 
-        # 격자 표시
-        for location in self.engagement_zones.keys():
+        if hasattr(self, 'trajectories'):
+            trajectory_groups = {}
+            for trajectory_data in self.trajectories:
+                trajectory = trajectory_data.get('trajectory')
+                if trajectory is None or not isinstance(trajectory, list) or len(trajectory) < 2:
+                    continue  # trajectory가 없거나 올바르지 않은 형식인 경우 건너뜁니다.
+                start = tuple(trajectory[0][:2])
+                end = tuple(trajectory[-1][:2])
+                key = (start, end)
+                if key not in trajectory_groups:
+                    trajectory_groups[key] = []
+                trajectory_groups[key].append(trajectory)
+
+            for (start, end), trajectories in trajectory_groups.items():
+                # 그룹의 대표 궤적 선택
+                representative_trajectory = trajectories[0]
+                points = [(float(lat), float(lon)) for lat, lon, _ in representative_trajectory if
+                          isinstance(lat, (int, float)) and isinstance(lon, (int, float))]
+
+                if len(points) < 2:
+                    continue  # 유효한 포인트가 2개 미만인 경우 건너뜁니다.
+
+                # 궤적 간소화
+                simplified_points = simplify_coords(points, 0.001)
+
+                # 방어 가능한 궤적 여부 확인
+                is_defended = self.is_trajectory_defended_temp(representative_trajectory)
+
+                # 간소화된 궤적 표시 (방어 가능한 경우 녹색, 그렇지 않은 경우 빨간색)
+                color = "green" if is_defended else "red"
+                folium.PolyLine(
+                    locations=simplified_points,
+                    color=color,
+                    weight=0.5,
+                    opacity=0.8
+                ).add_to(self.map)
+
+                # 방어 가능한 궤적에 대해 교전 지점 표시
+                if is_defended:
+                    for optimized_location_dic in self.optimized_locations:
+                        if self.is_same_trajectory(representative_trajectory, optimized_location_dic['trajectory']):
+                            temp_defense_coordinate = optimized_location_dic['defense_coordinate']
+                            intercept_point = self.find_intercept_point(optimized_location_dic)
+                            if intercept_point:
+                                folium.PolyLine(
+                                    locations=[temp_defense_coordinate, intercept_point[:2]],
+                                    color="blue",
+                                    weight=0.5,
+                                    opacity=0.8
+                                ).add_to(self.map)
+
+        # 최적 위치 표시 (작은 녹색 사각형으로 변경)
+        for optimized_location_dic in self.optimized_locations:
             folium.Rectangle(
-                bounds=[
-                    (location[0] - 0.05, location[1] - 0.05),
-                    (location[0] + 0.05, location[1] + 0.05)
-                ],
-                color="gray",
-                fill=False,
-                weight=1
-            ).add_to(self.map)
-
-        # 최적 위치 표시
-        for location in self.optimized_locations:
-            folium.Marker(
-                location=location,
-                icon=folium.Icon(color='green', icon='star')
+                bounds=[optimized_location_dic.get('defense_coordinate'),
+                        optimized_location_dic.get('defense_coordinate')],
+                color='green',
+                fill=True,
+                fillColor='green',
+                weight=2,
+                fillOpacity=0.8,
+                popup=f"최적 위치: {optimized_location_dic.get('defense_coordinate')}",
             ).add_to(self.map)
 
         data = io.BytesIO()
@@ -1289,46 +1291,166 @@ class MissileDefenseApp(QDialog):
         # 지도 로딩이 완료되었는지 확인합니다.
         self.map_view.loadFinished.connect(self.on_map_load_finished)
 
-    def get_mgrs_from_dict(self, data_dict):
+    def optimize_locations(self):
         try:
-            mgrs = data_dict.get(self.tr('군사좌표(MGRS)'), '')
-            if not mgrs:
-                raise ValueError(self.tr("MGRS 데이터가 없습니다."))
+            # 방어 시스템의 교전 구역 계산
+            self.calculate_engagement_zones()
 
-            # 공백 제거 및 구성 요소 분리
-            mgrs_parts = mgrs.replace(' ', '')
+            # 후보 방어 위치 목록 생성 (중복 제거)
+            candidate_locations = list(set([zone['defense_name'] for zone in self.engagement_zones]))
+            num_candidate_locations = len(candidate_locations)
 
-            # MGRS 문자열의 길이 확인
-            if len(mgrs_parts) != 15:
-                raise ValueError(self.tr("MGRS 데이터 형식이 올바르지 않습니다."))
+            # 목표물 위치 목록 생성 (중복 제거)
+            bases = set([(zone['base_name'], zone['base_coordinate']) for zone in self.engagement_zones])
+            num_bases = len(bases)
 
-            zone = mgrs_parts[:3]
-            square = mgrs_parts[3:5]
-            easting = mgrs_parts[5:10]
-            northing = mgrs_parts[10:]
+            # 목표물 위치 목록 생성 (중복 제거)
+            targets = set([(zone['target_name'], zone['target_coordinate']) for zone in self.engagement_zones])
+            num_targets = len(targets)
 
-            # 구성 요소 검증
-            if not zone[0:2].isdigit() or not zone[2].isalpha():
-                raise ValueError(self.tr("잘못된 MGRS zone 형식입니다."))
-            if not square.isalpha():
-                raise ValueError(self.tr("잘못된 MGRS square 형식입니다."))
-            if not easting.isdigit() or not northing.isdigit():
-                raise ValueError(self.tr("잘못된 MGRS easting 또는 northing 형식입니다."))
+            # 목적 함수: 각 위치의 비용을 1로 가정하고 총 비용 최소화
+            c = np.ones(num_candidate_locations)
 
-            return f'{zone}{square}{easting}{northing}'
-        except (TypeError, ValueError) as e:
-            raise ValueError(self.tr(f"MGRS 데이터 오류: {e}"))
+            # 제약 조건 행렬(A)과 벡터(b) 초기화
+            A = []
+            b = []
+
+            # 각 목표물에 대한 제약 조건 생성
+            for target in targets:
+                for base in bases:
+                    constraint = [0] * num_candidate_locations
+                    for i, location in enumerate(candidate_locations):
+                        # 현재 위치가 해당 목표물을 방어할 수 있는지 확인
+                        if any(zone['defense_name'] == location and
+                                # zone['base_name'] == base[0] and
+                                # zone['base_coordinate'] == base[1] and
+                                zone['target_name'] == target[0] and
+                                zone['target_coordinate'] == target[1]
+                            for zone in self.engagement_zones):
+                            constraint[i] = 1
+                    A.append(constraint)
+                    b.append(1)  # 각 목표물은 최소 1개의 방어 시스템으로 방어되어야 함
+
+            # NumPy 배열로 변환
+            A = np.array(A)
+            b = np.array(b)
+
+            # 각 변수(위치)의 범위 설정: 0(미선택) 또는 1(선택)
+            bounds = [(0, 1)] * num_candidate_locations
+
+            # 선형 계획법 문제 해결
+            # A와 b를 음수로 변환하여 '이상' 제약 조건을 '이하' 제약 조건으로 변경
+            res = linprog(c, A_ub=-A, b_ub=-b, bounds=bounds, method='highs')
+
+            self.optimized_locations = []
+            if res.success:
+                # 최적화 결과 처리
+                for i, x in enumerate(res.x):
+                    if x > 0.5:  # 0.5 초과 값을 가진 위치를 선택 (반올림 효과)
+                        optimal_location = candidate_locations[i]
+                        # 선택된 위치에 해당하는 모든 교전 구역 추가
+                        optimal_zones = [zone for zone in self.engagement_zones if
+                                         zone['defense_name'] == optimal_location]
+                        self.optimized_locations.extend(optimal_zones)
+            else:
+                # 최적해를 찾지 못한 경우 경고 메시지 표시
+                QMessageBox.warning(self, self.tr("경고"), self.tr("최적해를 찾지 못했습니다."))
+                return
+
+        except Exception as e:
+            # 오류 발생 시 에러 메시지 표시
+            QMessageBox.critical(self, self.tr("에러"), self.tr(f"위치 최적화 중 오류 발생: {str(e)}"))
+            return
+
+    def run_location_optimization(self):
+        """최적 방공포대 위치 산출 실행 메서드"""
+        try:
+            self.calculate_trajectories()
+            self.optimize_locations()
+
+            if not hasattr(self, 'optimized_locations') or not self.optimized_locations:
+                QMessageBox.warning(self, "경고", "최적화된 위치가 없습니다.")
+                return
+
+            # 결과 테이블 업데이트
+            self.result_table.setRowCount(0)  # 기존 행 모두 제거
+            self.result_table.setColumnCount(4)
+            self.result_table.setHorizontalHeaderLabels(["최적 위치", "방어 가능 자산", "무기 유형", "위협 방위각"])
+            self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.result_table.verticalHeader().setVisible(False)
+
+            defensible_assets = {}
+            for optimized_location in self.optimized_locations:
+                temp_defense_name = optimized_location.get('defense_name')
+                target_name = optimized_location.get('target_name')
+                weapon_type = optimized_location.get('weapon_type')
+                threat_azimuth = optimized_location.get('threat_azimuth')
+
+                if temp_defense_name not in defensible_assets:
+                    defensible_assets[temp_defense_name] = {
+                        'assets': set(),
+                        'weapons': set(),
+                        'azimuths': set()
+                    }
+                defensible_assets[temp_defense_name]['assets'].add(target_name)
+                defensible_assets[temp_defense_name]['weapons'].add(weapon_type)
+                defensible_assets[temp_defense_name]['azimuths'].add(str(threat_azimuth))
+
+            for temp_defense_name, data in defensible_assets.items():
+                row_position = self.result_table.rowCount()
+                self.result_table.insertRow(row_position)
+                self.result_table.setItem(row_position, 0, QTableWidgetItem(temp_defense_name))
+                self.result_table.setItem(row_position, 1, QTableWidgetItem(', '.join(sorted(data['assets']))))
+                self.result_table.setItem(row_position, 2, QTableWidgetItem(', '.join(sorted(data['weapons']))))
+                self.result_table.setItem(row_position, 3, QTableWidgetItem(', '.join(sorted(data['azimuths']))))
+
+            # 지도 업데이트
+            self.update_map_with_optimized_locations()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 산출 오류: {e}"))
+
+    def is_trajectory_defended_temp(self, trajectory):
+        """주어진 궤적이 방어 가능한지 확인하는 메서드"""
+        return any(self.is_same_trajectory(trajectory, optimized_location_dic.get('trajectory', []))
+                   for optimized_location_dic in self.optimized_locations
+                   if 'trajectory' in optimized_location_dic)
 
     @staticmethod
-    def get_lat_lon_from_mgrs(mgrs_string):
-        """MGRS 좌표를 위도와 경도로 변환하는 메서드"""
-        m_conv = mgrs.MGRS()
-        # 공백 제거 및 구성 요소 분리
-        mgrs_parts = mgrs_string.replace(' ', '')
-        lat, lon = m_conv.toLatLon(mgrs_parts)
-        return lat, lon
+    def is_same_trajectory(trajectory1, trajectory2):
+        """두 궤적이 동일한지 확인하는 메서드"""
+        if not isinstance(trajectory1, list) or not isinstance(trajectory2, list):
+            return False
+        if len(trajectory1) != len(trajectory2):
+            return False
+        return all(np.allclose(np.array(p1), np.array(p2)) for p1, p2 in zip(trajectory1, trajectory2))
 
-    def get_selected_items(self, table):
+    def find_intercept_point(self, defense_tr_dic):
+        """방어 가능한 교전 지점을 찾는 메서드"""
+        defense_lat, defense_lon = defense_tr_dic['defense_coordinate']
+        trajectory = defense_tr_dic['trajectory']
+        weapon_type = defense_tr_dic['weapon_type']
+        defense_altitude_range = (self.weapon_systems_info[weapon_type].get('min_altitude'), self.weapon_systems_info[weapon_type].get('max_altitude'))
+        defense_range = (self.weapon_systems_info[weapon_type].get('min_radius'), self.weapon_systems_info[weapon_type].get('max_radius'))
+
+        for point in trajectory:
+            lat, lon, altitude = point
+            distance = self.calculate_distance(defense_lat, defense_lon, lat, lon)
+            if (defense_range[0] <= distance <= defense_range[1] and
+                    defense_altitude_range[0] <= altitude <= defense_altitude_range[1]):
+                return lat, lon, altitude
+
+        return None
+
+    @staticmethod
+    def on_map_load_finished(result):
+        if result:
+            print("지도가 성공적으로 로드되었습니다.")
+        else:
+            print("지도 로딩에 실패했습니다.")
+
+    @staticmethod
+    def get_selected_items(table):
         selected_items = []
         for row in range(table.rowCount()):
             if table.cellWidget(row, 0).isChecked():
@@ -1398,8 +1520,8 @@ class MissileTrajectoryCalculator:
         t = np.linspace(0, 1, 1000)
         x = distance * t
         y = alpha * x * (1 - x / distance) + beta * x * (1 - x / distance) * (x / distance)
+        y = y / 1000  # Convert meters to kilometers
         z = np.zeros_like(x)
-
         return x, y, z
 
     def convert_trajectory_to_coordinates(self, start_lat, start_lon, end_lat, end_lon, bearing, x, y, z):
@@ -1409,7 +1531,7 @@ class MissileTrajectoryCalculator:
         for i in range(len(x)):
             point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
             if point:
-                trajectory.append((point[0], point[1], y[i]))
+                trajectory.append((point[0], point[1], y[i]))  # y is already in km
 
         if trajectory:
             trajectory[-1] = (end_lat, end_lon, 0)

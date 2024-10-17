@@ -1,6 +1,6 @@
 # Project Name
 TEMPLATE = app
-TARGET = CVT_template2
+TARGET = CDMS
 CONFIG += console
 CONFIG -= app_bundle
 
@@ -9,8 +9,7 @@ CONFIG -= app_bundle
 # Translation Files
 TRANSLATIONS += \
     translations/app_ko.ts \
-    translations/app_en.ts \
-    translations/app_ar.ts
+    translations/app_en.ts 
 
 # Include paths for additional libraries if needed
 # INCLUDEPATH += path/to/include

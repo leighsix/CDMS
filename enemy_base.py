@@ -2,7 +2,7 @@ import sys
 import sqlite3
 import folium
 import sys, io
-import re, mgrs
+import re, mgrs, json
 import pandas as pd
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton,
@@ -35,17 +35,16 @@ class EnemyBaseInputDialog(QDialog):
         self.enemy_id = None
         self.enemy_base_fields = {}
         self.initUI()
+        if self.edit_mode and self.enemy_data:
+            self.setWindowTitle(self.tr("적 미사일 기지 정보 수정"))
+            if hasattr(self, 'enemy_data') and self.enemy_data:
+                self.populate_fields()
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
 
 
     def initUI(self):
         # 창 제목 및 아이콘 설정
-        if self.edit_mode:
-            self.setWindowTitle(self.tr("적 미사일 기지 정보 수정"))
-            if hasattr(self, 'enemy_data') and self.enemy_data:
-                self.populate_fields()
-        else:
-            self.setWindowTitle(self.tr("적 미사일 기지 정보 입력"))
+        self.setWindowTitle(self.tr("적 미사일 기지 정보 입력"))
         # 메인 레이아웃 설정
 
         layout = QVBoxLayout()
@@ -89,7 +88,8 @@ class EnemyBaseInputDialog(QDialog):
                 for i, sub_label in enumerate(label):
                     if label == (self.tr("위도"), self.tr("경도")):
                         input_widget = CoordinateEdit(sub_label)
-                        input_widget.editingFinished.connect(self.convert_to_mgrs)
+                        input_widget.editingFinished.connect(
+                            self.check_coordinates)  # textChanged에서 editingFinished로 변경
                     else:
                         input_widget = UnderlineEdit()
                     input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -100,6 +100,10 @@ class EnemyBaseInputDialog(QDialog):
                 hbox.addWidget(input_widgets[0])
                 hbox.addWidget(sub_label_widget)
                 hbox.addWidget(input_widgets[1])
+
+                if label == (self.tr("위도"), self.tr("경도")):
+                    self.lat_widget = input_widgets[0]
+                    self.lon_widget = input_widgets[1]
 
                 self.enemy_base_fields[label] = tuple(input_widgets)
 
@@ -119,9 +123,11 @@ class EnemyBaseInputDialog(QDialog):
                     self.weapon_system_input = QWidget()
                     weapon_layout = QHBoxLayout(self.weapon_system_input)
                     self.weapon_checkboxes = []
-                    weapon_systems = ["Scud-B", "Scud-C", "Nodong"]
-                    for system in weapon_systems:
-                        checkbox = QCheckBox(system)
+                    # weapon_systems.json 파일에서 무기체계 데이터 읽기
+                    with open('missile_info.json', 'r', encoding='utf-8') as file:
+                        weapon_systems_dic = json.load(file)
+                    for weapon in weapon_systems_dic.keys():
+                        checkbox = QCheckBox(weapon)
                         checkbox.setStyleSheet("font: 바른공군체; font-size: 13pt;")
                         self.weapon_checkboxes.append(checkbox)
                         weapon_layout.addWidget(checkbox)
@@ -171,6 +177,11 @@ class EnemyBaseInputDialog(QDialog):
 
         # 메인 레이아웃 설정
         self.setLayout(layout)
+
+    def check_coordinates(self):
+        if hasattr(self, 'lat_widget') and hasattr(self, 'lon_widget'):
+            if self.lat_widget.text() and self.lon_widget.text():
+                self.convert_to_mgrs()
 
     def convert_to_mgrs(self):
         lat_widget, lon_widget = self.enemy_base_fields[(self.tr("위도"), self.tr("경도"))]
@@ -277,19 +288,21 @@ class EnemyBaseInputDialog(QDialog):
         if self.enemy_data:
             self.enemy_id = self.enemy_data[0]
             cursor = self.parent.parent.conn.cursor()
+            cursor.execute(f"SELECT * FROM enemy_bases_ko WHERE id = ?", (self.enemy_id,))
+            enemy_data1 = cursor.fetchone()
             cursor.execute(f"SELECT * FROM enemy_bases_en WHERE id = ?", (self.enemy_id,))
             enemy_data2 = cursor.fetchone()
-            coord_str = self.enemy_data[3]
+            coord_str = enemy_data1[3]
             lat, lon = coord_str.split(',')
             for label, field in self.enemy_base_fields.items():
                 if isinstance(field, tuple):
                     if label == (self.tr("기지명"), self.tr("(영문)")):
                         f1, f2 = field
-                        f1.setText(self.enemy_data[1])
+                        f1.setText(str(enemy_data1[1]))
                         f2.setText(str(enemy_data2[1]))
                     elif label == (self.tr("지역"), self.tr("(영문)")):
                         f1, f2 = field
-                        f1.setText(str(self.enemy_data[2]))
+                        f1.setText(str(enemy_data1[2]))
                         f2.setText(str(enemy_data2[2]))
                     elif label == (self.tr("위도"), self.tr("경도")):
                         f1, f2 = field
@@ -304,11 +317,13 @@ class EnemyBaseInputDialog(QDialog):
                         for checkbox in self.weapon_checkboxes:
                             checkbox.setChecked(checkbox.text() in stored_weapons)
 
-    def validate_latitude(self, lat):
+    @staticmethod
+    def validate_latitude(lat):
         pattern = r'^[NS]\d{2}\.\d{5}'
         return bool(re.match(pattern, lat))
 
-    def validate_longitude(self, lon):
+    @staticmethod
+    def validate_longitude(lon):
         pattern = r'^[EW]\d{3}\.\d{5}'
         return bool(re.match(pattern, lon))
 
@@ -322,7 +337,6 @@ class EnemyBaseWindow(QDialog):
             tiles=self.parent.map_app.loadSettings()['style'])
         self.setWindowTitle("적 미사일 발사기지 정보")
         self.setMinimumSize(1200, 800)
-        self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.initUI()
         self.load_all_enemy_bases()
         self.show_threat_radius = False
@@ -353,17 +367,14 @@ class EnemyBaseWindow(QDialog):
     def refresh(self):
         # 데이터프레임 다시 로드
         self.load_all_enemy_bases()
-
         # 필터 초기화
         self.search_filter.clear()  # 검색창 초기화
-
         # 테이블의 모든 체크박스 해제
         self.enemy_base_table.uncheckAllRows()
         for weapon_system, checkbox in self.enemy_weapon_system_checkboxes.items():
             if checkbox.isChecked():
                 checkbox.setChecked(False)
         self.radius_checkbox.setChecked(False)
-
         # 테이블 데이터 다시 로드
         self.load_enemy_bases()
 
@@ -401,16 +412,25 @@ class EnemyBaseWindow(QDialog):
             ["", self.tr("기지명"), self.tr("지역"), self.tr("경위도"), self.tr("군사좌표(MGRS"), self.tr("무기체계")])
 
         # 행 번호 숨기기
-        self.enemy_base_table.verticalHeader().setVisible(False)
+        # self.enemy_base_table.verticalHeader().setVisible(False)
+        self.enemy_base_table.setAlternatingRowColors(True)
+        self.enemy_base_table.setStyleSheet("QTableWidget {background-color: #ffffff; font: 바른공군체; font-size: 16px;}"
+                                        "QTableWidget::item { padding: 1px; }")
+        self.enemy_base_table.setSelectionBehavior(QTableView.SelectRows)
 
         font = QFont("강한공군체", 13)
         font.setBold(True)
         self.enemy_base_table.horizontalHeader().setFont(font)
+
         header = self.enemy_base_table.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         header.setMinimumSectionSize(80)  # 최소 열 너비 설정
         header.resizeSection(0, 30)
 
+        # 테이블 설정
+        self.enemy_base_table.horizontalHeader().setStretchLastSection(False)
+        self.enemy_base_table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.enemy_base_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
         # 헤더 텍스트 중앙 정렬
         for column in range(header.count()):
@@ -421,6 +441,10 @@ class EnemyBaseWindow(QDialog):
         # 나머지 열들이 남은 공간을 채우도록 설정
         for column in range(1, header.count()):
             self.enemy_base_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
+
+        # 헤더 높이 자동 조절
+        self.enemy_base_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.enemy_base_table.verticalHeader().setDefaultSectionSize(60)
 
         left_layout.addWidget(self.enemy_base_table)
 
@@ -468,6 +492,12 @@ class EnemyBaseWindow(QDialog):
         self.update_page_label()
 
 
+        # 각 버튼에 폰트 적용
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(1)
+        button_layout.setContentsMargins(0, 1, 0, 1)
+
+
         self.enemy_base_input_button = QPushButton(self.tr("적 기지 입력"), self)
         self.correction_button = QPushButton(self.tr("수정"), self)
         self.delete_button = QPushButton(self.tr("삭제"), self)
@@ -477,14 +507,12 @@ class EnemyBaseWindow(QDialog):
         self.delete_button.clicked.connect(self.delete_enemy_base)
         self.return_button.clicked.connect(self.parent.show_main_page)
 
-        # 각 버튼에 폰트 적용
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(1)
-        button_layout.setContentsMargins(0, 1, 0, 1)
+
         for button in [self.enemy_base_input_button, self.correction_button,
                        self.delete_button, self.return_button]:
-            button.setFont(QFont("강한공군체", 13, QFont.Bold))
-            button.setFixedSize(120, 40)
+            button.setFont(QFont("강한공군체", 12, QFont.Bold))
+            button.setFixedSize(150, 50)
+
             button.setStyleSheet("QPushButton { text-align: center; }")
         button_layout.addWidget(self.enemy_base_input_button)
         button_layout.addWidget(self.correction_button)
@@ -504,7 +532,11 @@ class EnemyBaseWindow(QDialog):
         weapon_layout.setContentsMargins(10, 5, 10, 5)  # 여백 조정
         weapon_layout.setSpacing(10)  # 체크박스 간 간격 조정
         self.enemy_weapon_system_checkboxes = {}
-        enemy_weapon_system = ["Scud-B", "Scud-C", "Nodong"]
+        enemy_weapon_system = []
+        with open('missile_info.json', 'r', encoding='utf-8') as file:
+            weapon_systems_dic = json.load(file)
+        for weapon in weapon_systems_dic.keys():
+            enemy_weapon_system.append(weapon)
         for weapon in enemy_weapon_system:
             checkbox = QCheckBox(weapon)
             checkbox.stateChanged.connect(self.update_map)
@@ -524,8 +556,8 @@ class EnemyBaseWindow(QDialog):
 
         # 지도 출력 버튼
         self.print_button = QPushButton(self.tr("지도 출력"), self)
-        self.print_button.setFont(QFont("강한공군체", 14, QFont.Bold))
-        self.print_button.setFixedSize(230, 50)
+        self.print_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.print_button.setFixedSize(150, 40)
         self.print_button.setStyleSheet("QPushButton { text-align: center; }")
         self.print_button.clicked.connect(self.print_map)
         checkbox_button_layout.addWidget(self.print_button, alignment=Qt.AlignRight)
@@ -687,7 +719,7 @@ class EnemyBaseWindow(QDialog):
             EnemyBaseMapView(selected_enemy_bases, self.map)
 
         if selected_weapons:
-            EnemyWeaponMapView(selected_weapons, self.show_threat_radius, self.map)
+            EnemyWeaponMapView(selected_weapons, self.map, self.show_threat_radius)
 
         data = io.BytesIO()
         self.map.save(data, close_file=False)
@@ -700,9 +732,9 @@ class EnemyBaseWindow(QDialog):
             checkbox_widget = self.enemy_base_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
                 base_name = self.enemy_base_table.item(row, 1).text()
-                mgrs_coord = self.enemy_base_table.item(row, 4).text()
+                coord = self.enemy_base_table.item(row, 3).text()
                 weapon_system = self.enemy_base_table.item(row, 5).text()
-                selected_enemy_bases.append((base_name, mgrs_coord, weapon_system))
+                selected_enemy_bases.append((base_name, coord, weapon_system))
         return selected_enemy_bases
 
     def get_selected_weapons(self):
@@ -711,13 +743,13 @@ class EnemyBaseWindow(QDialog):
             checkbox_widget = self.enemy_base_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
                 base_name = self.enemy_base_table.item(row, 1).text()
-                mgrs_coord = self.enemy_base_table.item(row, 4).text()
+                coord = self.enemy_base_table.item(row, 3).text()
                 weapon_system = self.enemy_base_table.item(row, 5).text()
                 weapon_systems_list = weapon_system.split(", ")
                 for weapon in weapon_systems_list:
                     for weapon_systems_check, checkbox in self.enemy_weapon_system_checkboxes.items():
                         if checkbox.isChecked() and weapon == weapon_systems_check:
-                            selected_enemy_weapons.append((base_name, mgrs_coord, weapon))
+                            selected_enemy_weapons.append((base_name, coord, weapon))
         return selected_enemy_weapons
 
     def print_map(self):
