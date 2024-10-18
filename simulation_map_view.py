@@ -43,10 +43,14 @@ class SimulationCalMapView(QObject):
         colormap._font_size = '14px'
         colormap._ticklabels = [str(i) for i in range(min_priority, max_priority + 1)]
 
-        legend_html = """
-        <div style="position: fixed; bottom: 50px; left: 50px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
-            <p><span style="color: black;">&#9733;</span> 방어자산</p>
-            <p><span style="color: black;">&#9679;</span> 중요자산</p>
+        defended_assets = self.tr("방어자산")
+        critical_assets = self.tr("중요자산")
+        assets_classification = self.tr("자산구분")
+        legend_html = f"""
+        <div style="position: fixed; top: 40px; right: 40px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
+            <h4 style="margin-top: 0;">{assets_classification}</h4>
+            <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
+            <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
         </div>
         """
         map_obj.get_root().html.add_child(folium.Element(legend_html))
@@ -226,7 +230,107 @@ class SimulationWeaponMapView(QObject):
             fillOpacity=0.2
         ).add_to(map_obj)
 
-class SimulationEnemyBaseWeaponMapView(QObject):
+class SimulationEnemyBaseMapView(QObject):
+    def __init__(self, coordinates_list, map_obj):
+        super().__init__()
+        self.load_map(coordinates_list, map_obj)
+
+    @staticmethod
+    def parse_coordinates(coord_string):
+        """경위도 문자열을 파싱하여 위도와 경도를 반환합니다."""
+        lat_str, lon_str = coord_string.split(',')
+        lat = float(lat_str[1:])  # 'N' 제거
+        lon = float(lon_str[1:])  # 'E' 제거
+        return lat, lon
+
+    def load_map(self, coordinates_list, map_obj):
+        if not coordinates_list:
+            return
+        m_conv = mgrs.MGRS()
+        enemy_bases = self.tr("적 미사일 기지")
+        weapon_systems = self.tr("적 보유 미사일")
+        coordinates = self.tr("좌표")
+
+        # 색상 정의
+        color_map = {
+            'Scud-B': 'red',
+            'Scud-C': 'blue',
+            'Nodong': 'green',
+            '다종 미사일': 'purple'
+        }
+
+        for base_name, coord, weapon_system in coordinates_list:
+            weapon_systems_list = weapon_system.split(", ")
+            try:
+                lat, lon = self.parse_coordinates(coord)
+                # 무기 시스템에 따른 색상 결정
+                if len(weapon_systems_list) > 1:
+                    color = color_map['다종 미사일']
+                else:
+                    color = color_map.get(weapon_systems_list[0], 'gray')  # 알 수 없는 타입은 회색으로 표시
+
+                # 마커 아이콘을 삼각형으로 변경
+                icon = folium.DivIcon(html=f"""
+                    <div style="
+                        width: 0;
+                        height: 0;
+                        border-left: 7px solid transparent;
+                        border-right: 7px solid transparent;
+                        border-bottom: 15px solid {color};
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 8px;
+                    ">
+                    </div>
+                """)
+
+                folium.Marker(
+                    location=[lat, lon],
+                    icon=icon,
+                    popup=folium.Popup(f"""
+                                    <b>{enemy_bases}:</b> {base_name}<br>
+                                    <b>{coordinates}:</b> {coord}<br>
+                                    <b>{weapon_systems}:</b> {weapon_system}
+                                """, max_width=200)
+                ).add_to(map_obj)
+
+            except Exception as e:
+                print(self.tr(f"좌표 변환 오류 {coord}: {e}"))
+                continue
+
+        # 범례 추가 (삼각형 아이콘으로 변경)
+        legend_html = f"""
+            <div id="maplegend" style="
+                position: fixed; 
+                bottom: 50px; 
+                right: 50px; 
+                width: 150px; 
+                height: auto; 
+                background-color: white; 
+                border: 2px solid grey; 
+                z-index: 9999; 
+                font-size: 14px;
+                padding: 10px;
+                border-radius: 5px;
+                box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            ">
+                <b>{weapon_systems}</b><br>
+                <div style="margin-top: 5px;">
+                    <span style="color:red;">&#9650;</span> Scud-B<br>
+                    <span style="color:blue;">&#9650;</span> Scud-C<br>
+                    <span style="color:green;">&#9650;</span> Nodong<br>
+                    <span style="color:purple;">&#9650;</span> 다종 미사일
+                </div>
+            </div>
+        """
+
+        # 범례를 지도에 추가
+        map_obj.get_root().html.add_child(folium.Element(legend_html))
+
+class SimulationEnemyWeaponMapView(QObject):
     def __init__(self, coordinates_list, map_obj, show_threat_radius):
         super().__init__()
         self.show_threat_radius = show_threat_radius
@@ -243,17 +347,7 @@ class SimulationEnemyBaseWeaponMapView(QObject):
     def load_map(self, coordinates_list, map_obj):
         if not coordinates_list:
             return
-        enemy_bases = self.tr("적 미사일 기지")
-        weapon_systems = self.tr("적 보유 미사일")
-        coordinates = self.tr("좌표")
-
-        # 색상 정의
-        color_map = {
-            'Scud-B': 'red',
-            'Scud-C': 'blue',
-            'Nodong': 'green',
-            '다종 미사일': 'purple'
-        }
+        # 무기체계별 색상 및 반경 정의
         # JSON 파일에서 데이터 로드
         with open('missile_info.json', 'r', encoding='utf-8') as file:
             missile_data = json.load(file)
@@ -273,99 +367,30 @@ class SimulationEnemyBaseWeaponMapView(QObject):
                 "max_radius": int(info["max_radius"]),
                 "function": info["function"]
             }
-
-
         for base_name, coord, weapon_system in coordinates_list:
-            weapon_systems_list = weapon_system.split(", ")
-            for weapon in weapon_systems_list:
-                try:
-                    lat, lon = self.parse_coordinates(coord)
+            try:
+                lat, lon = self.parse_coordinates(coord)
 
-                    # 무기체계에 따른 색상 및 반경 선택
-                    info = weapon_info.get(weapon, {"color": "#000000", "max_radius": 0})
-                    m_color = info["color"]
-                    radius = info["max_radius"]
-
-                    # 무기 시스템에 따른 색상 결정
-                    if len(weapon_systems_list) > 1:
-                        color = color_map['다종 미사일']
-                    else:
-                        color = color_map.get(weapon_systems_list[0], 'gray')  # 알 수 없는 타입은 회색으로 표시
-
-                    # 마커 아이콘을 삼각형으로 변경
-                    icon = folium.DivIcon(html=f"""
-                            <div style="
-                                width: 0;
-                                height: 0;
-                                border-left: 7px solid transparent;
-                                border-right: 7px solid transparent;
-                                border-bottom: 15px solid {color};
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                color: white;
-                                font-weight: bold;
-                                font-size: 8px;
-                            ">
-                            </div>
-                        """)
-
-                    folium.Marker(
-                        location=[lat, lon],
-                        icon=icon,
-                        popup=folium.Popup(f"""
-                                            <b>{enemy_bases}:</b> {base_name}<br>
-                                            <b>{coordinates}:</b> {coord}<br>
-                                            <b>{weapon_systems}:</b> {weapon}
-                                        """, max_width=200)
-                    ).add_to(map_obj)
-
+                # 무기체계에 따른 색상 및 반경 선택
+                info = weapon_info.get(weapon_system, {"color": "#000000", "max_radius": 0})
+                color = info["color"]
+                max_radius = info["max_radius"]
                     # 방어 반경 그리기
-                    if self.show_threat_radius:
-                        self.draw_threat_radius(map_obj, lat, lon, m_color, radius)
+                if self.show_threat_radius:
+                    self.draw_threat_radius(map_obj, lat, lon, color, max_radius)
 
-                except Exception as e:
-                    logging.error(self.tr(f"MGRS 좌표 변환 오류 {coord}: {e}"))
-                    continue
+            except Exception as e:
+                logging.error(self.tr(f"좌표 변환 오류 {coord}: {e}"))
+                continue
 
-                # 범례 추가 (삼각형 아이콘으로 변경)
-            legend_html = f"""
-                    <div id="maplegend" style="
-                        position: fixed; 
-                        bottom: 50px; 
-                        right: 50px; 
-                        width: 150px; 
-                        height: auto; 
-                        background-color: white; 
-                        border: 2px solid grey; 
-                        z-index: 9999; 
-                        font-size: 14px;
-                        padding: 10px;
-                        border-radius: 5px;
-                        box-shadow: 0 0 15px rgba(0,0,0,0.2);
-                    ">
-                        <b>{weapon_systems}</b><br>
-                        <div style="margin-top: 5px;">
-                            <span style="color:red;">&#9650;</span> Scud-B<br>
-                            <span style="color:blue;">&#9650;</span> Scud-C<br>
-                            <span style="color:green;">&#9650;</span> Nodong<br>
-                            <span style="color:purple;">&#9650;</span> 다종 미사일
-                        </div>
-                    </div>
-                """
-
-
-        # 범례를 지도에 추가
-        map_obj.get_root().html.add_child(folium.Element(legend_html))
-
-    def draw_threat_radius(self, map_obj, lat, lon, m_color, max_radius):
+    @staticmethod
+    def draw_threat_radius(map_obj, lat, lon, color, max_radius):
         folium.Circle(
             location=[lat, lon],
             radius=max_radius*1000,
-            color=m_color,
+            color=color,
             weight=1,
             fill=True,
-            fillColor=m_color,
+            fillColor=color,
             fillOpacity=0.2
         ).add_to(map_obj)
-

@@ -43,10 +43,14 @@ class CommonCalMapView(QObject):
         colormap._font_size = '14px'
         colormap._ticklabels = [str(i) for i in range(min_priority, max_priority + 1)]
 
-        legend_html = """
-        <div style="position: fixed; bottom: 50px; left: 50px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
-            <p><span style="color: black;">&#9733;</span> 방어자산</p>
-            <p><span style="color: black;">&#9679;</span> 중요자산</p>
+        defended_assets = self.tr("방어자산")
+        critical_assets = self.tr("중요자산")
+        assets_classification = self.tr("자산구분")
+        legend_html = f"""
+        <div style="position: fixed; top: 40px; right: 40px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
+            <h4 style="margin-top: 0;">{assets_classification}</h4>
+            <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
+            <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
         </div>
         """
         map_obj.get_root().html.add_child(folium.Element(legend_html))

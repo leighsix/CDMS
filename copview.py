@@ -394,7 +394,6 @@ class CopViewWindow(QDialog):
         self.load_enemy_missile_sites()
         self.load_weapon_assets()
 
-
     def toggle_defense_radius(self, state):
         self.show_defense_radius = state == Qt.Checked
         self.no_defense_cal_table.clearContents()
@@ -496,7 +495,7 @@ class CopViewWindow(QDialog):
         self.no_defense_cal_table.setRowCount(0)
 
         selected_assets = self.get_selected_assets()
-        selected_weapon_assets = self.get_weapon_assets()
+        selected_weapon_assets = self.get_selected_weapon_assets()
         selected_enemy_weapons = self.get_selected_enemy_weapons()
 
         m_conv = mgrs.MGRS()
@@ -659,7 +658,7 @@ class CopViewWindow(QDialog):
             tiles=self.parent.map_app.loadSettings()['style'])
 
         selected_assets = self.get_selected_assets()
-        weapon_assets = self.get_weapon_assets()
+        weapon_assets = self.get_selected_weapon_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
         selected_enemy_weapons = self.get_selected_enemy_weapons()
         self.no_defense_cal_table.clearContents()
@@ -710,7 +709,7 @@ class CopViewWindow(QDialog):
                 selected_assets.append((asset_name, coord, dal_select, priority))
         return selected_assets
 
-    def get_weapon_assets(self):
+    def get_selected_weapon_assets(self):
         weapon_assets = []
         for row in range(self.weapon_assets_table.rowCount()):
             checkbox_widget = self.weapon_assets_table.cellWidget(row, 0)

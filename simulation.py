@@ -5,30 +5,29 @@ import random
 import math
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget, QFileDialog, QMessageBox, QHBoxLayout, QSplitter, QComboBox, QLineEdit, QTableWidget, QPushButton, QLabel,
                              QGroupBox, QCheckBox, QHeaderView, QDialog, QTableWidgetItem)
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
-from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QFont
 import matplotlib.pyplot as plt
-from simulation_map_view import SimulationCalMapView, SimulationWeaponMapView, SimulationEnemyBaseWeaponMapView
-from setting import MapApp
-import mgrs
+from simulation_map_view import SimulationCalMapView, SimulationWeaponMapView, SimulationEnemyBaseMapView, SimulationEnemyWeaponMapView
 import io
-from PyQt5 import QtWidgets, QtGui
 import pandas as pd
 from scipy.optimize import linprog
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import QUrl
 import folium
-from branca.element import Figure
-import os
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
+from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect
+from PyQt5.QtGui import QPageLayout, QPageSize
+from PyQt5.QtCore import QUrl, QSize, QTimer, QTemporaryFile, QDir, QEventLoop, QDateTime
+from setting import MapApp
 import numpy as np
 import math
 from geopy import distance
 from geopy.point import Point
 from simplification.cutil import simplify_coords
+from missile_trajectory_calculator import MissileTrajectoryCalculator
+from particle_swarm_optimization import ParticleSwarmOptimization, MissileDefenseOptimizer
 
 
 # 한글 폰트 설정
@@ -49,7 +48,6 @@ class MissileDefenseApp(QDialog):
             tiles=self.parent.map_app.loadSettings()['style'])
         self.setWindowTitle(self.tr("미사일 방어 시뮬레이션"))
         self.setMinimumSize(1200, 800)
-        self.setStyleSheet("background-color: #ffffff; font-family: '강한 공군체'; font-size: 12pt;")
         self.load_dataframes()
         self.trajectory_calculator = MissileTrajectoryCalculator()
         self.initUI()
@@ -69,8 +67,16 @@ class MissileDefenseApp(QDialog):
 
             except sqlite3.OperationalError:
                 print("assets_priority 테이블이 존재하지 않습니다.")
-                self.cal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "target_asset", "area", "coordinate", "mgrs", "criticality", "vulnerability", "threat", "bonus", "total_score"])
-                self.cal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "target_asset", "area", "coordinate", "mgrs", "criticality", "vulnerability", "threat", "bonus", "total_score"])
+                self.cal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
+                                                       "target_asset", "area", "coordinate", "mgrs", "description",
+                                                       "dal_select", "weapon_system", "ammo_count", "threat_degree",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "threat", "total_score"])
+                self.cal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
+                                                       "target_asset", "area", "coordinate", "mgrs", "description",
+                                                       "dal_select", "weapon_system", "ammo_count", "threat_degree",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "threat", "total_score"])
 
 
             try:
@@ -80,8 +86,16 @@ class MissileDefenseApp(QDialog):
                 self.dal_df_en = pd.read_sql_query(query, conn,)
             except sqlite3.OperationalError:
                 print("defense_assets 테이블이 존재하지 않습니다.")
-                self.dal_df_ko = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree"])
-                self.dal_df_en = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree"])
+                self.dal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
+                                                       "target_asset", "area", "coordinate", "mgrs", "description",
+                                                       "dal_select", "weapon_system", "ammo_count", "threat_degree",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "threat", "total_score"])
+                self.dal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
+                                                       "target_asset", "area", "coordinate", "mgrs", "description",
+                                                       "dal_select", "weapon_system", "ammo_count", "threat_degree",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "threat", "total_score"])
 
             try:
                 query = "SELECT * FROM enemy_bases_ko"
@@ -92,6 +106,19 @@ class MissileDefenseApp(QDialog):
                 print("defense_assets 테이블이 존재하지 않습니다.")
                 self.enemy_bases_df_ko = pd.DataFrame(columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
                 self.enemy_bases_df_en = pd.DataFrame(columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
+
+
+            try:
+                query = "SELECT * FROM weapon_assets_ko"
+                self.weapon_assets_df_ko = pd.read_sql_query(query, conn,)
+                query = "SELECT * FROM weapon_assets_en"
+                self.weapon_assets_df_en = pd.read_sql_query(query, conn,)
+
+            except sqlite3.OperationalError:
+                print("defense_assets 테이블이 존재하지 않습니다.")
+                self.weapon_assets_df_ko = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree", "dal_select"])
+                self.weapon_assets_df_en = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree", "dal_select"])
+
         except sqlite3.Error as e:
             print(f"데이터베이스 연결 오류: {e}")
 
@@ -99,7 +126,7 @@ class MissileDefenseApp(QDialog):
             if conn:
                 conn.close()
 
-        if self.cal_df_ko.empty and self.dal_df_ko.empty and self.enemy_bases_df_ko.empty:
+        if self.cal_df_ko.empty and self.dal_df_ko.empty and self.enemy_bases_df_ko.empty and self.weapon_assets_df_ko:
             print("경고: 데이터를 불러오지 못했습니다. 빈 DataFrame을 사용합니다.")
 
     def refresh(self):
@@ -108,32 +135,26 @@ class MissileDefenseApp(QDialog):
 
         # 필터 초기화
         # 테이블의 모든 체크박스 해제
-        self.cal_assets_table.uncheckAllRows()
+        self.assets_table.uncheckAllRows()
         self.unit_filter.setCurrentIndex(0)  # '전체'로 설정
         self.search_filter.clear()  # 검색창 초기화
-        self.display_cal_count_combo.setCurrentIndex(0)
-
 
         # 테이블의 모든 체크박스 해제
         self.enemy_sites_table.uncheckAllRows()
         self.missile_type_combo.setCurrentIndex(0)  # '전체'로 설정
         self.search_enemy_filter.clear()  # 검색창 초기화
         self.threat_radius_checkbox.setChecked(False)
-        self.display_enemy_count_combo.setCurrentIndex(0)
-
 
         # 테이블의 모든 체크박스 해제
         self.defense_assets_table.uncheckAllRows()
         self.weapon_systems_combo.setCurrentIndex(0)  # '전체'로 설정
         self.search_defense_filter.clear()  # 검색창 초기화
         self.defense_radius_check.setChecked(False)
-        self.display_dal_count_combo2.setCurrentIndex(0)
-
 
         # 테이블 데이터 다시 로드
         self.load_cal_assets()
         self.load_enemy_missile_sites()
-        self.load_dal_assets()
+        self.load_weapon_assets()
 
         # 지도 업데이트
         self.update_map()
@@ -154,92 +175,48 @@ class MissileDefenseApp(QDialog):
 
         self.unit_filter = QComboBox()
         self.unit_filter.addItems([self.tr("전체"), self.tr("지상군"), self.tr("해군"), self.tr("공군")])
-        self.unit_filter.currentTextChanged.connect(self.load_cal_assets)
+        self.unit_filter.currentTextChanged.connect(self.load_assets)
         self.filter_layout.addWidget(self.unit_filter)
 
+        # 방어대상자산 테이블 검색 기능
+        self.filter_layout = QHBoxLayout()
         self.search_filter = QLineEdit()
         self.search_filter.setPlaceholderText(self.tr("방어대상자산 또는 지역구분 검색"))
-        self.search_filter.textChanged.connect(self.load_cal_assets)
+        self.search_button = QPushButton(self.tr("찾기"))
+        self.search_button.clicked.connect(self.load_assets)
         self.filter_layout.addWidget(self.search_filter)
-
-        self.display_cal_count_combo = QComboBox()
-        self.display_cal_count_combo.addItems(["30", "50", "100", "200"])
-        self.display_cal_count_combo.currentTextChanged.connect(self.load_cal_assets)
-        self.filter_layout.addWidget(self.display_cal_count_combo)
+        self.filter_layout.addWidget(self.search_button)
         left_layout.addLayout(self.filter_layout)
 
-        self.cal_assets_table = MyTableWidget()
-        self.cal_assets_table.setColumnCount(7)
-        self.cal_assets_table.setHorizontalHeaderLabels(
-            ["", self.tr("우선순위"), self.tr("구성군"), self.tr("지역구분"), self.tr("방어대상자산"), self.tr("경위도"), self.tr('군사좌표(MGRS)')])
+        left_layout.addLayout(self.filter_layout)
+
+        self.assets_table = MyTableWidget()
+        self.assets_table.setColumnCount(5)
+        self.assets_table.setHorizontalHeaderLabels(
+            ["", self.tr("우선순위"), self.tr("구성군"), self.tr("지역구분"), self.tr("방어대상자산")])
 
         # 행 번호 숨기기
-        self.cal_assets_table.verticalHeader().setVisible(False)
-        self.cal_assets_table.setColumnHidden(5, True)
-        self.cal_assets_table.setColumnHidden(6, True)
-
+        self.assets_table.verticalHeader().setVisible(False)
 
         font = QFont("강한공군체", 13)
         font.setBold(True)
-        self.cal_assets_table.horizontalHeader().setFont(font)
-        header = self.cal_assets_table.horizontalHeader()
+        self.assets_table.horizontalHeader().setFont(font)
+        header = self.assets_table.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         header.resizeSection(0, 40)
         header.resizeSection(1, 80)
 
         # 헤더 텍스트 중앙 정렬
         for column in range(header.count()):
-            item = self.cal_assets_table.horizontalHeaderItem(column)
+            item = self.assets_table.horizontalHeaderItem(column)
             if item:
                 item.setTextAlignment(Qt.AlignCenter)
 
         # 나머지 열들이 남은 공간을 채우도록 설정
         for column in range(2, header.count()):
-            self.cal_assets_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
-        left_layout.addWidget(self.cal_assets_table)
+            self.assets_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
 
-        # 페이지네이션 컨트롤 추가
-        self.cal_pagination_layout = QHBoxLayout()
-        self.cal_prev_button = QPushButton("◀")
-        self.cal_next_button = QPushButton("▶")
-        self.cal_page_label = QLabel()
-
-        # 스타일 설정
-        button_style = """
-            QPushButton {
-                background-color: #f0f0f0;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
-            }
-        """
-        self.cal_prev_button.setStyleSheet(button_style)
-        self.cal_next_button.setStyleSheet(button_style)
-
-        # 레이아웃에 위젯 추가
-        self.cal_pagination_layout.addWidget(self.cal_prev_button)
-        self.cal_pagination_layout.addWidget(self.cal_page_label)
-        self.cal_pagination_layout.addWidget(self.cal_next_button)
-
-        # 레이아웃 정렬 및 간격 설정
-        self.cal_pagination_layout.setAlignment(Qt.AlignCenter)
-        self.cal_pagination_layout.setSpacing(10)
-
-        left_layout.addLayout(self.cal_pagination_layout)
-
-        # 버튼 연결
-        self.cal_prev_button.clicked.connect(self.cal_prev_page)
-        self.cal_next_button.clicked.connect(self.cal_next_page)
-
-        # 초기 페이지 설정
-        self.cal_current_page = 1
-        self.cal_rows_per_page = 30  # 기본값 설정
-        self.cal_total_pages = 1  # 초기값 설정
-        self.cal_update_page_label()
+        left_layout.addWidget(self.assets_table)
 
         # 버튼 레이아웃 설정
         button_layout = QHBoxLayout()
@@ -247,7 +224,7 @@ class MissileDefenseApp(QDialog):
         button_layout.setContentsMargins(0, 20, 0, 20)
         button_layout.setAlignment(Qt.AlignCenter)  # 버튼을 중앙에 정렬
 
-        self.return_button = QPushButton(self.tr("메인화면으로 돌아가기"), self)
+        self.return_button = QPushButton(self.tr("메인화면"), self)
         self.return_button.clicked.connect(self.parent.show_main_page)
         self.return_button.setFont(QFont("강한공군체", 15, QFont.Bold))
         self.return_button.setFixedSize(250, 50)  # 버튼 크기 고정 (너비 200, 높이 50)
@@ -255,39 +232,37 @@ class MissileDefenseApp(QDialog):
         button_layout.addWidget(self.return_button)
         left_layout.addLayout(button_layout)  # 버튼 레이아웃을 left_layout에 추가
 
-
         # 우측 상단 위젯 (적 기지 테이블)
         top_right_widget = QWidget()
         top_right_layout = QVBoxLayout(top_right_widget)
 
 
+
         # 우측 상단 테이블: 적 미사일 발사기지
+        top_right_layout.addWidget(QLabel(self.tr("적 미사일 기지 목록")))
+
         # 필터 추가
         self.enemy_filter_layout = QHBoxLayout()
 
-        # 검색 창
+        # 적 미사일 기지 테이블 검색 기능
+        self.enemy_filter_layout = QHBoxLayout()
         self.search_enemy_filter = QLineEdit()
         self.search_enemy_filter.setPlaceholderText(self.tr("적 기지명 또는 지역 검색"))
-        self.search_enemy_filter.textChanged.connect(self.load_enemy_missile_sites)
+        self.search_enemy_button = QPushButton(self.tr("찾기"))
+        self.search_enemy_button.clicked.connect(self.load_enemy_missile_sites)
         self.enemy_filter_layout.addWidget(self.search_enemy_filter)
+        self.enemy_filter_layout.addWidget(self.search_enemy_button)
+        top_right_layout.addLayout(self.enemy_filter_layout)
 
-
-        # 무기체계 콤보박스
+        # 미사일 타입 콤보박스
         self.missile_type_combo = QComboBox()
         with open('missile_info.json', 'r', encoding='utf-8') as file:
             missile_types = json.load(file)
-        # '전체' 항목을 포함한 무기체계 목록 생성
         missile_types_list = [self.tr('전체')] + list(missile_types.keys())
         # 무기체계 이름들을 콤보박스에 추가
         self.missile_type_combo.addItems(missile_types_list)
         self.missile_type_combo.currentTextChanged.connect(self.load_enemy_missile_sites)
         self.enemy_filter_layout.addWidget(self.missile_type_combo)
-
-
-        self.display_enemy_count_combo = QComboBox()
-        self.display_enemy_count_combo.addItems(["30", "50", "100", "200"])
-        self.display_enemy_count_combo.currentTextChanged.connect(self.load_enemy_missile_sites)
-        self.enemy_filter_layout.addWidget(self.display_enemy_count_combo)
 
         # 위협반경 표시 체크박스
         self.threat_radius_checkbox = QCheckBox(self.tr("위협반경 표시"))
@@ -297,13 +272,10 @@ class MissileDefenseApp(QDialog):
         top_right_layout.addLayout(self.enemy_filter_layout)
 
         self.enemy_sites_table = MyTableWidget()
-        self.enemy_sites_table.setColumnCount(6)
-        self.enemy_sites_table.setHorizontalHeaderLabels(["", self.tr("발사기지"), self.tr("지역"), self.tr("보유미사일"), self.tr("경위도"), self.tr("군사좌표(MGRS)")])
+        self.enemy_sites_table.setColumnCount(4)
+        self.enemy_sites_table.setHorizontalHeaderLabels(["", self.tr("발사기지"), self.tr("경위도"), self.tr("보유미사일")])
         # 행 번호 숨기기
         self.enemy_sites_table.verticalHeader().setVisible(False)
-        self.enemy_sites_table.setColumnHidden(4, True)
-        self.enemy_sites_table.setColumnHidden(5, True)
-
         font = QFont("강한공군체", 13)
         font.setBold(True)
         self.enemy_sites_table.horizontalHeader().setFont(font)
@@ -317,160 +289,75 @@ class MissileDefenseApp(QDialog):
                 item.setTextAlignment(Qt.AlignCenter)
 
         # 나머지 열들이 남은 공간을 채우도록 설정
-        for column in range(2, header.count()):
+        for column in range(1, header.count()):
             self.enemy_sites_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
 
         top_right_layout.addWidget(self.enemy_sites_table)
-
-        # 페이지네이션 컨트롤 추가
-        self.enemy_pagination_layout = QHBoxLayout()
-        self.enemy_prev_button = QPushButton("◀")
-        self.enemy_next_button = QPushButton("▶")
-        self.enemy_page_label = QLabel()
-
-        # 스타일 설정
-        button_style = """
-            QPushButton {
-                background-color: #f0f0f0;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
-            }
-        """
-        self.enemy_prev_button.setStyleSheet(button_style)
-        self.enemy_next_button.setStyleSheet(button_style)
-
-        # 레이아웃에 위젯 추가
-        self.enemy_pagination_layout.addWidget(self.enemy_prev_button)
-        self.enemy_pagination_layout.addWidget(self.enemy_page_label)
-        self.enemy_pagination_layout.addWidget(self.enemy_next_button)
-
-        # 레이아웃 정렬 및 간격 설정
-        self.enemy_pagination_layout.setAlignment(Qt.AlignCenter)
-        self.enemy_pagination_layout.setSpacing(10)
-
-        top_right_layout.addLayout(self.enemy_pagination_layout)
-
-        # 버튼 연결
-        self.enemy_prev_button.clicked.connect(self.enemy_prev_page)
-        self.enemy_next_button.clicked.connect(self.enemy_next_page)
-
-        # 초기 페이지 설정
-        self.enemy_current_page = 1
-        self.enemy_rows_per_page = 30  # 기본값 설정
-        self.enemy_total_pages = 1  # 초기값 설정
-        self.enemy_update_page_label()
 
         # 우측 하단 위젯 (방어 자산 테이블)
         bottom_right_widget = QWidget()
         bottom_right_layout = QVBoxLayout(bottom_right_widget)
 
+        # 우측 중간 테이블 변경
+        bottom_right_layout.addWidget(QLabel(self.tr("무기 자산 목록")))
+
         # 필터 추가
-        self.defense_assets_filter_layout = QHBoxLayout()
+        self.weapon_filter_layout = QHBoxLayout()
+        # 무기 자산 테이블 검색 기능
+        self.weapon_filter_layout = QHBoxLayout()
+        self.search_weapon_filter = QLineEdit()
+        self.search_weapon_filter.setPlaceholderText(self.tr("방공포대 검색"))
+        self.search_weapon_button = QPushButton(self.tr("찾기"))
+        self.search_weapon_button.clicked.connect(self.load_weapon_assets)
+        self.weapon_filter_layout.addWidget(self.search_weapon_filter)
+        self.weapon_filter_layout.addWidget(self.search_weapon_button)
+        bottom_right_layout.addLayout(self.weapon_filter_layout)
 
-        # 검색 창
-        self.search_defense_filter = QLineEdit()
-        self.search_defense_filter.setPlaceholderText(self.tr("방어자산명 또는 구성군, 지역 검색"))
-        self.search_defense_filter.textChanged.connect(self.load_dal_assets)
-        self.defense_assets_filter_layout.addWidget(self.search_defense_filter)
-
-        # 무기체계 콤보박스
-        self.weapon_systems_combo = QComboBox()
-        # weapon_systems.json 파일에서 무기체계 데이터 읽기
+        # 미사일 타입 콤보박스
+        self.weapon_type_combo = QComboBox()
         with open('weapon_systems.json', 'r', encoding='utf-8') as file:
-            weapon_systems = json.load(file)
-        weapon_systems_list = [self.tr('전체')] + list(weapon_systems.keys())
+            weapon_types = json.load(file)
+        weapon_types_list = [self.tr('전체')] + list(weapon_types.keys())
         # 무기체계 이름들을 콤보박스에 추가
-        self.weapon_systems_combo.addItems(weapon_systems_list)
-        self.weapon_systems_combo.currentTextChanged.connect(self.load_dal_assets)
-        self.defense_assets_filter_layout.addWidget(self.weapon_systems_combo)
+        self.weapon_type_combo.addItems(weapon_types_list)
+        self.weapon_type_combo.currentTextChanged.connect(self.load_weapon_assets)
+        self.weapon_filter_layout.addWidget(self.weapon_type_combo)
 
-        self.display_dal_count_combo = QComboBox()
-        self.display_dal_count_combo.addItems(["30", "50", "100", "200"])
-        self.display_dal_count_combo.currentTextChanged.connect(self.load_dal_assets)
-        self.defense_assets_filter_layout.addWidget(self.display_dal_count_combo)
-
-        # 위협반경 표시 체크박스
+        # 방어반경 표시 체크박스
         self.defense_radius_checkbox = QCheckBox(self.tr("방어반경 표시"))
         self.defense_radius_checkbox.stateChanged.connect(self.toggle_defense_radius)
-        self.defense_assets_filter_layout.addWidget(self.defense_radius_checkbox)
+        self.weapon_filter_layout.addWidget(self.defense_radius_checkbox)
 
+        bottom_right_layout.addLayout(self.weapon_filter_layout)
 
-        bottom_right_layout.addLayout(self.defense_assets_filter_layout)
+        # 방어반경 표시 체크박스
+        self.dal_select_checkbox = QCheckBox(self.tr("방어자산만 표시"))
+        self.dal_select_checkbox.stateChanged.connect(self.load_weapon_assets)
+        bottom_right_layout.addWidget(self.dal_select_checkbox)
 
-        self.defense_assets_table = MyTableWidget()
-        # ... (테이블 설정 - ViewCopWindow 클래스 참고)
-        self.defense_assets_table.setColumnCount(9)
-        self.defense_assets_table.setHorizontalHeaderLabels(["", self.tr("구성군"),  self.tr("지역"), self.tr("방어자산명"), self.tr("무기체계"), self.tr('위협방위'), self.tr('보유탄수'), self.tr('경위도'), self.tr('군사좌표(MGRS)')])
+        self.weapon_assets_table = MyTableWidget()
+        self.weapon_assets_table.setColumnCount(5)  # 체크박스 열 추가
+        self.weapon_assets_table.setHorizontalHeaderLabels(
+            ["", self.tr("구성군"), self.tr("지역"), self.tr("자산명"), self.tr("무기체계")])
         # 행 번호 숨기기
-        self.defense_assets_table.verticalHeader().setVisible(False)
-        self.defense_assets_table.setColumnHidden(5, True)
-        self.defense_assets_table.setColumnHidden(6, True)
-        self.defense_assets_table.setColumnHidden(7, True)
-        self.defense_assets_table.setColumnHidden(8, True)
+        self.weapon_assets_table.verticalHeader().setVisible(False)
         font = QFont("강한공군체", 13)
         font.setBold(True)
-        self.defense_assets_table.horizontalHeader().setFont(font)
-        header = self.defense_assets_table.horizontalHeader()
+        self.weapon_assets_table.horizontalHeader().setFont(font)
+        header = self.weapon_assets_table.horizontalHeader()
         header.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         header.resizeSection(0, 40)
         # 헤더 텍스트 중앙 정렬
         for column in range(header.count()):
-            item = self.defense_assets_table.horizontalHeaderItem(column)
+            item = self.weapon_assets_table.horizontalHeaderItem(column)
             if item:
                 item.setTextAlignment(Qt.AlignCenter)
 
         # 나머지 열들이 남은 공간을 채우도록 설정
-        for column in range(2, header.count()):
-            self.defense_assets_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
-        bottom_right_layout.addWidget(self.defense_assets_table)
+        for column in range(1, header.count()):
+            self.weapon_assets_table.horizontalHeader().setSectionResizeMode(column, QtWidgets.QHeaderView.Stretch)
 
-        # 페이지네이션 컨트롤 추가
-        self.dal_pagination_layout = QHBoxLayout()
-        self.dal_prev_button = QPushButton("◀")
-        self.dal_next_button = QPushButton("▶")
-        self.dal_page_label = QLabel()
-
-        # 스타일 설정
-        button_style = """
-            QPushButton {
-                background-color: #f0f0f0;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
-            }
-        """
-        self.dal_prev_button.setStyleSheet(button_style)
-        self.dal_next_button.setStyleSheet(button_style)
-
-        # 레이아웃에 위젯 추가
-        self.dal_pagination_layout.addWidget(self.dal_prev_button)
-        self.dal_pagination_layout.addWidget(self.dal_page_label)
-        self.dal_pagination_layout.addWidget(self.dal_next_button)
-
-        # 레이아웃 정렬 및 간격 설정
-        self.dal_pagination_layout.setAlignment(Qt.AlignCenter)
-        self.dal_pagination_layout.setSpacing(10)
-
-        bottom_right_layout.addLayout(self.dal_pagination_layout)
-
-        # 버튼 연결
-        self.dal_prev_button.clicked.connect(self.dal_prev_page)
-        self.dal_next_button.clicked.connect(self.dal_next_page)
-
-        # 초기 페이지 설정
-        self.dal_current_page = 1
-        self.dal_rows_per_page = 30  # 기본값 설정
-        self.dal_total_pages = 1  # 초기값 설정
-        self.dal_update_page_label()
+        bottom_right_layout.addWidget(self.weapon_assets_table)
 
         # 중앙 위젯 (지도)
         center_widget = QWidget()
@@ -488,16 +375,36 @@ class MissileDefenseApp(QDialog):
         simulate_button_layout.setAlignment(Qt.AlignCenter)
 
         # 미사일 궤적 분석 버튼
-        self.analyze_trajectories_button = QPushButton(self.tr("미사일 궤적 분석"))
+        self.analyze_trajectories_button = QPushButton(self.tr("미사일 궤적분석"))
+        self.analyze_trajectories_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.analyze_trajectories_button.setFixedSize(200, 30)
+        self.analyze_trajectories_button.setStyleSheet("QPushButton { text-align: center; }")
+
         self.analyze_trajectories_button.clicked.connect(self.run_trajectory_analysis)
         simulate_button_layout.addWidget(self.analyze_trajectories_button)
 
         # 최적 방공포대 위치 산출 버튼
-        self.optimize_locations_button = QPushButton(self.tr("최적 방공포대 위치 산출"))
+        self.optimize_locations_button = QPushButton(self.tr("최적 방공포대 위치산출"))
+        self.optimize_locations_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.optimize_locations_button.setFixedSize(200, 30)
+        self.optimize_locations_button.setStyleSheet("QPushButton { text-align: center; }")
+
         self.optimize_locations_button.clicked.connect(self.run_location_optimization)
         simulate_button_layout.addWidget(self.optimize_locations_button)
 
         center_layout.addLayout(simulate_button_layout)
+
+        # 방어반경 표시 체크박스와 지도 출력 버튼을 위한 수평 레이아웃
+        print_button_layout = QHBoxLayout()
+        # 지도 출력 버튼
+        self.print_button = QPushButton(self.tr("지도 출력"), self)
+        self.print_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.print_button.setFixedSize(130, 30)
+        self.print_button.setStyleSheet("QPushButton { text-align: center; }")
+        self.print_button.clicked.connect(self.print_map)
+        print_button_layout.addWidget(self.print_button, alignment=Qt.AlignRight)
+        # 수평 레이아웃을 center_layout에 추가
+        center_layout.addLayout(print_button_layout)
 
         # 시뮬레이션 결과 테이블
         self.result_table = QTableWidget()
@@ -533,16 +440,15 @@ class MissileDefenseApp(QDialog):
 
         # 데이터베이스 연결 및 데이터 로드
         self.load_dataframes()
-        self.mgrs_converter = mgrs.MGRS()
 
         with open("missile_info.json", "r", encoding="utf-8") as f:
             self.missile_info = json.load(f)
         with open("weapon_systems.json", "r", encoding="utf-8") as f:
             self.weapon_systems_info = json.load(f)
 
-        self.load_cal_assets()
+        self.load_assets()
         self.load_enemy_missile_sites()
-        self.load_dal_assets()
+        self.load_weapon_assets()
         # 초기 지도 표시 (필요에 따라 수정)
         self.update_map()
 
@@ -554,7 +460,7 @@ class MissileDefenseApp(QDialog):
         self.show_threat_radius = state == Qt.Checked
         self.update_map()
 
-    def load_cal_assets(self):
+    def load_assets(self):
         filtered_df = self.cal_df_ko if self.parent.selected_language == 'ko' else self.cal_df_en
 
         unit_filter_text = self.unit_filter.currentText()
@@ -566,32 +472,21 @@ class MissileDefenseApp(QDialog):
             filtered_df = filtered_df[
                 (filtered_df['target_asset'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['area'].str.contains(search_filter_text, case=False))
-                ]
+            ]
 
         filtered_df = filtered_df.sort_values('priority')
 
-        # 페이지네이션 설정
-        self.cal_rows_per_page = int(self.display_cal_count_combo.currentText())
-        self.cal_total_pages = -(-len(filtered_df) // self.cal_rows_per_page)  # 올림 나눗셈
-
-        # 현재 페이지에 해당하는 데이터만 선택
-        start_idx = (self.cal_current_page - 1) * self.cal_rows_per_page
-        end_idx = start_idx + self.cal_rows_per_page
-        page_df = filtered_df.iloc[start_idx:end_idx]
-
-        self.cal_assets_table.uncheckAllRows()
-        self.cal_assets_table.setRowCount(len(page_df))
-        for row, (_, asset) in enumerate(page_df.iterrows()):
+        self.assets_table.uncheckAllRows()
+        self.assets_table.setRowCount(len(filtered_df))
+        for row, (_, asset) in enumerate(filtered_df.iterrows()):
             checkbox = CenteredCheckBox()
-            self.cal_assets_table.setCellWidget(row, 0, checkbox)
+            self.assets_table.setCellWidget(row, 0, checkbox)
             checkbox.checkbox.stateChanged.connect(self.update_map)
-            for col, value in enumerate(asset[['priority', 'unit', 'area', 'target_asset', 'coordinate', 'mgrs']], start=1):
+            for col, value in enumerate(asset[['priority', 'unit', 'area', 'target_asset']], start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
-                self.cal_assets_table.setItem(row, col, item)
-
+                self.assets_table.setItem(row, col, item)
         self.update_map()
-        self.cal_update_pagination()
 
     def load_enemy_missile_sites(self):
         filtered_df = self.enemy_bases_df_ko if self.parent.selected_language == 'ko' else self.enemy_bases_df_en
@@ -602,76 +497,52 @@ class MissileDefenseApp(QDialog):
                 (filtered_df['base_name'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['area'].str.contains(search_filter_text, case=False)) |
                 (filtered_df['weapon_system'].str.contains(search_filter_text, case=False))
-                ]
+            ]
 
         missile_filter_text = self.missile_type_combo.currentText()
         if missile_filter_text != self.tr("전체"):
             filtered_df = filtered_df[
                 filtered_df['weapon_system'].apply(lambda x: missile_filter_text in x.split(', '))]
 
-        # 페이지네이션 설정
-        self.enemy_rows_per_page = int(self.display_enemy_count_combo.currentText())
-        self.enemy_total_pages = -(-len(filtered_df) // self.enemy_rows_per_page)  # 올림 나눗셈
-
-        # 현재 페이지에 해당하는 데이터만 선택
-        start_idx = (self.enemy_current_page - 1) * self.enemy_rows_per_page
-        end_idx = start_idx + self.enemy_rows_per_page
-        page_df = filtered_df.iloc[start_idx:end_idx]
-
         self.enemy_sites_table.uncheckAllRows()
-        self.enemy_sites_table.setRowCount(len(page_df))
+        self.enemy_sites_table.setRowCount(len(filtered_df))
         for row, (_, base) in enumerate(filtered_df.iterrows()):
             checkbox = CenteredCheckBox()
             self.enemy_sites_table.setCellWidget(row, 0, checkbox)
             checkbox.checkbox.stateChanged.connect(self.update_map)
-            for col, value in enumerate(base[['base_name', 'area', 'weapon_system', 'coordinate', 'mgrs']], start=1):
+            for col, value in enumerate(base[['base_name', 'coordinate', 'weapon_system']], start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.enemy_sites_table.setItem(row, col, item)
-
         self.update_map()
-        self.enemy_update_pagination()
 
-    def load_dal_assets(self):
-        filtered_df = self.dal_df_ko if self.parent.selected_language == 'ko' else self.dal_df_en
-
-        search_filter_text = self.search_defense_filter.text()
+    def load_weapon_assets(self):
+        # 테이블 초기화
+        weapon_assets_df = self.weapon_assets_df_ko if self.parent.selected_language == 'ko' else self.weapon_assets_df_en
+        # 필터링 추가
+        search_filter_text = self.search_weapon_filter.text()
+        if self.dal_select_checkbox.isChecked():
+            weapon_assets_df = weapon_assets_df[weapon_assets_df['dal_select'] == 1]
         if search_filter_text:
-            filtered_df = filtered_df[
-                (filtered_df['target_asset'].str.contains(search_filter_text, case=False)) |
-                (filtered_df['unit'].str.contains(search_filter_text, case=False)) |
-                (filtered_df['area'].str.contains(search_filter_text, case=False)) |
-                (filtered_df['weapon_system'].str.contains(search_filter_text, case=False))
+            weapon_assets_df = weapon_assets_df[
+                (weapon_assets_df['asset_name'].str.contains(search_filter_text, case=False)) |
+                (weapon_assets_df['area'].str.contains(search_filter_text, case=False)) |
+                (weapon_assets_df['unit'].str.contains(search_filter_text, case=False))
                 ]
-
-        weapon_filter_text = self.weapon_systems_combo.currentText()
-        if weapon_filter_text != self.tr("전체"):
-            filtered_df = filtered_df[
-                filtered_df['weapon_system'].apply(lambda x: weapon_filter_text in x.split(', '))]
-
-        # 페이지네이션 설정
-        self.dal_rows_per_page = int(self.display_dal_count_combo.currentText())
-        self.dal_total_pages = -(-len(filtered_df) // self.dal_rows_per_page)  # 올림 나눗셈
-
-        # 현재 페이지에 해당하는 데이터만 선택
-        start_idx = (self.dal_current_page - 1) * self.dal_rows_per_page
-        end_idx = start_idx + self.dal_rows_per_page
-        page_df = filtered_df.iloc[start_idx:end_idx]
-
-        self.defense_assets_table.uncheckAllRows()
-        self.defense_assets_table.setRowCount(len(page_df))
-        for row, (_, base) in enumerate(filtered_df.iterrows()):
+        weapon_type_filter_text = self.weapon_type_combo.currentText()
+        if weapon_type_filter_text != self.tr("전체"):
+            weapon_assets_df = weapon_assets_df[weapon_assets_df['weapon_system'] == weapon_type_filter_text]
+        self.weapon_assets_table.uncheckAllRows()
+        self.weapon_assets_table.setRowCount(len(weapon_assets_df))
+        for row, (_, weapons) in enumerate(weapon_assets_df.iterrows()):
             checkbox = CenteredCheckBox()
-            self.defense_assets_table.setCellWidget(row, 0, checkbox)
+            self.weapon_assets_table.setCellWidget(row, 0, checkbox)
             checkbox.checkbox.stateChanged.connect(self.update_map)
-            for col, value in enumerate(base[['unit', 'area', 'target_asset', 'weapon_system', 'threat_degree',
-                                              'ammo_count', 'coordinate', 'mgrs']], start=1):
+            for col, value in enumerate(weapons[['unit', 'area', 'asset_name', 'weapon_system']], start=1):
                 item = QTableWidgetItem(str(value))
                 item.setTextAlignment(Qt.AlignCenter)
-                self.defense_assets_table.setItem(row, col, item)
-
+                self.weapon_assets_table.setItem(row, col, item)
         self.update_map()
-        self.dal_update_pagination()
 
     def update_map(self):
         # 새로운 지도 객체를 생성하되, 현재의 중심 위치와 줌 레벨을 사용합니다.
@@ -681,14 +552,17 @@ class MissileDefenseApp(QDialog):
             tiles=self.parent.map_app.loadSettings()['style'])
 
         selected_assets = self.get_selected_assets()
-        selected_defense_assets = self.get_selected_defense_assets()
+        selected_weapon_assets = self.get_selected_weapon_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
+        selected_enemy_weapons = self.get_selected_enemy_weapons()
         if selected_assets:
             SimulationCalMapView(selected_assets, self.map)
-        if selected_defense_assets:
-            SimulationWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
+        if selected_weapon_assets:
+            SimulationWeaponMapView(selected_weapon_assets, self.map, self.show_defense_radius)
         if selected_enemy_bases:
-            SimulationEnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+            SimulationEnemyBaseMapView(selected_enemy_weapons, self.map)
+        if selected_enemy_weapons:
+            SimulationEnemyWeaponMapView(selected_enemy_weapons, self.map, self.show_threat_radius)
 
         data = io.BytesIO()
         self.map.save(data, close_file=False)
@@ -699,13 +573,13 @@ class MissileDefenseApp(QDialog):
         selected_assets = []
         asset_info_ko = pd.DataFrame()
         asset_info_en = pd.DataFrame()
-        for row in range(self.cal_assets_table.rowCount()):
-            checkbox_widget = self.cal_assets_table.cellWidget(row, 0)
+        for row in range(self.assets_table.rowCount()):
+            checkbox_widget = self.assets_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
-                priority = int(self.cal_assets_table.item(row, 1).text())
-                unit = self.cal_assets_table.item(row, 2).text()
-                area = self.cal_assets_table.item(row, 3).text()
-                asset_name = self.cal_assets_table.item(row, 4).text()
+                priority = int(self.assets_table.item(row, 1).text())
+                unit = self.assets_table.item(row, 2).text()
+                area = self.assets_table.item(row, 3).text()
+                asset_name = self.assets_table.item(row, 4).text()
                 if self.parent.selected_language == 'ko':
                     asset_info_ko = self.cal_df_ko[
                         (self.cal_df_ko['target_asset'] == asset_name) &
@@ -718,146 +592,98 @@ class MissileDefenseApp(QDialog):
                         (self.cal_df_en['area'] == area) &
                         (self.cal_df_en['unit'] == unit)
                         ]
-                mgrs_coord = asset_info_ko.iloc[0]['mgrs'] if self.parent.selected_language == 'ko' else asset_info_en.iloc[0]['mgrs']
-                selected_assets.append((asset_name, mgrs_coord, priority))
+                dal_select = asset_info_ko.iloc[0]['dal_select']  if self.parent.selected_language == 'ko' else asset_info_en.iloc[0]['dal_select']
+                coord = asset_info_ko.iloc[0]['coordinate'] if self.parent.selected_language == 'ko' else asset_info_en.iloc[0]['coordinate']
+                selected_assets.append((asset_name, coord, dal_select, priority))
         return selected_assets
 
-    def get_selected_defense_assets(self):
-        selected_defense_assets = []
-        dal_info_ko = pd.DataFrame()
-        dal_info_en = pd.DataFrame()
-        for row in range(self.defense_assets_table.rowCount()):
-            checkbox_widget = self.defense_assets_table.cellWidget(row, 0)
+    def get_selected_weapon_assets(self):
+        weapon_assets = []
+        for row in range(self.weapon_assets_table.rowCount()):
+            checkbox_widget = self.weapon_assets_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
-                unit = self.defense_assets_table.item(row, 1).text()
-                area = self.defense_assets_table.item(row, 2).text()
-                asset_name = self.defense_assets_table.item(row, 3).text()
-                weapon_system = self.defense_assets_table.item(row, 4).text()
+                unit = self.weapon_assets_table.item(row, 1).text()
+                area = self.weapon_assets_table.item(row, 2).text()
+                asset_name = self.weapon_assets_table.item(row, 3).text()
+                weapon_system = self.weapon_assets_table.item(row, 4).text()
 
-                if self.parent.selected_language == 'ko':
-                    dal_info_ko = self.dal_df_ko[
-                        (self.dal_df_ko['asset_name'] == asset_name) &
-                        (self.dal_df_ko['unit'] == unit) &
-                        (self.dal_df_ko['area'] == area) &
-                        (self.dal_df_ko['weapon_system'] == weapon_system)
-                        ]
-                else:
-                    dal_info_en = self.enemy_bases_df_en[
-                        (self.dal_df_en['asset_name'] == asset_name) &
-                        (self.dal_df_en['unit'] == unit) &
-                        (self.dal_df_en['area'] == area) &
-                        (self.dal_df_en['weapon_system'] == weapon_system)
-                        ]
-                mgrs_coord = dal_info_ko.iloc[0]['mgrs'] if self.parent.selected_language == 'ko' else dal_info_en.iloc[0]['mgrs']
-                threat_degree = dal_info_ko.iloc[0]['threat_degree'] if self.parent.selected_language == 'ko' else dal_info_en.iloc[0]['threat_degree']
-                selected_defense_assets.append((asset_name, mgrs_coord, weapon_system, threat_degree))
-        return selected_defense_assets
+                asset_info = self.weapon_assets_df_ko if self.parent.selected_language == 'ko' else self.weapon_assets_df_en
+                asset_info = asset_info[
+                    (asset_info['unit'] == unit) &
+                    (asset_info['area'] == area) &
+                    (asset_info['asset_name'] == asset_name)
+                    ]
+
+                if not asset_info.empty:
+                    unit = asset_info.iloc[0]['unit']
+                    area = asset_info.iloc[0]['area']
+                    coord = asset_info.iloc[0]['coordinate']
+                    ammo_count = asset_info.iloc[0]['ammo_count']
+                    threat_degree = asset_info.iloc[0]['threat_degree']
+                    dal_select = asset_info.iloc[0]['dal_select']
+                    weapon_assets.append((unit, area, asset_name, coord, weapon_system, ammo_count, threat_degree, dal_select))
+
+        return weapon_assets
 
     def get_selected_enemy_bases(self):
         selected_enemy_bases = []
-        bases_info_ko = pd.DataFrame()
-        bases_info_en = pd.DataFrame()
         for row in range(self.enemy_sites_table.rowCount()):
             checkbox_widget = self.enemy_sites_table.cellWidget(row, 0)
             if checkbox_widget and checkbox_widget.checkbox.isChecked():
                 base_name = self.enemy_sites_table.item(row, 1).text()
-                area = self.enemy_sites_table.item(row, 2).text()
+                coordinate = self.enemy_sites_table.item(row, 2).text()
+                weapon_system = self.enemy_sites_table.item(row, 3).text()
+                selected_enemy_bases.append((base_name, coordinate, weapon_system))
+        return selected_enemy_bases
+
+    def get_selected_enemy_weapons(self):
+        selected_enemy_weapons = []
+        weapon_info_ko = pd.DataFrame()
+        weapon_info_en = pd.DataFrame()
+        for row in range(self.enemy_sites_table.rowCount()):
+            checkbox_widget = self.enemy_sites_table.cellWidget(row, 0)
+            if checkbox_widget and checkbox_widget.checkbox.isChecked():
+                base_name = self.enemy_sites_table.item(row, 1).text()
+                coordinate = self.enemy_sites_table.item(row, 2).text()
                 weapon_system = self.enemy_sites_table.item(row, 3).text()
                 if self.parent.selected_language == 'ko':
-                    bases_info_ko = self.enemy_bases_df_ko[
+                    weapon_info_ko = self.enemy_bases_df_ko[
                         (self.enemy_bases_df_ko['base_name'] == base_name) &
-                        (self.enemy_bases_df_ko['area'] == area) &
+                        (self.enemy_bases_df_ko['coordinate'] == coordinate) &
                         (self.enemy_bases_df_ko['weapon_system'] == weapon_system)
                         ]
                 else:
-                    bases_info_en = self.enemy_bases_df_en[
+                    weapon_info_en = self.enemy_bases_df_en[
                         (self.enemy_bases_df_en['base_name'] == base_name) &
-                        (self.enemy_bases_df_en['area'] == area) &
+                        (self.enemy_bases_df_en['coordinate'] == coordinate) &
                         (self.enemy_bases_df_en['weapon_system'] == weapon_system)
                         ]
-                mgrs_coord = bases_info_ko.iloc[0]['mgrs'] if self.parent.selected_language == 'ko' else bases_info_en.iloc[0]['mgrs']
-                selected_enemy_bases.append((base_name, mgrs_coord, weapon_system))
-        return selected_enemy_bases
-
-    def cal_update_pagination(self):
-        self.cal_page_label.setText(f"{self.cal_current_page} / {self.cal_total_pages}")
-        self.cal_prev_button.setEnabled(self.cal_current_page > 1)
-        self.cal_next_button.setEnabled(self.cal_current_page < self.cal_total_pages)
-
-    def cal_update_page_label(self):
-        self.cal_page_label.setText(f"{self.cal_current_page} / {self.cal_total_pages}")
-
-    def cal_prev_page(self):
-        if self.cal_current_page > 1:
-            self.cal_current_page -= 1
-            self.cal_update_page_label()
-            self.load_cal_assets()
-
-    def cal_next_page(self):
-        if self.cal_current_page < self.cal_total_pages:
-            self.cal_current_page += 1
-            self.cal_update_page_label()
-            self.load_cal_assets()
-
-    def enemy_update_pagination(self):
-        self.enemy_page_label.setText(f"{self.enemy_current_page} / {self.enemy_total_pages}")
-        self.enemy_prev_button.setEnabled(self.enemy_current_page > 1)
-        self.enemy_next_button.setEnabled(self.enemy_current_page < self.enemy_total_pages)
-
-    def enemy_update_page_label(self):
-        self.enemy_page_label.setText(f"{self.enemy_current_page} / {self.enemy_total_pages}")
-
-    def enemy_prev_page(self):
-        if self.enemy_current_page > 1:
-            self.enemy_current_page -= 1
-            self.enemy_update_page_label()
-            self.load_enemy_missile_sites()
-
-    def enemy_next_page(self):
-        if self.enemy_current_page < self.enemy_total_pages:
-            self.enemy_current_page += 1
-            self.enemy_update_page_label()
-            self.load_enemy_missile_sites()
-
-    def dal_update_pagination(self):
-        self.dal_page_label.setText(f"{self.dal_current_page} / {self.dal_total_pages}")
-        self.dal_prev_button.setEnabled(self.dal_current_page > 1)
-        self.dal_next_button.setEnabled(self.dal_current_page < self.dal_total_pages)
-
-    def dal_update_page_label(self):
-        self.dal_page_label.setText(f"{self.dal_current_page} / {self.dal_total_pages}")
-
-    def dal_prev_page(self):
-        if self.dal_current_page > 1:
-            self.dal_current_page -= 1
-            self.dal_update_page_label()
-            self.load_dal_assets()
-
-    def dal_next_page(self):
-        if self.dal_current_page < self.dal_total_pages:
-            self.dal_current_page += 1
-            self.dal_update_page_label()
-            self.load_dal_assets()
+                weapon_systems_list = weapon_system.split(", ")
+                for weapon in weapon_systems_list:
+                    if self.missile_type_combo.currentText() == self.tr('전체'):
+                        selected_enemy_weapons.append((base_name, coordinate, weapon))
+                    else:
+                        if weapon == self.missile_type_combo.currentText():
+                            selected_enemy_weapons.append((base_name, coordinate, weapon))
+        return selected_enemy_weapons
 
     def calculate_trajectories(self):
         """미사일 궤적을 계산하는 메서드 (수정됨)"""
         try:
-            selected_enemy_bases = self.get_selected_items(self.enemy_sites_table)
-            selected_defense_assets = self.get_selected_items(self.defense_assets_table)
-            selected_cal_assets = self.get_selected_items(self.cal_assets_table)
-            if not selected_enemy_bases or not selected_cal_assets:
+            selected_enemy_weapons = self.get_selected_enemy_weapons()
+            selected_weapon_assets = self.get_selected_weapon_assets()
+            selected_assets = self.get_selected_assets()
+            if not selected_enemy_weapons or not selected_assets:
                 QMessageBox.warning(self, self.tr("경고"), self.tr("미사일 기지 또는 방어 대상 자산을 선택하세요."))
                 return
 
             self.trajectories = []
             self.defense_trajectories = []
-            for enemy_base_dic in selected_enemy_bases:
-                for cal_asset_dic in selected_cal_assets:
+            for base_name, missile_lat_lon, enemy_weapon in selected_enemy_weapons:
+                for target_name, target_lat_lon, dal_select, priority in selected_assets:
                     try:
-                        base_name = enemy_base_dic.get(self.tr('발사기지'))
-                        missile_lat, missile_lon = self.parse_coordinates(enemy_base_dic.get('경위도'))
-                        target_name = cal_asset_dic.get(self.tr('방어대상자산'))
-                        target_lat, target_lon = self.parse_coordinates(cal_asset_dic.get('경위도'))
+                        missile_lat, missile_lon = self.parse_coordinates(missile_lat_lon)
+                        target_lat, target_lon = self.parse_coordinates(target_lat_lon)
 
                         distance = self.trajectory_calculator.calculate_distance(missile_lat, missile_lon,
                                                                                  target_lat, target_lon)
@@ -879,12 +705,10 @@ class MissileDefenseApp(QDialog):
 
                                 self.trajectories.append(result)
                                 # 방어 가능한 궤적 따로 저장
-                                if selected_defense_assets:
-                                    for defense_asset_dic in selected_defense_assets:
-                                        defense_name = defense_asset_dic.get(self.tr('방어자산명'))
-                                        defense_lat, defense_lon = self.parse_coordinates(defense_asset_dic.get('경위도'))
-                                        weapon_type = defense_asset_dic.get(self.tr('무기체계'))
-                                        threat_azimuth =  int(defense_asset_dic.get(self.tr('위협방위')))
+                                if selected_weapon_assets:
+                                    for unit, area, defense_asset_name, defense_lat_lon, weapon_type, ammo_count, threat_degree, dal_select in selected_weapon_assets:
+                                        defense_lat, defense_lon = self.parse_coordinates(defense_lat_lon)
+                                        threat_azimuth =  int(threat_degree)
                                         if self.check_engagement_possibility(defense_lat, defense_lon, weapon_type,
                                                                              trajectory, threat_azimuth):
                                             defense_result = {
@@ -892,7 +716,7 @@ class MissileDefenseApp(QDialog):
                                                 'base_coordinate': (missile_lat, missile_lon),
                                                 'target_name': target_name,
                                                 'target_coordinate': (target_lat, target_lon),
-                                                'defense_name' : defense_name,
+                                                'defense_name' : defense_asset_name,
                                                 'defense_coordinate': (defense_lat, defense_lon),
                                                 'weapon_type': weapon_type,
                                                 'missile_type': missile_type,
@@ -924,16 +748,19 @@ class MissileDefenseApp(QDialog):
 
         # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
         selected_assets = self.get_selected_assets()
-        selected_defense_assets = self.get_selected_defense_assets()
+        selected_defense_assets = self.get_selected_weapon_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
+        selected_enemy_weapons = self.get_selected_enemy_weapons()
         if selected_assets:
-            CommonCalMapView(selected_assets, self.map)
+            SimulationCalMapView(selected_assets, self.map)
         if selected_defense_assets:
-            CommonWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
+            SimulationWeaponMapView(selected_defense_assets, self.map, self.show_defense_radius)
         if selected_enemy_bases:
-            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+            SimulationEnemyBaseMapView(selected_enemy_bases, self.map)
+        if selected_enemy_weapons:
+            SimulationEnemyWeaponMapView(selected_enemy_bases, self.map, self.show_threat_radius)
 
-        # 궤적을 지도에 추가합니다.
+        # 궤적을 지도에 추가하는 부분
         if hasattr(self, 'trajectories'):
             trajectory_groups = {}
             for trajectory_data in self.trajectories:
@@ -946,17 +773,11 @@ class MissileDefenseApp(QDialog):
                 trajectory_groups[key].append(trajectory)
 
             for (start, end), trajectories in trajectory_groups.items():
-                # 그룹의 대표 궤적 선택
                 representative_trajectory = trajectories[0]
                 points = [(float(lat), float(lon)) for lat, lon, _ in representative_trajectory]
-
-                # 궤적 간소화
                 simplified_points = simplify_coords(points, 0.001)
 
-                # 방어 가능한 궤적 여부 확인
                 is_defended = self.is_trajectory_defended(representative_trajectory)
-
-                # 간소화된 궤적 표시 (방어 가능한 경우 녹색, 그렇지 않은 경우 빨간색)
                 color = "green" if is_defended else "red"
                 folium.PolyLine(
                     locations=simplified_points,
@@ -965,7 +786,6 @@ class MissileDefenseApp(QDialog):
                     opacity=0.8
                 ).add_to(self.map)
 
-                # 방어 가능한 궤적에 대해 교전 지점 표시
                 if is_defended:
                     for defense_tr_dic in self.defense_trajectories:
                         if self.is_same_trajectory(representative_trajectory, defense_tr_dic['trajectory']):
@@ -990,14 +810,6 @@ class MissileDefenseApp(QDialog):
 
         # 지도 업데이트 후 화면을 갱신합니다.
         self.map_view.update()
-
-    @staticmethod
-    def parse_coordinates(coord_string):
-        """경위도 문자열을 파싱하여 위도와 경도를 반환합니다."""
-        lat_str, lon_str = coord_string.split(',')
-        lat = float(lat_str[1:])  # 'N' 제거
-        lon = float(lon_str[1:])  # 'E' 제거
-        return lat, lon
 
     def run_trajectory_analysis(self):
         """미사일 궤적 분석 실행 메서드"""
@@ -1066,6 +878,14 @@ class MissileDefenseApp(QDialog):
             return None
 
     @staticmethod
+    def parse_coordinates(coord_string):
+        """경위도 문자열을 파싱하여 위도와 경도를 반환합니다."""
+        lat_str, lon_str = coord_string.split(',')
+        lat = float(lat_str[1:])  # 'N' 제거
+        lon = float(lon_str[1:])  # 'E' 제거
+        return lat, lon
+
+    @staticmethod
     def calculate_bearing(lat1, lon1, lat2, lon2):
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlon = lon2 - lon1
@@ -1094,22 +914,81 @@ class MissileDefenseApp(QDialog):
                           self.weapon_systems_info[weapon_type].get('max_altitude'))  # 방어 유닛 요격 고도 (최소, 최대)
         angle = self.weapon_systems_info[weapon_type].get('angle')  # 방어 유닛 방위각
 
-        for M_lat, M_lon, Mz in trajectory:
-            distance = self.calculate_distance(defense_lat, defense_lon, M_lat, M_lon)  # 방어 유닛과 미사일 간 거리 계산
+        for i in range(len(trajectory) - 1):
+            start = trajectory[i]
+            end = trajectory[i + 1]
 
-            # 미사일의 방위각 계산
+            # 선분의 시작점과 끝점에 대해 교전 가능성 확인
+            for point in [start, end]:
+                M_lat, M_lon, Mz = point
+                distance = self.calculate_distance(defense_lat, defense_lon, M_lat, M_lon)
+
+                missile_azimuth = math.atan2(M_lat - defense_lat, M_lon - defense_lon)
+                azimuth_diff = abs(missile_azimuth - math.radians(threat_azimuth))
+
+                if (azimuth_diff <= math.radians(angle / 2) or azimuth_diff >= math.radians(360 - angle / 2)) and \
+                        range_tuple[0] <= distance <= range_tuple[1] and \
+                        altitude_tuple[0] <= Mz <= altitude_tuple[1]:
+                    return True  # 선분의 끝점 중 하나라도 교전 가능한 경우
+
+            # 선분이 방어 가능 공간을 통과하는지 확인
+            if self.line_intersects_defense_zone(start, end, defense_lat, defense_lon, range_tuple, altitude_tuple,
+                                                 angle, threat_azimuth):
+                return True
+
+        return False  # 궤적 전체에서 방어 가능한 지점이 없는 경우 False 반환
+
+    def line_intersects_defense_zone(self, start, end, defense_lat, defense_lon, range_tuple, altitude_tuple, angle,
+                                     threat_azimuth):
+        """선분이 방어 가능 공간을 통과하는지 확인하는 메서드"""
+        # 선분을 여러 개의 점으로 나누어 각 점에 대해 교전 가능성 확인
+        steps = 100  # 선분을 나눌 점의 개수
+        for i in range(1, steps):
+            t = i / steps
+            M_lat = start[0] + t * (end[0] - start[0])
+            M_lon = start[1] + t * (end[1] - start[1])
+            Mz = start[2] + t * (end[2] - start[2])
+
+            distance = self.calculate_distance(defense_lat, defense_lon, M_lat, M_lon)
             missile_azimuth = math.atan2(M_lat - defense_lat, M_lon - defense_lon)
-
-            # 위협방위와의 각도 차이 계산
             azimuth_diff = abs(missile_azimuth - math.radians(threat_azimuth))
 
-            # 논문의 식 (4)~(6)을 적용하여 교전 가능성 판단
             if (azimuth_diff <= math.radians(angle / 2) or azimuth_diff >= math.radians(360 - angle / 2)) and \
                     range_tuple[0] <= distance <= range_tuple[1] and \
                     altitude_tuple[0] <= Mz <= altitude_tuple[1]:
-                return True  # 교전 가능한 경우 True 반환
+                return True  # 선분 상의 한 점이라도 교전 가능한 경우
 
-        return False  # 궤적 전체에서 방어 가능한 지점이 없는 경우 False 반환
+        return False  # 선분이 방어 가능 공간을 통과하지 않는 경우
+
+    def find_intercept_point(self, defense_tr_dic):
+        """방어 가능한 교전 지점을 찾는 메서드"""
+        defense_lat, defense_lon = defense_tr_dic['defense_coordinate']
+        trajectory = defense_tr_dic['trajectory']
+        weapon_type = defense_tr_dic['weapon_type']
+        defense_altitude_range = (self.weapon_systems_info[weapon_type].get('min_altitude'),
+                                  self.weapon_systems_info[weapon_type].get('max_altitude'))
+        defense_range = (self.weapon_systems_info[weapon_type].get('min_radius'),
+                         self.weapon_systems_info[weapon_type].get('max_radius'))
+
+        for i in range(len(trajectory) - 1):
+            start = trajectory[i]
+            end = trajectory[i + 1]
+
+            # 선분 위의 점들을 검사
+            steps = 100
+            for j in range(steps + 1):
+                t = j / steps
+                lat = start[0] + t * (end[0] - start[0])
+                lon = start[1] + t * (end[1] - start[1])
+                altitude = start[2] + t * (end[2] - start[2])
+
+                distance = self.calculate_distance(defense_lat, defense_lon, lat, lon)
+                if (defense_range[0] <= distance <= defense_range[1] and
+                        defense_altitude_range[0] <= altitude <= defense_altitude_range[1]):
+                    return lat, lon, altitude
+
+        return None
+
 
     def calculate_engagement_zones(self):
         """방공포대 교전가능 공간을 계산하는 메서드 (수정됨)"""
@@ -1164,6 +1043,69 @@ class MissileDefenseApp(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "에러", f"교전 가능 공간 계산 중 오류 발생: {str(e)}")
 
+    def optimize_locations(self):
+        try:
+            # 격자 범위 설정
+            grid_bounds = np.array([[33.5, 38.5], [125.5, 129.5]])
+
+            # 최적화 객체 생성
+            optimizer = MissileDefenseOptimizer(self.trajectories, self.weapon_systems_info, grid_bounds)
+
+            # 방어 시스템 수 설정 (예: 5개)
+            num_defense_systems = 5
+
+            # 최적화 실행
+            optimized_positions = optimizer.optimize(num_defense_systems)
+
+            # 최적화 결과 저장
+            self.optimized_locations = []
+            for position in optimized_positions:
+                for trajectory in self.trajectories:
+                    if optimizer.is_trajectory_defended(trajectory, position):
+                        self.optimized_locations.append({
+                            'defense_coordinate': tuple(position),
+                            'trajectory': trajectory['trajectory'],
+                            'base_name': trajectory['base_name'],
+                            'target_name': trajectory['target_name'],
+                            'missile_type': trajectory['missile_type'],
+                            'weapon_type': 'Optimal'  # 실제 무기 유형은 추가 로직으로 결정 가능
+                        })
+
+            # 결과 출력 및 지도 업데이트
+            self.update_result_table()
+            self.update_map_with_optimized_locations()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 산출 오류: {e}"))
+
+    def update_result_table(self):
+        self.result_table.setRowCount(0)
+        self.result_table.setColumnCount(4)
+        self.result_table.setHorizontalHeaderLabels(["최적 위치", "방어 가능 자산", "무기 유형", "위협 방위각"])
+
+        for location in self.optimized_locations:
+            row = self.result_table.rowCount()
+            self.result_table.insertRow(row)
+            self.result_table.setItem(row, 0, QTableWidgetItem(str(location['defense_coordinate'])))
+            self.result_table.setItem(row, 1, QTableWidgetItem(location['target_name']))
+            self.result_table.setItem(row, 2, QTableWidgetItem(location['weapon_type']))
+            self.result_table.setItem(row, 3, QTableWidgetItem("N/A"))  # 방위각은 추가 계산 필요
+
+    def run_location_optimization(self):
+        try:
+            self.calculate_trajectories()
+            self.optimize_locations()
+
+            if not self.optimized_locations:
+                QMessageBox.warning(self, "경고", "최적화된 위치가 없습니다.")
+                return
+
+            self.update_result_table()
+            self.update_map_with_optimized_locations()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 산출 오류: {e}"))
+
     def update_map_with_optimized_locations(self):
         """미사일 궤적, 방어 궤적, 격자, 최적 위치를 지도에 표시하는 메서드"""
         # 새로운 지도 객체를 생성합니다.
@@ -1174,14 +1116,17 @@ class MissileDefenseApp(QDialog):
 
         # 선택된 자산, 방어 자산, 적 기지를 지도에 추가합니다.
         selected_assets = self.get_selected_assets()
-        selected_defense_assets = self.get_selected_defense_assets()
+        selected_defense_assets = self.get_selected_weapon_assets()
         selected_enemy_bases = self.get_selected_enemy_bases()
+        selected_enemy_weapons = self.get_selected_enemy_weapons()
         if selected_assets:
-            CommonCalMapView(selected_assets, self.map)
+            SimulationCalMapView(selected_assets, self.map)
         if selected_defense_assets:
-            CommonWeaponMapView(selected_defense_assets, self.show_defense_radius, self.map)
+            SimulationWeaponMapView(selected_defense_assets, self.map, self.show_defense_radius)
         if selected_enemy_bases:
-            EnemyBaseWeaponMapView(selected_enemy_bases, self.show_threat_radius, self.map)
+            SimulationEnemyBaseMapView(selected_enemy_bases, self.map)
+        if selected_enemy_weapons:
+            SimulationEnemyWeaponMapView(selected_enemy_bases, self.map, self.show_threat_radius)
 
         # 격자 및 라벨 표시
         lat_step = 0.2
@@ -1291,125 +1236,6 @@ class MissileDefenseApp(QDialog):
         # 지도 로딩이 완료되었는지 확인합니다.
         self.map_view.loadFinished.connect(self.on_map_load_finished)
 
-    def optimize_locations(self):
-        try:
-            # 방어 시스템의 교전 구역 계산
-            self.calculate_engagement_zones()
-
-            # 후보 방어 위치 목록 생성 (중복 제거)
-            candidate_locations = list(set([zone['defense_name'] for zone in self.engagement_zones]))
-            num_candidate_locations = len(candidate_locations)
-
-            # 목표물 위치 목록 생성 (중복 제거)
-            bases = set([(zone['base_name'], zone['base_coordinate']) for zone in self.engagement_zones])
-            num_bases = len(bases)
-
-            # 목표물 위치 목록 생성 (중복 제거)
-            targets = set([(zone['target_name'], zone['target_coordinate']) for zone in self.engagement_zones])
-            num_targets = len(targets)
-
-            # 목적 함수: 각 위치의 비용을 1로 가정하고 총 비용 최소화
-            c = np.ones(num_candidate_locations)
-
-            # 제약 조건 행렬(A)과 벡터(b) 초기화
-            A = []
-            b = []
-
-            # 각 목표물에 대한 제약 조건 생성
-            for target in targets:
-                for base in bases:
-                    constraint = [0] * num_candidate_locations
-                    for i, location in enumerate(candidate_locations):
-                        # 현재 위치가 해당 목표물을 방어할 수 있는지 확인
-                        if any(zone['defense_name'] == location and
-                                # zone['base_name'] == base[0] and
-                                # zone['base_coordinate'] == base[1] and
-                                zone['target_name'] == target[0] and
-                                zone['target_coordinate'] == target[1]
-                            for zone in self.engagement_zones):
-                            constraint[i] = 1
-                    A.append(constraint)
-                    b.append(1)  # 각 목표물은 최소 1개의 방어 시스템으로 방어되어야 함
-
-            # NumPy 배열로 변환
-            A = np.array(A)
-            b = np.array(b)
-
-            # 각 변수(위치)의 범위 설정: 0(미선택) 또는 1(선택)
-            bounds = [(0, 1)] * num_candidate_locations
-
-            # 선형 계획법 문제 해결
-            # A와 b를 음수로 변환하여 '이상' 제약 조건을 '이하' 제약 조건으로 변경
-            res = linprog(c, A_ub=-A, b_ub=-b, bounds=bounds, method='highs')
-
-            self.optimized_locations = []
-            if res.success:
-                # 최적화 결과 처리
-                for i, x in enumerate(res.x):
-                    if x > 0.5:  # 0.5 초과 값을 가진 위치를 선택 (반올림 효과)
-                        optimal_location = candidate_locations[i]
-                        # 선택된 위치에 해당하는 모든 교전 구역 추가
-                        optimal_zones = [zone for zone in self.engagement_zones if
-                                         zone['defense_name'] == optimal_location]
-                        self.optimized_locations.extend(optimal_zones)
-            else:
-                # 최적해를 찾지 못한 경우 경고 메시지 표시
-                QMessageBox.warning(self, self.tr("경고"), self.tr("최적해를 찾지 못했습니다."))
-                return
-
-        except Exception as e:
-            # 오류 발생 시 에러 메시지 표시
-            QMessageBox.critical(self, self.tr("에러"), self.tr(f"위치 최적화 중 오류 발생: {str(e)}"))
-            return
-
-    def run_location_optimization(self):
-        """최적 방공포대 위치 산출 실행 메서드"""
-        try:
-            self.calculate_trajectories()
-            self.optimize_locations()
-
-            if not hasattr(self, 'optimized_locations') or not self.optimized_locations:
-                QMessageBox.warning(self, "경고", "최적화된 위치가 없습니다.")
-                return
-
-            # 결과 테이블 업데이트
-            self.result_table.setRowCount(0)  # 기존 행 모두 제거
-            self.result_table.setColumnCount(4)
-            self.result_table.setHorizontalHeaderLabels(["최적 위치", "방어 가능 자산", "무기 유형", "위협 방위각"])
-            self.result_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            self.result_table.verticalHeader().setVisible(False)
-
-            defensible_assets = {}
-            for optimized_location in self.optimized_locations:
-                temp_defense_name = optimized_location.get('defense_name')
-                target_name = optimized_location.get('target_name')
-                weapon_type = optimized_location.get('weapon_type')
-                threat_azimuth = optimized_location.get('threat_azimuth')
-
-                if temp_defense_name not in defensible_assets:
-                    defensible_assets[temp_defense_name] = {
-                        'assets': set(),
-                        'weapons': set(),
-                        'azimuths': set()
-                    }
-                defensible_assets[temp_defense_name]['assets'].add(target_name)
-                defensible_assets[temp_defense_name]['weapons'].add(weapon_type)
-                defensible_assets[temp_defense_name]['azimuths'].add(str(threat_azimuth))
-
-            for temp_defense_name, data in defensible_assets.items():
-                row_position = self.result_table.rowCount()
-                self.result_table.insertRow(row_position)
-                self.result_table.setItem(row_position, 0, QTableWidgetItem(temp_defense_name))
-                self.result_table.setItem(row_position, 1, QTableWidgetItem(', '.join(sorted(data['assets']))))
-                self.result_table.setItem(row_position, 2, QTableWidgetItem(', '.join(sorted(data['weapons']))))
-                self.result_table.setItem(row_position, 3, QTableWidgetItem(', '.join(sorted(data['azimuths']))))
-
-            # 지도 업데이트
-            self.update_map_with_optimized_locations()
-
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 산출 오류: {e}"))
-
     def is_trajectory_defended_temp(self, trajectory):
         """주어진 궤적이 방어 가능한지 확인하는 메서드"""
         return any(self.is_same_trajectory(trajectory, optimized_location_dic.get('trajectory', []))
@@ -1425,22 +1251,6 @@ class MissileDefenseApp(QDialog):
             return False
         return all(np.allclose(np.array(p1), np.array(p2)) for p1, p2 in zip(trajectory1, trajectory2))
 
-    def find_intercept_point(self, defense_tr_dic):
-        """방어 가능한 교전 지점을 찾는 메서드"""
-        defense_lat, defense_lon = defense_tr_dic['defense_coordinate']
-        trajectory = defense_tr_dic['trajectory']
-        weapon_type = defense_tr_dic['weapon_type']
-        defense_altitude_range = (self.weapon_systems_info[weapon_type].get('min_altitude'), self.weapon_systems_info[weapon_type].get('max_altitude'))
-        defense_range = (self.weapon_systems_info[weapon_type].get('min_radius'), self.weapon_systems_info[weapon_type].get('max_radius'))
-
-        for point in trajectory:
-            lat, lon, altitude = point
-            distance = self.calculate_distance(defense_lat, defense_lon, lat, lon)
-            if (defense_range[0] <= distance <= defense_range[1] and
-                    defense_altitude_range[0] <= altitude <= defense_altitude_range[1]):
-                return lat, lon, altitude
-
-        return None
 
     @staticmethod
     def on_map_load_finished(result):
@@ -1449,130 +1259,60 @@ class MissileDefenseApp(QDialog):
         else:
             print("지도 로딩에 실패했습니다.")
 
-    @staticmethod
-    def get_selected_items(table):
-        selected_items = []
-        for row in range(table.rowCount()):
-            if table.cellWidget(row, 0).isChecked():
-                row_data = {}
-                for col in range(1, table.columnCount()):  # 체크박스 열 제외
-                    header = table.horizontalHeaderItem(col).text()
-                    row_data[header] = table.item(row, col).text()
-                selected_items.append(row_data)
-        return selected_items
+    def print_map(self):
+        self.printer = QPrinter(QPrinter.HighResolution)
+        self.printer.setPageOrientation(QPageLayout.Landscape)
+        self.printer.setPageSize(QPageSize(QPageSize.A4))
+        self.printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
 
+        self.preview = QPrintPreviewDialog(self.printer, self)
+        self.preview.setMinimumSize(1000, 800)
+        self.preview.paintRequested.connect(self.handle_print_requested)
+        self.preview.finished.connect(self.print_finished)
+        self.preview.exec_()
 
-class SimulationResultWindow(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent = parent
-        self.setWindowTitle(self.tr("시뮬레이션 결과"))
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
-
-        # Folium 맵을 표시할 QWebEngineView 생성
-        self.web_view = QWebEngineView()
-        layout.addWidget(self.web_view)
-
-        # MissileDefenseApp에서 필요한 속성들을 가져옵니다
-        self.trajectories = self.parent.trajectories
-        self.optimized_locations = self.parent.optimized_locations
-        self.cal_assets_table = self.parent.cal_assets_table
-        self.enemy_sites_table = self.parent.enemy_sites_table
-        self.get_selected_items = self.parent.get_selected_items
-        self.get_lat_lon_from_mgrs = self.parent.get_lat_lon_from_mgrs
-
-class MissileTrajectoryCalculator:
-    def __init__(self):
-        self.EARTH_RADIUS = 6371  # 지구 반지름 (km)
-        self.G = 9.81  # 중력 가속도 (m/s^2)
-
-        with open('missile_info.json', 'r', encoding='utf-8') as f:
-            self.missile_info = json.load(f)
-
-    def calculate_trajectory(self, missile_base, target, missile_type):
-        B_lat, B_lon = missile_base
-        T_lat, T_lon = target
-
-        L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
-
-        # 미사일 타입에 따른 계수 선택
-        coeffs = self.missile_info[missile_type]['trajectory_coefficients']
-
-        # 논문 3.1절의 계산식 사용
-        alpha = coeffs['alpha']['a1'] * L + coeffs['alpha']['a2']
-        beta = coeffs['beta']['a1'] * L + coeffs['beta']['b1']
-
+    def handle_print_requested(self, printer):
         try:
-            x, y, z = self.calculate_ballistic_trajectory(L, alpha, beta)
-            bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
-            trajectory = self.convert_trajectory_to_coordinates(B_lat, B_lon, T_lat, T_lon, bearing, x, y, z)
+            painter = QPainter()
+            painter.begin(printer)
 
-            return trajectory
+            page_rect = printer.pageRect(QPrinter.DevicePixel)
 
+            title_font = QFont("Arial", 16, QFont.Bold)
+            painter.setFont(title_font)
+            title_rect = painter.boundingRect(page_rect, Qt.AlignTop | Qt.AlignHCenter, "Simulation Result")
+            painter.drawText(title_rect, Qt.AlignTop | Qt.AlignHCenter, "Simulation Result")
+
+            full_map = self.map_view.grab()
+
+            combined_image = full_map.toImage()
+
+            content_rect = page_rect.adjusted(0, title_rect.height() + 10, 0, -30)
+            scaled_image = combined_image.scaled(QSize(int(content_rect.width()), int(content_rect.height())),
+                                                 Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+            x = int(content_rect.left() + (content_rect.width() - scaled_image.width()) / 2)
+            y = int(content_rect.top() + (content_rect.height() - scaled_image.height()) / 2)
+            painter.drawImage(x, y, scaled_image)
+
+            info_font = QFont("Arial", 8)
+            painter.setFont(info_font)
+            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            info_text = self.tr(f"인쇄 일시: {current_time}")
+            painter.drawText(page_rect.adjusted(10, -20, -10, -10), Qt.AlignBottom | Qt.AlignRight, info_text)
+
+            painter.end()
         except Exception as e:
-            print(f"궤적 계산 중 오류 발생: {e}")
-            return None
+            print(self.tr(f"인쇄 중 오류 발생: {str(e)}"))
+            self.print_success = False
+        else:
+            self.print_success = True
 
-    @staticmethod
-    def calculate_ballistic_trajectory(distance, alpha, beta):
-        t = np.linspace(0, 1, 1000)
-        x = distance * t
-        y = alpha * x * (1 - x / distance) + beta * x * (1 - x / distance) * (x / distance)
-        y = y / 1000  # Convert meters to kilometers
-        z = np.zeros_like(x)
-        return x, y, z
-
-    def convert_trajectory_to_coordinates(self, start_lat, start_lon, end_lat, end_lon, bearing, x, y, z):
-        trajectory = []
-        start = Point(start_lat, start_lon)
-
-        for i in range(len(x)):
-            point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
-            if point:
-                trajectory.append((point[0], point[1], y[i]))  # y is already in km
-
-        if trajectory:
-            trajectory[-1] = (end_lat, end_lon, 0)
-
-        return trajectory
-
-    @staticmethod
-    def calculate_distance(lat1, lon1, lat2, lon2):
-        return distance.great_circle((lat1, lon1), (lat2, lon2)).km
-
-    @staticmethod
-    def calculate_bearing(lat1, lon1, lat2, lon2):
-        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-        dlon = lon2 - lon1
-        y = math.sin(dlon) * math.cos(lat2)
-        x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
-        initial_bearing = math.atan2(y, x)
-        return math.degrees(initial_bearing)
-
-    def calculate_point_at_distance_and_bearing(self, start, distance, bearing):
-        start_lat = math.radians(start.latitude)
-        start_lon = math.radians(start.longitude)
-        bearing = math.radians(bearing)
-        angular_distance = distance / self.EARTH_RADIUS
-
-        end_lat = math.asin(
-            math.sin(start_lat) * math.cos(angular_distance) +
-            math.cos(start_lat) * math.sin(angular_distance) * math.cos(bearing)
-        )
-
-        cos_end_lat = math.cos(end_lat)
-        if abs(cos_end_lat) < 1e-10:
-            return None
-
-        end_lon = start_lon + math.atan2(
-            math.sin(bearing) * math.sin(angular_distance) * math.cos(start_lat),
-            math.cos(angular_distance) - math.sin(start_lat) * math.sin(end_lat)
-        )
-
-        return math.degrees(end_lat), math.degrees(end_lon)
-
+    def print_finished(self, result):
+        if self.print_success:
+            QMessageBox.information(self, self.tr("인쇄 완료"), self.tr("지도가 성공적으로 출력되었습니다."))
+        else:
+            QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
 
 class CenteredCheckBox(QWidget):
     def __init__(self, parent=None):
