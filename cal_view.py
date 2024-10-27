@@ -2,19 +2,20 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QCoreApplication, QTranslator
 from addasset import AddAssetWindow
-import sys
+import sys, logging
 import sqlite3
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 from PyQt5.QtGui import QTextDocument, QTextCursor, QTextTableFormat, QTextFrameFormat, QTextLength, QTextCharFormat, QFont, QTextBlockFormat
-
+from PyQt5.QtGui import QPagedPaintDevice, QPainter, QImage, QPageSize, QPageLayout
+from PyQt5.QtCore import QUrl, QTemporaryFile, QSize, QTimer, QMarginsF
 from generate_dummy_data import engagement_effectiveness
 from languageselection import Translator, LanguageSelectionWindow
 from commander_guidance import BmdPriority, EngagementEffect
 from common_map_view import CommonCalMapView
 from cal_map_view import CalMapView
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QObject, QRect
+from PyQt5.QtCore import QObject, QRect, QDateTime
 from setting import SettingWindow, MapApp
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import folium
@@ -95,7 +96,7 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
         self.engagement_filter = QComboBox()
         self.engagement_filter.addItems(
             [self.tr("전체"), self.tr("1단계: 원격발사대"), self.tr("2단계: 단층방어"), self.tr("3단계: 중첩방어"), self.tr("4단계: 다층방어")])
-        self.engagement_filter.setFixedSize(150, 30)
+        self.engagement_filter.setFixedSize(250, 30)
         self.engagement_filter.setStyleSheet("font: 바른공군체; font-size: 16px;")
         self.engagement_filter.currentIndexChanged.connect(self.load_assets)  # 변경 시 load_assets 호출
         filter_layout.addWidget(engagement_filter_label, 1, 2)
@@ -207,9 +208,27 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
         left_layout.addWidget(self.assets_table, 1)  # stretch factor를 1로 설정하여 남은 공간을 채우도록 함
         left_layout.addLayout(button_layout)
 
+
+
         # 오른쪽 레이아웃 구성
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
+
+        # 방어반경 표시 체크박스와 지도 출력 버튼을 위한 수평 레이아웃
+        map_print_button_layout = QVBoxLayout()
+
+        # 지도 출력 버튼
+        self.map_print_button = QPushButton(self.tr("지도 출력"), self)
+        self.map_print_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.map_print_button.setFixedSize(120, 30)
+        self.map_print_button.setStyleSheet("QPushButton { text-align: center; }")
+        self.map_print_button.clicked.connect(self.print_map)
+        map_print_button_layout.addWidget(self.map_print_button, alignment=Qt.AlignRight)
+
+        right_layout.addLayout(map_print_button_layout)
+
+
+
         self.map_view = QWebEngineView()
         right_layout.addWidget(self.map_view)
 
@@ -285,9 +304,11 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
         self.unit_filter.setCurrentIndex(0)  # 콤보박스를 "전체"로 설정
         self.engagement_filter.setCurrentIndex(0)
         self.bmd_priority_filter.setCurrentIndex(0)
+        self.assets_table.uncheckAllRows()
         self.dal_checkbox.setChecked(False)
         self.asset_search_input.clear()  # 검색 입력창 비우기
         self.load_assets()  # 테이블 데이터 새로고침
+        self.update_map()
 
     def update_map(self):
         self.map = folium.Map(
@@ -441,20 +462,36 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
         self.stacked_widget.setCurrentWidget(self.engagement_effectiveness_page)
         self.engagement_effectiveness_page.load_assets()
 
-    def show_main_page(self):
-        self.stacked_widget.setCurrentWidget(self.bmd_priority_page)
-
     def print_assets_table(self):
         try:
             document = QTextDocument()
             cursor = QTextCursor(document)
 
+            # CSS 스타일 수정
             document.setDefaultStyleSheet("""
-                body { font-family: 'Arial', sans-serif; }
-                h1 { color: black; }
-                .info { padding: 10px; }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { border: 1px solid black; padding: 4px; text-align: center; }
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Arial', sans-serif;
+                    width: 100%;
+                    margin: 0 auto;
+                }
+                h1 { 
+                    color: black; 
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .info { padding: 1px; }
+                table { 
+                    border-collapse: collapse; 
+                    width: 90%;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                td, th { 
+                    border: 1px solid black; 
+                    padding: 5px; 
+                    text-align: center;
+                }
             """)
 
             font = QFont("Arial", 8)
@@ -463,17 +500,21 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
             cursor.insertHtml("<h1 align='center'>" + self.tr("CAL 목록") + "</h1>")
             cursor.insertBlock()
 
+            cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
+            cursor.insertHtml(self.tr("보고서 생성 일시: ") + QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
+            cursor.insertHtml("</div>")
+            cursor.insertBlock()
 
             table_format = QTextTableFormat()
             table_format.setBorderStyle(QTextFrameFormat.BorderStyle_Solid)
-            table_format.setCellPadding(1)
+            table_format.setCellPadding(2)
             table_format.setAlignment(Qt.AlignCenter)
             table_format.setWidth(QTextLength(QTextLength.PercentageLength, 100))
 
             rows = self.assets_table.rowCount() + 1
             cols = self.assets_table.columnCount() - 1
 
-            excluded_columns = [0, 1, 4, 5, 9, 10]
+            excluded_columns = [0, 1, 3, 4, 5, 9, 10, 11, 12, 13, 14, 16]
 
             actual_cols = cols - len(excluded_columns)
             table = cursor.insertTable(rows, actual_cols, table_format)
@@ -507,6 +548,9 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(file_path)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Millimeter)
+                printer.setPageOrientation(QPageLayout.Landscape)
                 document.print_(printer)
                 QMessageBox.information(self, self.tr("저장 완료"), self.tr("PDF가 저장되었습니다: {}").format(file_path))
 
@@ -515,9 +559,59 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), self.tr("다음 오류가 발생했습니다: {}").format(str(e)))
 
-    def show_message(self, message):
-        """메시지 박스 출력 함수"""
-        QMessageBox.information(self, self.tr("정보"), message)
+    def print_map(self, *args):  # *args를 추가하여 추가 인자를 무시합니다.
+        self.printer = QPrinter(QPrinter.HighResolution)
+        self.printer.setPageOrientation(QPageLayout.Landscape)
+        self.printer.setPageSize(QPageSize(QPageSize.A4))
+        self.printer.setPageMargins(10, 10, 10, 10, QPrinter.Millimeter)
+
+        self.preview = QPrintPreviewDialog(self.printer, self)
+        self.preview.setMinimumSize(1000, 800)
+        self.preview.paintRequested.connect(self.handle_print_requested)
+        self.preview.finished.connect(self.print_finished)
+        self.preview.exec_()
+
+    def handle_print_requested(self, printer):
+        try:
+            painter = QPainter()
+            painter.begin(printer)
+
+            page_rect = printer.pageRect(QPrinter.DevicePixel)
+
+            title_font = QFont("Arial", 16, QFont.Bold)
+            painter.setFont(title_font)
+            title_rect = painter.boundingRect(page_rect, Qt.AlignTop | Qt.AlignHCenter, self.tr("CAL 지도 보기"))
+            painter.drawText(title_rect, Qt.AlignTop | Qt.AlignHCenter, self.tr("CAL 지도 보기"))
+
+            full_map = self.map_view.grab()
+
+            content_rect = page_rect.adjusted(0, title_rect.height() + 10, 0, -30)
+            scaled_image = full_map.scaled(QSize(int(content_rect.width()), int(content_rect.height())),
+                                           Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+            x = int(content_rect.left() + (content_rect.width() - scaled_image.width()) / 2)
+            y = int(content_rect.top() + (content_rect.height() - scaled_image.height()) / 2)
+            painter.drawImage(x, y, scaled_image.toImage())
+
+            info_font = QFont("Arial", 8)
+            painter.setFont(info_font)
+            current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            info_text = f"인쇄 일시: {current_time}"
+            painter.drawText(page_rect.adjusted(10, -20, -10, -10), Qt.AlignBottom | Qt.AlignRight, info_text)
+
+            painter.end()
+        except Exception as e:
+            logging.error(f"인쇄 중 오류 발생: {str(e)}")
+            self.print_success = False
+        else:
+            self.print_success = True
+
+    def print_finished(self):
+        if self.print_success:
+            QMessageBox.information(self, self.tr("인쇄 완료"), self.tr("지도가 성공적으로 출력되었습니다."))
+        else:
+            QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
+
 
 class MainWindow(QMainWindow, QObject):
     """메인 윈도우 클래스"""

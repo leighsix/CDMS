@@ -55,11 +55,12 @@ class BmdPriorityWindow(QtWidgets.QDialog):
         header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         # 행 높이 설정
-        self.priority_table.verticalHeader().setDefaultSectionSize(50)  # 행 높이를 60으로 설정
+        self.priority_table.verticalHeader().setDefaultSectionSize(60)  # 행 높이를 60으로 설정
 
+        priorities = [self.tr('1순위'), self.tr('2순위'), self.tr('3순위'), self.tr('4순위'), self.tr('5순위')]
         # 구분 열 고정값 설정 및 다른 셀 편집 가능하게 설정
         for row in range(5):
-            item = QTableWidgetItem(f"{row + 1}순위")
+            item = QTableWidgetItem(priorities[row])
             item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             item.setTextAlignment(Qt.AlignCenter)
             item.setBackground(QColor("#e6f2ff"))
@@ -107,14 +108,6 @@ class BmdPriorityWindow(QtWidgets.QDialog):
         self.setLayout(layout)
 
         self.load_table_data()  # 초기 로드
-
-    def get_data(self):
-        data = []
-        for row in range(self.priority_table.rowCount()):
-            item = self.priority_table.item(row, 0).text()
-            description = ", ".join([self.priority_table.item(row, col).text() for col in range(1, self.priority_table.columnCount())])
-            data.append((item, description))
-        return data
 
     def save_table_data(self):
         ko_data = []
@@ -225,7 +218,7 @@ class BmdPriorityWindow(QtWidgets.QDialog):
         preview.paintRequested.connect(lambda p: document.print_(p))
         preview.exec_()
 
-class EngagementEffectWindow(QtWidgets.QDialog, QObject):
+class EngagementEffectWindow(QtWidgets.QDialog):
     """저장된 자산을 보여주는 창"""
 
     def __init__(self, parent):
@@ -258,6 +251,9 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
         filter_layout.addWidget(unit_filter_label)
         filter_layout.addWidget(self.unit_filter)
 
+        # 필터 변경 시 자동 갱신
+        self.unit_filter.currentIndexChanged.connect(self.filter_assets)
+
         # 검색 섹션
         search_label = QLabel(self.tr("검색"), self)
         search_label.setStyleSheet("font: 바른공군체; font-size: 16px;")
@@ -275,10 +271,6 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
         # 찾기 버튼 연결
         self.find_button.clicked.connect(self.filter_assets)
         filter_layout.addWidget(self.find_button)
-
-        # 필터 변경 시 자동 갱신
-        self.unit_filter.currentIndexChanged.connect(self.filter_assets)
-        self.asset_search_input.textChanged.connect(self.filter_assets)
 
         # 여백 추가
         filter_layout.addStretch()
@@ -313,17 +305,30 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
 
         # 헤더 설정
         header = self.assets_table.horizontalHeader()
-        # 첫 번째와 두 번째 열은 고정 크기로, 세 번째 열은 나머지 공간을 채우도록 설정
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)  # 1열 고정
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)  # 2열 고정
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
+        header.resizeSection(0, 150)
+        header.resizeSection(1, 200)
 
-        # 열 너비 설정
-        self.assets_table.setColumnWidth(0, 100)  # 첫 번째 열 너비
-        self.assets_table.setColumnWidth(1, 150)  # 두 번째 열 너비
+        # 헤더 높이 자동 조절
+        self.assets_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.assets_table.verticalHeader().setDefaultSectionSize(70)
 
-        # 행 높이 설정
-        self.assets_table.verticalHeader().setDefaultSectionSize(50)  # 행 높이를 50으로 설정
+        # 헤더 텍스트 중앙 정렬 및 자동 줄바꿈
+        for column in range(header.count()):
+            item = self.assets_table.horizontalHeaderItem(column)
+            if item:
+                item.setTextAlignment(Qt.AlignCenter)
+
+        # 테이블 설정
+        self.assets_table.setWordWrap(True)  # 자동 줄바꿈 활성화
+        self.assets_table.horizontalHeader().setStretchLastSection(False)
+        self.assets_table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.assets_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # 테이블 셀 높이 자동 조절
+        self.assets_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
         # 내용 열 채우기
         contents = [self.tr("1단계: 원격발사대"), self.tr("2단계: 단층방어"), self.tr("3단계: 중첩방어"), self.tr("4단계: 다층방어")]
@@ -336,6 +341,7 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
                     item.setBackground(QColor("#e6f2ff"))
                 elif col == 1:
                     item.setText(content.split(": ")[1])
+                    item.setBackground(QColor("#e6f2ff"))
                 self.assets_table.setItem(row, col, item)
 
         # 세 번째 열 자동 줄바꿈 설정
@@ -389,19 +395,72 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
         filter_text = self.unit_filter.currentText()
         search_text = self.asset_search_input.text().lower()
 
-        for row in range(self.assets_table.rowCount()):
-            show_row = True
-            for col in range(self.assets_table.columnCount()):
-                item = self.assets_table.item(row, col)
-                if item:
-                    cell_text = item.text().lower()
-                    if filter_text != self.tr("전체") and filter_text.lower() not in cell_text:
+        try:
+            conn = sqlite3.connect('assets_management.db')
+            cursor = conn.cursor()
+
+            table_name = f"cal_assets_{self.parent.selected_language}"
+
+            # 각 행별로 필터링 적용
+            for row in range(self.assets_table.rowCount()):
+                show_row = True
+
+                # 1,2열은 그대로 유지
+                engagement_level = self.assets_table.item(row, 0).text()
+
+                # 3열(자산목록)에 대해서만 필터링 적용
+                if filter_text != self.tr("전체"):
+                    # 선택된 unit에 해당하는 자산 검색
+                    query = f"""
+                    SELECT target_asset 
+                    FROM {table_name}
+                    WHERE engagement_effectiveness LIKE ? 
+                    AND unit = ?
+                    """
+                    cursor.execute(query, (f'%{engagement_level}%', filter_text))
+                else:
+                    # 전체 자산 검색
+                    query = f"""
+                    SELECT target_asset
+                    FROM {table_name}  
+                    WHERE engagement_effectiveness LIKE ?
+                    """
+                    cursor.execute(query, (f'%{engagement_level}%',))
+
+                results = cursor.fetchall()
+                filtered_assets = ', '.join([r[0] for r in results])
+
+                # 검색어 필터링 적용
+                if search_text:
+                    # 자산명/지역명 검색
+                    query = f"""
+                    SELECT target_asset
+                    FROM {table_name}
+                    WHERE engagement_effectiveness LIKE ?
+                    AND (target_asset LIKE ? OR area LIKE ?)
+                    """
+                    cursor.execute(query,
+                                   (f'%{engagement_level}%', f'%{search_text}%', f'%{search_text}%'))
+                    search_results = cursor.fetchall()
+                    filtered_assets = ', '.join([r[0] for r in search_results])
+
+                    if not search_results:
                         show_row = False
-                        break
-                    if search_text and search_text not in cell_text:
-                        show_row = False
-                        break
-            self.assets_table.setRowHidden(row, not show_row)
+
+                # 필터링된 결과를 3열에 표시
+                asset_item = QTableWidgetItem(filtered_assets)
+                asset_item.setTextAlignment(Qt.AlignCenter)
+                self.assets_table.setItem(row, 2, asset_item)
+
+                # 행 표시/숨김 처리
+                self.assets_table.setRowHidden(row, not show_row)
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "데이터베이스 오류", f"데이터베이스 오류가 발생했습니다: {e}")
+
+        finally:
+            if conn:
+                conn.close()
 
     def load_assets(self):
         keywords = [
@@ -428,8 +487,6 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
 
                 target_assets = ', '.join([result[0] for result in results]) if results else ''
 
-                self.assets_table.setItem(row, 0, QTableWidgetItem(keyword.split(": ")[0]))
-                self.assets_table.setItem(row, 1, QTableWidgetItem(keyword.split(": ")[1]))
                 self.assets_table.setItem(row, 2, QTableWidgetItem(target_assets))
 
             self.assets_table.resizeColumnsToContents()
@@ -510,18 +567,6 @@ class EngagementEffectWindow(QtWidgets.QDialog, QObject):
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), self.tr("다음 오류가 발생했습니다: {}").format(str(e)))
 
-    def get_data(self):
-        data = []
-        for row in range(self.assets_table.rowCount()):
-            item = self.assets_table.item(row, 1).text()
-            description = self.assets_table.item(row, 2).text()
-            data.append((item, description))
-        return data
-
-    def show_message(self, message):
-        """메시지 박스 출력 함수"""
-        QMessageBox.information(self, self.tr("정보"), message)
-
 class BmdPriority(QtWidgets.QDialog):
     def __init__(self, parent):
         super(BmdPriority, self).__init__(parent)
@@ -531,7 +576,7 @@ class BmdPriority(QtWidgets.QDialog):
     def initUI(self):
         layout = QVBoxLayout()
         layout.setSpacing(20)
-        layout.setContentsMargins(30, 40, 30, 30)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.priority_table = QTableWidget()
         self.priority_table.setColumnCount(5)
@@ -545,27 +590,34 @@ class BmdPriority(QtWidgets.QDialog):
         self.priority_table.setAlternatingRowColors(True)
         self.priority_table.verticalHeader().setVisible(False)  # 왼쪽 헤더열 숨기기
         self.priority_table.setStyleSheet(
-            "QTableWidget {background-color: #f0f0f0; font: 바른공군체; font-size: 18px;}"
+            "QTableWidget {background-color: #f0f0f0; font: 바른공군체; font-size: 16px;}"
             "QTableWidget::item { padding: 0px; }"
             "QHeaderView::section { background-color: #4a86e8; color: white; font-weight: bold; font-size: 18px; }"
         )
 
         # 헤더 폰트 설정
-        font = QFont("강한공군체", 18)  # 폰트 크기를 18로 변경
+        font = QFont("강한공군체", 15)  # 폰트 크기를 18로 변경
         font.setBold(True)
         self.priority_table.horizontalHeader().setFont(font)
 
         # 헤더 설정
         header = self.priority_table.horizontalHeader()
-        header.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)  # 1열 고정
+        header.resizeSection(0, 130)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
 
-        # 행 높이 설정
-        self.priority_table.verticalHeader().setDefaultSectionSize(50)  # 행 높이를 60으로 설정
+        # 헤더 높이 자동 조절
+        self.priority_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.priority_table.verticalHeader().setDefaultSectionSize(40)  # 행 높이를 40으로 설정
 
         # 구분 열 고정값 설정 및 다른 셀 편집 가능하게 설정
+        priorities = [self.tr('1순위'), self.tr('2순위'), self.tr('3순위'), self.tr('4순위'), self.tr('5순위')]
+        # 구분 열 고정값 설정 및 다른 셀 편집 가능하게 설정
         for row in range(5):
-            item = QTableWidgetItem(f"{row + 1}순위")
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            item = QTableWidgetItem(priorities[row])
             item.setTextAlignment(Qt.AlignCenter)
             item.setBackground(QColor("#e6f2ff"))
             self.priority_table.setItem(row, 0, item)
@@ -577,7 +629,6 @@ class BmdPriority(QtWidgets.QDialog):
                 item.setTextAlignment(Qt.AlignCenter)
                 self.priority_table.setItem(row, col, item)
 
-        self.priority_table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
 
         layout.addWidget(self.priority_table)
 
@@ -586,7 +637,7 @@ class BmdPriority(QtWidgets.QDialog):
         self.load_table_data()  # 초기 로드
 
     def load_table_data(self):
-        file_name = f'bmd_priority_data_{self.parent.language}.json'
+        file_name = f'bmd_priority_data_{self.parent.parent.selected_language}.json'
         try:
             with open(file_name, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -602,7 +653,8 @@ class BmdPriority(QtWidgets.QDialog):
         except FileNotFoundError:
             pass  # 파일이 없으면 아무것도 하지 않음
 
-class EngagementEffect(QtWidgets.QDialog, QObject):
+
+class EngagementEffect(QtWidgets.QDialog):
     def __init__(self, parent):
         super(EngagementEffect, self).__init__(parent)
         self.parent = parent
@@ -611,7 +663,7 @@ class EngagementEffect(QtWidgets.QDialog, QObject):
     def initUI(self):
         layout = QVBoxLayout()
         layout.setSpacing(20)
-        layout.setContentsMargins(30, 40, 30, 30)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.assets_table = QTableWidget()
         self.assets_table.setColumnCount(3)
@@ -624,34 +676,48 @@ class EngagementEffect(QtWidgets.QDialog, QObject):
         self.assets_table.setAlternatingRowColors(True)
         self.assets_table.verticalHeader().setVisible(False)  # 왼쪽 헤더열 숨기기
         self.assets_table.setStyleSheet(
-            "QTableWidget {background-color: #f0f0f0; font: 바른공군체; font-size: 18px;}"
+            "QTableWidget {background-color: #f0f0f0; font: 바른공군체; font-size: 16px;}"
             "QTableWidget::item { padding: 0px; }"
             "QHeaderView::section { background-color: #4a86e8; color: white; font-weight: bold; font-size: 18px; }"
         )
 
         # 헤더 폰트 설정
-        font = QFont("강한공군체", 18)
+        font = QFont("강한공군체", 15)
         font.setBold(True)
         self.assets_table.horizontalHeader().setFont(font)
 
         # 헤더 설정
         header = self.assets_table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)  # 1열 고정
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Fixed)  # 2열 고정
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)  # 3열 자동 조절
+        header.resizeSection(0, 150)
+        header.resizeSection(1, 200)
 
-        # 열 너비 설정
-        self.assets_table.setColumnWidth(0, 100)  # 첫 번째 열 너비
-        self.assets_table.setColumnWidth(1, 150)  # 두 번째 열 너비
+        # 헤더 높이 자동 조절
+        self.assets_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.assets_table.verticalHeader().setDefaultSectionSize(40)
 
-        # 행 높이 설정
-        self.assets_table.verticalHeader().setDefaultSectionSize(50)  # 행 높이를 50으로 설정
+        # 헤더 텍스트 중앙 정렬 및 자동 줄바꿈
+        for column in range(header.count()):
+            item = self.assets_table.horizontalHeaderItem(column)
+            if item:
+                item.setTextAlignment(Qt.AlignCenter)
+
+        # 테이블 설정
+        self.assets_table.setWordWrap(True)  # 자동 줄바꿈 활성화
+        self.assets_table.horizontalHeader().setStretchLastSection(False)
+        self.assets_table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.assets_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # 테이블 셀 높이 자동 조절
+        self.assets_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+
 
         # 구분 열 고정값 설정 및 다른 셀 편집 가능하게 설정
         contents = [self.tr("1단계: 원격발사대"), self.tr("2단계: 단층방어"), self.tr("3단계: 중첩방어"), self.tr("4단계: 다층방어")]
         for row, content in enumerate(contents):
             item = QTableWidgetItem(content.split(": ")[0])
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             item.setTextAlignment(Qt.AlignCenter)
             item.setBackground(QColor("#e6f2ff"))
             self.assets_table.setItem(row, 0, item)
@@ -660,15 +726,6 @@ class EngagementEffect(QtWidgets.QDialog, QObject):
             item.setTextAlignment(Qt.AlignCenter)
             item.setBackground(QColor("#e6f2ff"))
             self.assets_table.setItem(row, 1, item)
-
-            item = QTableWidgetItem()
-            item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self.assets_table.setItem(row, 2, item)
-
-        self.assets_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
-        # 세 번째 열 줄 바꿈 설정
-        self.assets_table.setWordWrap(True)
 
         layout.addWidget(self.assets_table)
 
@@ -688,7 +745,7 @@ class EngagementEffect(QtWidgets.QDialog, QObject):
             conn = sqlite3.connect('assets_management.db')
             cursor = conn.cursor()
 
-            table_name = f"cal_assets_{self.parent.language}"
+            table_name = f"cal_assets_{self.parent.parent.selected_language}"
 
             for row, keyword in enumerate(keywords):
                 query = f"""
@@ -701,11 +758,6 @@ class EngagementEffect(QtWidgets.QDialog, QObject):
 
                 target_assets = ', '.join([result[0] for result in results]) if results else ''
 
-                if self.parent.language == 'en':
-                    target_assets = self.translate_to_english(target_assets)
-
-                self.assets_table.setItem(row, 0, QTableWidgetItem(keyword.split(": ")[0]))
-                self.assets_table.setItem(row, 1, QTableWidgetItem(keyword.split(": ")[1]))
                 self.assets_table.setItem(row, 2, QTableWidgetItem(target_assets))
 
             self.assets_table.resizeColumnsToContents()
@@ -733,7 +785,7 @@ class MainWindow(QMainWindow):
         self.show_main_page()
 
     def show_main_page(self):
-        self.stacked_widget.setCurrentWidget(self.bmd_priority_page)
+        self.stacked_widget.setCurrentWidget(self.engagement_effectiveness_page)
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

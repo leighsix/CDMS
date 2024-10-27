@@ -9,7 +9,6 @@
                 "a2": -0.0262,
                 "b1": -0.0215,
                 "b2": -0.006
-
             },
             "beta": {
                 "a1": 2.75,
@@ -22,7 +21,7 @@
     "Scud-C": {
         "min_radius": 270,
         "max_radius": 450,
-        "function": "단거리 탄도미사일 (SRBM)",
+        "function": "단거리 탄도미사일 (SRBM)..",
         "trajectory_coefficients": {
             "alpha": {
                 "a1": -0.0955,
@@ -35,14 +34,13 @@
                 "a2": -0.023,
                 "b1": 2.48,
                 "b2": -0.00174
-
             }
         }
     },
     "Nodong": {
         "min_radius": 450,
         "max_radius": 1000,
-        "function": "중거리 탄도미사일 (MRBM)",
+        "function": "중거리 탄도미사일 (MRBM)......",
         "trajectory_coefficients": {
             "alpha": {
                 "a1": -0.0152,

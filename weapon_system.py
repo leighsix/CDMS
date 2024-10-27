@@ -217,9 +217,14 @@ class WeaponSystemWindow(QDialog):
             self.table.insertRow(row)
             checkbox = CenteredCheckBox()
             self.table.setCellWidget(row, 0, checkbox)
-            for col, text in enumerate([name, info['min_altitude'], info['max_altitude'], info['min_radius'], info['max_radius'], info['angle'], info['function']], start=1):
+            for col, text in enumerate(
+                    [name, info['min_altitude'], info['max_altitude'], info['min_radius'], info['max_radius'],
+                     info['angle'], info['function']], start=1):
                 item = QTableWidgetItem(str(text))
-                item.setTextAlignment(Qt.AlignCenter)
+                if text == info['function']:  # function 컬럼인 경우
+                    item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                else:  # 나머지 컬럼
+                    item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row, col, item)
 
             # 행 높이 설정 (체크박스 높이 + 여유 공간)

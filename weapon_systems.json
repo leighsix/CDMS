@@ -29,7 +29,7 @@
         "min_altitude": 10,
         "max_altitude": 30,
         "angle": 120,
-        "function": "PAC-3의 진화형으로, 더 긴 사거리와 향상된 요격 능력을 제공.\n"
+        "function": "PAC-3의 진화형으로, 더 긴 사거리와 향상된 요격 능력을 제공...\n"
     },
     "L-SAM": {
         "min_radius": 10,

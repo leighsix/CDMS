@@ -1,8 +1,8 @@
-import json
-import math
+import math,json
 import numpy as np
 from geopy import distance
 from geopy.point import Point
+
 
 class MissileTrajectoryCalculator:
     def __init__(self):
@@ -13,48 +13,47 @@ class MissileTrajectoryCalculator:
             self.missile_info = json.load(f)
 
     def calculate_trajectory(self, missile_base, target, missile_type):
-        try:
-            B_lat, B_lon = missile_base
-            T_lat, T_lon = target
+        B_lat, B_lon = missile_base
+        T_lat, T_lon = target
 
-            L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
+        # 1. 거리 계산 (km)
+        L = self.calculate_distance(B_lat, B_lon, T_lat, T_lon)
 
-            coeffs = self.missile_info[missile_type]['trajectory_coefficients']
-            alpha = coeffs['alpha']['a1'] * L + coeffs['alpha']['a2']
-            beta = coeffs['beta']['a1'] * L + coeffs['beta']['b1']
+        # 2. 미사일 정보에서 궤적 계수 가져오기
+        coeffs = self.missile_info[missile_type]['trajectory_coefficients']
+        a1, a2 = coeffs['alpha']['a1'], coeffs['alpha']['a2']
+        b1, b2 = coeffs['beta']['b1'], coeffs['beta']['b2']
 
-            x, y, z = self.calculate_ballistic_trajectory(L, alpha, beta)
-            bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
-            trajectory = self.convert_trajectory_to_coordinates(B_lat, B_lon, T_lat, T_lon, bearing, x, y, z)
-            return trajectory
+        # 3. 궤적 계수 alpha, beta 계산
+        alpha = a1 * np.exp(a2 * L) + b1 * np.exp(b2 * L)
+        beta = a1 * np.exp(a2 * L) + b1 * np.exp(b2 * L)
 
-        except KeyError as e:
-            print(f"미사일 타입 오류: {e}")
-        except ValueError as e:
-            print(f"입력값 오류: {e}")
-        except Exception as e:
-            print(f"궤적 계산 중 예상치 못한 오류 발생: {e}")
-        return None
+        # 3. d 값 계산
+        d = (-beta + math.sqrt(beta ** 2 + 4 * alpha * L)) / (2 * alpha)
 
-    @staticmethod
-    def calculate_ballistic_trajectory(distance, alpha, beta):
-        t = np.linspace(0, 1, 1000)
-        x = distance * t
-        y = alpha * x * (1 - x / distance) + beta * x * (1 - x / distance) * (x / distance)
-        z = np.zeros_like(x)
-        return x, y, z
+        # 4. 발사 각도 계산
+        launch_angle = math.atan((4 * alpha * L) / (beta ** 2))
 
-    def convert_trajectory_to_coordinates(self, start_lat, start_lon, end_lat, end_lon, bearing, x, y, z):
+        # 5. 궤적 계산
+        trajectory = self.calculate_ballistic_trajectory(L, alpha, beta, B_lat, B_lon, T_lat, T_lon)
+
+        return trajectory
+
+    def calculate_ballistic_trajectory(self, L, alpha, beta, B_lat, B_lon, T_lat, T_lon):
+        bearing = self.calculate_bearing(B_lat, B_lon, T_lat, T_lon)
+
         trajectory = []
-        start = Point(start_lat, start_lon)
+        steps = 1000
+        for i in range(steps + 1):
+            t = (i / steps) * L
+            x = t
+            z = (t / L) * (1 - (t / L)) * (alpha * L + beta * (t / L)) * L
+            z = z/1000
 
-        for i in range(len(x)):
-            point = self.calculate_point_at_distance_and_bearing(start, x[i], bearing)
-            if point:
-                trajectory.append((point[0], point[1], y[i]))
+            current_point = self.calculate_point_at_distance_and_bearing(Point(B_lat, B_lon), x, bearing)
 
-        if trajectory:
-            trajectory[-1] = (end_lat, end_lon, 0)
+            if current_point:
+                trajectory.append((current_point[0], current_point[1], z))
 
         return trajectory
 
@@ -88,3 +87,14 @@ class MissileTrajectoryCalculator:
         )
 
         return math.degrees(end_lat), math.degrees(end_lon)
+
+
+# 사용 예시
+# calculator = MissileTrajectoryCalculator()
+# missile_base = (37.5665, 126.9780)  # 서울의 위도, 경도
+# target = (35.6895, 139.6917)  # 도쿄의 위도, 경도
+# trajectory = calculator.calculate_trajectory(missile_base, target, 'Nodong')
+#
+# print("궤적 포인트 (위도, 경도, 고도):")
+# for point in trajectory:
+#     print(f"위도: {point[0]:.4f}, 경도: {point[1]:.4f}, 고도: {point[2]:.2f} km")

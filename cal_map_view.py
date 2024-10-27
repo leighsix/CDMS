@@ -54,13 +54,17 @@ class CalMapView(QObject):
             self.tr('기타'): 'black'
         }
 
-        # BMD 우선순위별 모양 정의
-        bmd_shapes = {}
-        shape_counter = 1
-        for item in coordinates_list:
-            if item[5] not in bmd_shapes:
-                bmd_shapes[item[5]] = shape_counter
-                shape_counter = (shape_counter % 6) + 1
+        # BMD 우선순위별 모양 정의 (고정된 매핑)
+        bmd_shapes = {
+            self.tr('지휘통제시설'): 1,  # 원
+            self.tr('비행단'): 2,  # 삼각형
+            self.tr('군수기지'): 3,  # 사각형
+            self.tr('해군기지'): 4,  # 다이아몬드
+            self.tr('주요레이다'): 5,  # 오각형
+            self.tr('None'): 6  # 육각형
+        }
+
+
 
         # 구성군 범례 생성
         legend_html = f'''
@@ -129,39 +133,36 @@ class CalMapView(QObject):
         map_obj.get_root().html.add_child(folium.Element(legend_html))
         map_obj.get_root().html.add_child(folium.Element(bmd_legend_html))
 
+    # 모양별 HTML 생성 함수
     @staticmethod
-    def get_shape_html(shape, color):
-        if shape == 1:  # 해군기지
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+    def get_shape_html(shape_num, color):
+        shapes = {
+            1: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 5 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z" fill="{color}"/>
                 <circle cx="50" cy="50" r="10" fill="white"/>
-            </svg>'''
-        elif shape == 2:  # 비행단
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            2:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 10 L10 90 H90 Z" fill="{color}"/>
                 <path d="M50 30 L30 70 H70 Z" fill="white"/>
-            </svg>'''
-        elif shape == 3:  # 지휘통제시설
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            3:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M20 0 H80 L100 20 V80 L80 100 H20 L0 80 V20 Z" fill="{color}"/>
                 <rect x="30" y="30" width="40" height="40" fill="white"/>
-            </svg>'''
-        elif shape == 4:  # 군수기지
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            4:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 0 L100 50 L50 100 L0 50 Z" fill="{color}"/>
                 <circle cx="50" cy="50" r="20" fill="white"/>
-            </svg>'''
-        elif shape == 5:  # 주요레이다
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            5: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="50" fill="{color}"/>
                 <path d="M50 20 L80 80 H20 Z" fill="white"/>
                 <circle cx="50" cy="50" r="10" fill="{color}"/>
-            </svg>'''
-        else:  # 일반 아이콘
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            6: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="{color}"/>
             </svg>'''
-
+            }
+        return shapes[shape_num].format(color)
 
 class PriorityCalMapView(QObject):
     def __init__(self, coordinates_list, map_obj):
@@ -197,13 +198,15 @@ class PriorityCalMapView(QObject):
         colormap.caption = priorities
         colormap.add_to(map_obj)
 
-        # BMD 우선순위별 모양 정의
-        bmd_shapes = {}
-        shape_counter = 1
-        for item in coordinates_list:
-            if item[6] not in bmd_shapes:
-                bmd_shapes[item[6]] = shape_counter
-                shape_counter = (shape_counter % 6) + 1
+        # BMD 우선순위별 모양 정의 (고정된 매핑)
+        bmd_shapes = {
+            self.tr('지휘통제시설'): 1,  # 원
+            self.tr('비행단'): 2,  # 삼각형
+            self.tr('군수기지'): 3,  # 사각형
+            self.tr('해군기지'): 4,  # 다이아몬드
+            self.tr('주요레이다'): 5,  # 오각형
+            self.tr('None'): 6  # 육각형
+        }
 
         for priority, unit, asset_name, area, coordinate, engagement_effectiveness, bmd_priority in coordinates_list:
             try:
@@ -256,38 +259,36 @@ class PriorityCalMapView(QObject):
 
         map_obj.get_root().html.add_child(folium.Element(bmd_legend_html))
 
+    # 모양별 HTML 생성 함수
     @staticmethod
-    def get_shape_html(shape, color):
-        if shape == 1:  # 해군기지
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+    def get_shape_html(shape_num, color):
+        shapes = {
+            1: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 5 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z" fill="{color}"/>
                 <circle cx="50" cy="50" r="10" fill="white"/>
-            </svg>'''
-        elif shape == 2:  # 비행단
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            2:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 10 L10 90 H90 Z" fill="{color}"/>
                 <path d="M50 30 L30 70 H70 Z" fill="white"/>
-            </svg>'''
-        elif shape == 3:  # 지휘통제시설
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            3:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M20 0 H80 L100 20 V80 L80 100 H20 L0 80 V20 Z" fill="{color}"/>
                 <rect x="30" y="30" width="40" height="40" fill="white"/>
-            </svg>'''
-        elif shape == 4:  # 군수기지
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            4:f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <path d="M50 0 L100 50 L50 100 L0 50 Z" fill="{color}"/>
                 <circle cx="50" cy="50" r="20" fill="white"/>
-            </svg>'''
-        elif shape == 5:  # 주요레이다
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            5: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="50" fill="{color}"/>
                 <path d="M50 20 L80 80 H20 Z" fill="white"/>
                 <circle cx="50" cy="50" r="10" fill="{color}"/>
-            </svg>'''
-        else:  # 일반 아이콘
-            return f'''<svg width="20" height="20" viewBox="0 0 100 100">
+            </svg>''',
+            6: f'''<svg width="20" height="20" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="{color}"/>
             </svg>'''
+            }
+        return shapes[shape_num].format(color)
 
 
 

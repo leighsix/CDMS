@@ -99,7 +99,9 @@ class AddAssetWindow(QDialog, QObject):
 
                     for i, sub_label in enumerate(label):
                         if label == (self.tr("위도"), self.tr("경도")):
-                            input_widget = CoordinateEdit(sub_label)
+                            input_widget = UnderlineEdit()
+                            input_widget.setPlaceholderText(
+                                f"Ex: {'N39.99999' if sub_label == self.tr('위도') else 'E128.99999'}")
                             input_widget.editingFinished.connect(self.check_coordinates)
                         else:
                             input_widget = UnderlineEdit()
@@ -145,6 +147,7 @@ class AddAssetWindow(QDialog, QObject):
                         self.unit_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
                         self.unit_combo.setStyleSheet("background-color: white; font: 바른공군체; font-size: 13pt;")
                         input_widget = self.unit_combo
+
                     elif label == self.tr("군사좌표(MGRS)"):
                         input_widget = AutoSpacingLineEdit()
                         input_widget.setPlaceholderText("99A AA 99999 99999")
@@ -201,7 +204,7 @@ class AddAssetWindow(QDialog, QObject):
             ammo_input = QLineEdit()
             ammo_input.setPlaceholderText(self.tr("탄수"))
             ammo_input.setStyleSheet("font: 바른공군체; font-size: 14px;")
-            ammo_input.setFixedWidth(50)
+            ammo_input.setFixedWidth(100)
             ammo_input.setEnabled(False)
 
             checkbox.stateChanged.connect(lambda state, input=ammo_input: input.setEnabled(state == Qt.Checked))
@@ -258,7 +261,7 @@ class AddAssetWindow(QDialog, QObject):
         engagement_layout.addWidget(self.engagement_combo)
 
         # 교전효과 수준 그룹
-        bmd_priority_group = QGroupBox(self.tr("우선순위 고려사항"))
+        bmd_priority_group = QGroupBox(self.tr("연합사 BMD 우선순위"))
         bmd_priority_group.setStyleSheet("font: 강한공군체; font-size: 20px; font-weight: bold;")  # 그룹 박스 글꼴 설정
         bmd_priority_layout = QVBoxLayout(bmd_priority_group)
 
@@ -971,33 +974,61 @@ class AddAssetWindow(QDialog, QObject):
             lang = 0 if self.parent.selected_language == 'ko' else 1
             cursor.insertHtml(f"<h2>{assets_info}</h2>")
             cursor.insertHtml(f"<table {table_style}>")
-            # 구성군 정보 추가
-            cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr('구성군')}</th>"
-                              f"<td {td_style} width='70%'>{self.unit_combo.currentText().strip()}</td></tr>")
+
+
+            # 기존 자산 정보 필드 추가
             for label, field in self.asset_info_fields.items():
                 if isinstance(label, tuple):
                     if label == (self.tr("위도"), self.tr("경도")):
                         lat, lon = field
                         value = f"{lat.text().strip()}, {lon.text().strip()}"
                         cursor.insertHtml(f"<tr><th {th_style} width='30%'>{coordinate}</th>"
-                                      f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+                                          f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
                     else:
                         selected_field = field[0] if self.parent.selected_language == 'ko' else field[1]
                         if isinstance(selected_field, QLineEdit):
                             value = selected_field.text().strip()
                         else:
                             value = selected_field.toPlainText().strip()
-                        cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr(label[lang])}</th>"
-                                      f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+                        cursor.insertHtml(f"<tr><th {th_style} width='30%'>{label[0]}</th>"
+                                          f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+
                 else:
                     if isinstance(field, QLineEdit):
                         value = field.text()
                     elif isinstance(field, QTextEdit):
                         value = field.toPlainText()
+                    elif isinstance(field, QComboBox):
+                        value = self.unit_combo.currentText().strip()
                     else:
-                        value = str(field)  # 다른 타입의 필드 처리
+                        value = str(field)
                     cursor.insertHtml(f"<tr><th {th_style} width='30%'>{self.tr(label)}</th>"
                                       f"<td {td_style} width='70%'>{value.strip()}</td></tr>")
+
+            # 방어자산 정보 추가
+            cursor.insertHtml(
+                f"<tr><th {th_style} width='30%'>{self.tr('방어자산(DAL)')}</th><td {td_style} width='70%'>{self.dal_checkbox.isChecked()}</td></tr>")
+
+            # 무기체계 정보 추가
+            weapon_systems = []
+            for weapon, checkbox in self.weapon_checkboxes.items():
+                if checkbox.isChecked():
+                    ammo = self.ammo_inputs[weapon].text()
+                    weapon_systems.append(f"{weapon}({ammo})")
+            cursor.insertHtml(
+                f"<tr><th {th_style} width='30%'>{self.tr('무기체계')}</th><td {td_style} width='70%'>{', '.join(weapon_systems)}</td></tr>")
+
+            # 위협방위 정보 추가
+            cursor.insertHtml(
+                f"<tr><th {th_style} width='30%'>{self.tr('위협방위')}</th><td {td_style} width='70%'>{self.threat_degree_edit.text()}</td></tr>")
+
+            # 교전효과 수준 추가
+            cursor.insertHtml(
+                f"<tr><th {th_style} width='30%'>{self.tr('교전효과 수준')}</th><td {td_style} width='70%'>{self.engagement_combo.currentText()}</td></tr>")
+
+            # BMD 우선순위 추가
+            cursor.insertHtml(
+                f"<tr><th {th_style} width='30%'>{self.tr('우선순위 고려사항')}</th><td {td_style} width='70%'>{self.bmd_priority_combo.currentText()}</td></tr>")
 
             cursor.insertHtml("</table>")
             cursor.insertHtml("<br><br>")
@@ -1224,7 +1255,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle(self.tr("자산 관리"))  # 창 제목 설정
         self.setMinimumSize(1024, 768)  # 최소 크기 설정
-        self.selected_language = "ko"
+        self.selected_language = "en"
         self.db_path = 'assets_management.db'
         self.conn = sqlite3.connect(self.db_path)  # 데이터베이스 연결
         self.cursor = self.conn.cursor()  # 커서 생성
@@ -1395,12 +1426,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def show_view_assets_page(self):
         self.centralWidget.setCurrentIndex(0)  # 인덱스 0의 페이지로 전환
-
-class CoordinateEdit(UnderlineEdit):
-    def __init__(self, coordinate_type, parent=None):
-        super().__init__(parent)
-        self.coordinate_type = coordinate_type
-        self.setPlaceholderText(f"예: {'N39.99999' if coordinate_type == '위도' else 'E128.99999'}")
 
 
 if __name__ == "__main__":

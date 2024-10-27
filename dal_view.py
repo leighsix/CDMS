@@ -90,7 +90,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
         self.engagement_filter = QComboBox()
         self.engagement_filter.addItems(
             [self.tr("전체"), self.tr("1단계: 원격발사대"), self.tr("2단계: 단층방어"), self.tr("3단계: 중첩방어"), self.tr("4단계: 다층방어")])
-        self.engagement_filter.setFixedSize(150, 30)
+        self.engagement_filter.setFixedSize(250, 30)
         self.engagement_filter.setStyleSheet("font: 바른공군체; font-size: 16px;")
         filter_layout.addWidget(engagement_filter_label, 1, 2)
         filter_layout.addWidget(self.engagement_filter, 1, 3)
@@ -316,6 +316,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
                 checkbox.setChecked(False)
         self.defense_radius_checkbox.setChecked(False)
         self.load_assets()  # 테이블 데이터 새로고침
+        self.update_map()
 
     def update_map(self):
         self.map = folium.Map(
@@ -400,7 +401,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
                         (COALESCE(criticality, 0) + COALESCE(criticality_bonus_center, 0) + COALESCE(criticality_bonus_function, 0)) +
                         (COALESCE(vulnerability_damage_protection, 0) + COALESCE(vulnerability_damage_dispersion, 0) + COALESCE(vulnerability_recovery_time, 0) + COALESCE(vulnerability_recovery_ability, 0)) +
                         (COALESCE(threat_attack, 0) + COALESCE(threat_detection, 0)) AS total_score
-                    FROM cal_assets_ko
+                    FROM cal_assets_en
                     WHERE dal_select = 1
                     '''
 
@@ -517,11 +518,29 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
             cursor = QTextCursor(document)
 
             document.setDefaultStyleSheet("""
-                body { font-family: 'Arial', sans-serif; }
-                h1 { color: black; }
-                .info { padding: 10px; }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { border: 1px solid black; padding: 4px; text-align: center; }
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Arial', sans-serif;
+                    width: 100%;
+                    margin: 0 auto;
+                }
+                h1 { 
+                    color: black; 
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .info { padding: 1px; }
+                table { 
+                    border-collapse: collapse; 
+                    width: 90%;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                td, th { 
+                    border: 1px solid black; 
+                    padding: 5px; 
+                    text-align: center;
+                }
             """)
 
             font = QFont("Arial", 8)
@@ -530,6 +549,10 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
             cursor.insertHtml("<h1 align='center'>" + self.tr("CAL 목록") + "</h1>")
             cursor.insertBlock()
 
+            cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
+            cursor.insertHtml(self.tr("보고서 생성 일시: ") + QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
+            cursor.insertHtml("</div>")
+            cursor.insertBlock()
 
             table_format = QTextTableFormat()
             table_format.setBorderStyle(QTextFrameFormat.BorderStyle_Solid)
@@ -540,7 +563,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
             rows = self.assets_table.rowCount() + 1
             cols = self.assets_table.columnCount() - 1
 
-            excluded_columns = [0, 1, 4, 5, 9, 10]
+            excluded_columns = [0, 1, 3, 4, 5, 9, 10, 11, 13, 14, 15, 17, 18, 19]
 
             actual_cols = cols - len(excluded_columns)
             table = cursor.insertTable(rows, actual_cols, table_format)
@@ -574,6 +597,9 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(file_path)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Millimeter)
+                printer.setPageOrientation(QPageLayout.Landscape)
                 document.print_(printer)
                 QMessageBox.information(self, self.tr("저장 완료"), self.tr("PDF가 저장되었습니다: {}").format(file_path))
 

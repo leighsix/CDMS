@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QTableWidget, \
     QTableWidgetItem, \
-    QHeaderView, QMessageBox, QHBoxLayout, QWidget, QCheckBox, QStyleOptionButton, QStyle
+    QHeaderView, QMessageBox, QHBoxLayout, QWidget, QCheckBox, QStyleOptionButton, QStyle, QGroupBox, QGridLayout
 from PyQt5.QtCore import Qt, QRect
 import json
 from PyQt5.QtWidgets import QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel
@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QTextE
 class EnemySpecWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(self.tr("방공무기체계 제원 입력"))
+        self.setWindowTitle(self.tr("적 미사일 제원 입력"))
         self.initUI()
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
 
@@ -26,14 +26,15 @@ class EnemySpecWindow(QDialog):
         top_layout = QVBoxLayout(top_widget)
 
         self.table = MyTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["", self.tr("미사일명"), self.tr("최소위협반경"), self.tr("최대위협반경"), self.tr("주요기능")])
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(
+            ["", self.tr("미사일명"), self.tr("최소위협반경"), self.tr("최대위협반경"), self.tr("주요기능"), self.tr("궤적계수")])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
         self.table.setColumnWidth(0, 60)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.table.hideColumn(5)  # 궤적계수 열(5번 열)을 숨깁니다.
+
+        for i in range(1, 6):
+            self.table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
 
         self.table.setAlternatingRowColors(True)
         self.table.setStyleSheet(
@@ -85,18 +86,16 @@ class EnemySpecWindow(QDialog):
         self.max_radius_edit = QLineEdit()
         self.max_radius_edit.setInputMask("9999999")
         self.max_radius_edit.setPlaceholderText("99999km")
-        self.function_edit = QTextEdit()  # QLineEdit에서 QTextEdit로 변경
-        self.function_edit.setMinimumHeight(100)  # 최소 높이 설정
+        self.function_edit = QTextEdit()
+        self.function_edit.setMinimumHeight(100)
 
         for edit in [self.name_edit, self.min_radius_edit, self.max_radius_edit]:
             edit.setStyleSheet("QLineEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
 
         self.function_edit.setStyleSheet("QTextEdit { padding: 5px; border: 1px solid #ccc; border-radius: 3px; }")
 
-        # 라벨 스타일 설정
         label_style = "QLabel { font-size: 14px; font-weight: bold; }"
 
-        # 라벨 생성 및 스타일 적용
         name_label = QLabel(self.tr("미사일명:"))
         name_label.setStyleSheet(label_style)
         min_radius_label = QLabel(self.tr("최소위협반경:"))
@@ -106,13 +105,30 @@ class EnemySpecWindow(QDialog):
         function_label = QLabel(self.tr("주요기능:"))
         function_label.setStyleSheet(label_style)
 
-        # 폼 레이아웃에 라벨과 입력 필드 추가
         form_layout.addRow(name_label, self.name_edit)
         form_layout.addRow(min_radius_label, self.min_radius_edit)
         form_layout.addRow(max_radius_label, self.max_radius_edit)
         form_layout.addRow(function_label, self.function_edit)
 
         bottom_layout.addLayout(form_layout)
+
+        # 궤적계수 입력 그룹박스 수정
+        trajectory_group = QGroupBox(self.tr("궤적계수"))
+        trajectory_group.setStyleSheet(label_style)
+        trajectory_layout = QGridLayout()
+
+        labels = ["alpha", "beta"]
+        coeffs = ["a1", "a2", "b1", "b2"]
+
+        for i, label in enumerate(labels):
+            for j, coeff in enumerate(coeffs):
+                trajectory_layout.addWidget(QLabel(f"{label} {coeff}:"), i * 2, j)
+                line_edit = QLineEdit()
+                line_edit.setObjectName(f"{label}_{coeff}")
+                trajectory_layout.addWidget(line_edit, i * 2 + 1, j)
+
+        trajectory_group.setLayout(trajectory_layout)
+        bottom_layout.addWidget(trajectory_group)
 
         # 저장 버튼
         save_button = QPushButton(self.tr("저장"))
@@ -137,40 +153,70 @@ class EnemySpecWindow(QDialog):
         self.load_missile_info()
 
     def save_missile_info(self):
-        name = self.name_edit.text()
-        min_radius = int(self.min_radius_edit.text())
-        max_radius = int(self.max_radius_edit.text())
-        function = self.function_edit.toPlainText()  # QTextEdit에서 텍스트를 가져오는 메서드 수정
-
-        if not all([name, min_radius, max_radius, function]):
-            QMessageBox.warning(self, self.tr("경고"), self.tr("모든 필드를 입력해주세요."))
-            return
-
         try:
-            with open('missile_info.json', 'r', encoding='utf-8') as file:
-                data = json.load(file)
-        except FileNotFoundError:
-            data = {}
+            name = self.name_edit.text().strip()  # 공백 제거
+            min_radius = int(self.min_radius_edit.text() or 0)
+            max_radius = int(self.max_radius_edit.text() or 0)
+            function = self.function_edit.toPlainText().strip()  # 공백 제거
 
-        if name in data:
-            reply = QMessageBox.question(self, self.tr('확인'),
-                                         self.tr('이미 존재하는 미사일 정보입니다. 수정하시겠습니까?'),
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.No:
+            # 필수 입력값 검증
+            if not all([name, min_radius, max_radius, function]):
+                QMessageBox.warning(self, "경고", "모든 필드를 입력해주세요.")
                 return
 
-        data[name] = {
-            'min_radius': min_radius,
-            'max_radius': max_radius,
-            'function': function
-        }
+            # JSON 파일 읽기
+            try:
+                with open('missile_info.json', 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+            except (FileNotFoundError, json.JSONDecodeError):
+                data = {}
 
-        with open('missile_info.json', 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
+            # 기존 데이터 확인
+            if name in data:
+                reply = QMessageBox.question(self, '확인',
+                                             '이미 존재하는 미사일 정보입니다. 수정하시겠습니까?',
+                                             QMessageBox.Yes | QMessageBox.No)
+                if reply == QMessageBox.No:
+                    return
 
-        self.load_missile_info()
-        self.clear_inputs()
-        QMessageBox.information(self, self.tr("성공"), self.tr("미사일 정보가 저장되었습니다."))
+            # 기본 계수값 설정
+            default_coefficients = {
+                "alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
+                "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}
+            }
+
+            # 궤적 계수 처리
+            trajectory_coefficients = {}
+            for label in ["alpha", "beta"]:
+                trajectory_coefficients[label] = {}
+                for coeff in ["a1", "a2", "b1", "b2"]:
+                    line_edit = self.findChild(QLineEdit, f"{label}_{coeff}")
+                    if line_edit:
+                        try:
+                            value = line_edit.text().strip()
+                            trajectory_coefficients[label][coeff] = float(value) if value else \
+                            default_coefficients[label][coeff]
+                        except ValueError:
+                            trajectory_coefficients[label][coeff] = default_coefficients[label][coeff]
+
+            # 데이터 구조화
+            data[name] = {
+                'min_radius': min_radius,
+                'max_radius': max_radius,
+                'function': function,
+                'trajectory_coefficients': trajectory_coefficients
+            }
+
+            # JSON 파일 저장
+            with open('missile_info.json', 'w', encoding='utf-8') as file:
+                json.dump(data, file, ensure_ascii=False, indent=4)
+
+            self.load_missile_info()
+            self.clear_inputs()
+            QMessageBox.information(self, "성공", "미사일 정보가 저장되었습니다.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "오류", f"저장 중 오류가 발생했습니다: {str(e)}")
 
     def load_missile_info(self):
         try:
@@ -191,26 +237,38 @@ class EnemySpecWindow(QDialog):
             self.table.insertRow(row)
             checkbox = CenteredCheckBox()
             self.table.setCellWidget(row, 0, checkbox)
-            for col, text in enumerate([name, info['min_radius'], info['max_radius'], info['function']], start=1):
+            items = [
+                name,
+                str(info['min_radius']),
+                str(info['max_radius']),
+                info['function'],
+                json.dumps(info['trajectory_coefficients'])
+            ]
+
+            for col, text in enumerate(items, start=1):
                 item = QTableWidgetItem(str(text))
-                item.setTextAlignment(Qt.AlignCenter)
+                if col == 4:  # function 컬럼
+                    item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row, col, item)
 
-            # 행 높이 설정 (체크박스 높이 + 여유 공간)
             self.table.setRowHeight(row, 40)
-
-        # 각 열의 내용에 맞게 열 너비 조정
         self.table.resizeColumnsToContents()
-        # 체크박스 열은 고정 너비 유지
         self.table.setColumnWidth(0, 60)
-
-
 
     def clear_inputs(self):
         self.name_edit.clear()
         self.min_radius_edit.clear()
         self.max_radius_edit.clear()
         self.function_edit.clear()
+
+        # 궤적계수 입력란 초기화
+        for label in ["alpha", "beta"]:
+            for coeff in ["a1", "a2", "b1", "b2"]:
+                line_edit = self.findChild(QLineEdit, f"{label}_{coeff}")
+                if line_edit:
+                    line_edit.clear()
 
     def edit_missile_info(self):
         checked_rows = []
@@ -224,10 +282,34 @@ class EnemySpecWindow(QDialog):
             return
 
         row = checked_rows[0]
-        self.name_edit.setText(self.table.item(row, 1).text())
-        self.min_radius_edit.setText(self.table.item(row, 2).text())
-        self.max_radius_edit.setText(self.table.item(row, 3).text())
-        self.function_edit.setText(self.table.item(row, 4).text())
+        try:
+            self.name_edit.setText(self.table.item(row, 1).text())
+            self.min_radius_edit.setText(self.table.item(row, 2).text())
+            self.max_radius_edit.setText(self.table.item(row, 3).text())
+            self.function_edit.setText(self.table.item(row, 4).text())
+
+            # 미사일 계수 처리
+            default_coefficients = {
+                "alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
+                "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}
+            }
+
+            trajectory_coefficients = default_coefficients
+            if self.table.item(row, 5):
+                try:
+                    trajectory_coefficients = json.loads(self.table.item(row, 5).text())
+                except json.JSONDecodeError:
+                    print("JSON 디코딩 오류, 기본값 사용")
+
+            for label in ["alpha", "beta"]:
+                for coeff in ["a1", "a2", "b1", "b2"]:
+                    line_edit = self.findChild(QLineEdit, f"{label}_{coeff}")
+                    if line_edit:
+                        value = trajectory_coefficients[label][coeff]
+                        line_edit.setText(str(value))
+
+        except Exception as e:
+            QMessageBox.warning(self, self.tr("오류"), self.tr(f"데이터 로드 중 오류가 발생했습니다: {str(e)}"))
 
     def delete_missile_info(self):
         checked_rows = []

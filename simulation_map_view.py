@@ -47,12 +47,14 @@ class SimulationCalMapView(QObject):
         critical_assets = self.tr("중요자산")
         assets_classification = self.tr("자산구분")
         legend_html = f"""
-        <div style="position: fixed; top: 40px; right: 40px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
-            <h4 style="margin-top: 0;">{assets_classification}</h4>
+        <div style="position: fixed; bottom: 200px; right: 20px; width: auto; height: auto; background-color: white; 
+            border: 2px solid grey; z-index:9999; font-size:14px">
+            <strong>{assets_classification}</strong><br>
             <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
             <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
         </div>
         """
+
         map_obj.get_root().html.add_child(folium.Element(legend_html))
 
         for asset_name, coordinate, dal_select, priority in coordinates_list:
@@ -127,10 +129,11 @@ class SimulationWeaponMapView(QObject):
 
         defense_assets = self.tr("방어자산")
         weapon_systems = self.tr("무기체계")
+        coordinates = self.tr('좌표')
         # 범례 생성
         # "무기체계"를 .ts 파일에서 번역될 수 있도록 수정
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 50px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
@@ -175,7 +178,7 @@ class SimulationWeaponMapView(QObject):
                     icon=icon,
                     popup=folium.Popup(f"""
                                     <b>{defense_assets}:</b> {asset_name}<br>
-                                    <b>MGRS:</b> {coord}<br>
+                                    <b>{coordinates}:</b> {coord}<br>
                                     <b>{weapon_systems}:</b> {weapon_system}
                                 """, max_width=200)
                 ).add_to(map_obj)
@@ -251,12 +254,13 @@ class SimulationEnemyBaseMapView(QObject):
         weapon_systems = self.tr("적 보유 미사일")
         coordinates = self.tr("좌표")
 
+
         # 색상 정의
         color_map = {
             'Scud-B': 'red',
             'Scud-C': 'blue',
             'Nodong': 'green',
-            '다종 미사일': 'purple'
+            'Various Types': 'purple'
         }
 
         for base_name, coord, weapon_system in coordinates_list:
@@ -265,7 +269,7 @@ class SimulationEnemyBaseMapView(QObject):
                 lat, lon = self.parse_coordinates(coord)
                 # 무기 시스템에 따른 색상 결정
                 if len(weapon_systems_list) > 1:
-                    color = color_map['다종 미사일']
+                    color = color_map['Various Types']
                 else:
                     color = color_map.get(weapon_systems_list[0], 'gray')  # 알 수 없는 타입은 회색으로 표시
 
@@ -306,7 +310,7 @@ class SimulationEnemyBaseMapView(QObject):
             <div id="maplegend" style="
                 position: fixed; 
                 bottom: 50px; 
-                right: 50px; 
+                right: 20px; 
                 width: 150px; 
                 height: auto; 
                 background-color: white; 
@@ -322,7 +326,7 @@ class SimulationEnemyBaseMapView(QObject):
                     <span style="color:red;">&#9650;</span> Scud-B<br>
                     <span style="color:blue;">&#9650;</span> Scud-C<br>
                     <span style="color:green;">&#9650;</span> Nodong<br>
-                    <span style="color:purple;">&#9650;</span> 다종 미사일
+                    <span style="color:purple;">&#9650;</span> Various Types
                 </div>
             </div>
         """

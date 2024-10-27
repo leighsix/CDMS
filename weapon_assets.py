@@ -11,6 +11,7 @@ from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter
 from PyQt5.QtGui import QPageLayout, QPageSize
 from PyQt5.QtCore import QUrl, QSize, QTimer, QTemporaryFile, QDir, QEventLoop, QDateTime
 from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect
+from PyQt5.QtCore import QUrl, QTemporaryFile, QSize, QTimer, QMarginsF
 from addasset import AutoSpacingLineEdit, UnderlineEdit
 from PyQt5.QtWidgets import *
 import sqlite3
@@ -342,6 +343,9 @@ class AddWeaponAssetWindow(QDialog):
                     self.asset_info_fields[self.tr("보유탄수")].setText(str(self.asset_data[7]))
                     self.asset_info_fields[self.tr("위협방위")].setText(str(self.asset_data[8]))
 
+            # 방어자산 포함여부 체크박스 설정
+            self.dal_select_checkbox.setChecked(bool(asset_data1[9]))  # dal_select 값으로 체크박스 설정
+
     @staticmethod
     def validate_latitude(lat):
         pattern = r'^[NS]\d{2}\.\d{5}'
@@ -518,12 +522,14 @@ class WeaponAssetWindow(QDialog):
         button_layout = QHBoxLayout()
         self.add_weapon_asset_button = QPushButton(self.tr("입력"), self)
         self.correction_button = QPushButton(self.tr("수정"), self)
+        self.print_button = QPushButton(self.tr("출력"), self)
         self.return_button = QPushButton(self.tr("메인화면"), self)
         self.add_weapon_asset_button.clicked.connect(self.add_weapon_asset)
         self.correction_button.clicked.connect(self.correct_asset)
+        self.print_button.clicked.connect(self.print_weapon_assets_table)
         self.return_button.clicked.connect(self.parent.show_main_page)
 
-        for button in [self.add_weapon_asset_button, self.correction_button, self.return_button]:
+        for button in [self.add_weapon_asset_button, self.correction_button, self.print_button, self.return_button]:
             button.setFont(QFont("강한공군체", 13, QFont.Bold))
             button.setFixedSize(130, 40)
             button_layout.addWidget(button)
@@ -597,12 +603,15 @@ class WeaponAssetWindow(QDialog):
         self.unit_filter.setCurrentIndex(0)  # 콤보박스를 "전체"로 설정
         self.weapon_filter.setCurrentIndex(0)  # 무기체계 필터를 "전체"로 설정
         self.asset_search_input.clear()  # 검색 입력창 비우기
+        self.dal_select_filter.setChecked(False)
         # 테이블의 모든 체크박스 해제
         self.weapon_assets_table.uncheckAllRows()
         for weapon_system, checkbox in self.weapon_system_checkboxes.items():
             if checkbox.isChecked():
                 checkbox.setChecked(False)
         self.load_assets()  # 테이블 데이터 새로고침
+        self.radius_checkbox.setChecked(False)
+
         # 지도 업데이트
         self.update_map()
 
@@ -631,7 +640,6 @@ class WeaponAssetWindow(QDialog):
         self.weapon_assets_table.setColumnHidden(4, True)
         self.weapon_assets_table.setColumnHidden(5, True)
         self.weapon_assets_table.setColumnHidden(10, True)
-
 
     def load_assets(self):
         """현재 필터에 맞춰 자산 정보를 로드하여 표시하는 함수"""
@@ -794,18 +802,37 @@ class WeaponAssetWindow(QDialog):
             document = QTextDocument()
             cursor = QTextCursor(document)
 
+            # CSS 스타일 수정
             document.setDefaultStyleSheet("""
-                body { font-family: '바른공군체', sans-serif; }
-                h1 { color: black; }
-                .info { padding: 10px; }
-                table { border-collapse: collapse; width: 100%; }
-                td, th { border: 1px solid black; padding: 4px; text-align: center; }
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Arial', sans-serif;
+                    width: 100%;
+                    margin: 0 auto;
+                }
+                h1 { 
+                    color: black; 
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .info { padding: 1px; }
+                table { 
+                    border-collapse: collapse; 
+                    width: 90%;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                td, th { 
+                    border: 1px solid black; 
+                    padding: 5px; 
+                    text-align: center;
+                }
             """)
 
-            font = QFont("바른공군체", 8)
+            font = QFont("Arial", 8)
             document.setDefaultFont(font)
 
-            cursor.insertHtml("<h1 align='center'>" + self.tr("방어자산 보고서") + "</h1>")
+            cursor.insertHtml("<h1 align='center'>" + self.tr("미사일 방공포대 목록") + "</h1>")
             cursor.insertBlock()
 
             cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
@@ -815,14 +842,15 @@ class WeaponAssetWindow(QDialog):
 
             table_format = QTextTableFormat()
             table_format.setBorderStyle(QTextFrameFormat.BorderStyle_Solid)
-            table_format.setCellPadding(2)
+            table_format.setCellPadding(1)
             table_format.setAlignment(Qt.AlignCenter)
             table_format.setWidth(QTextLength(QTextLength.PercentageLength, 100))
 
             rows = self.weapon_assets_table.rowCount() + 1
-            cols = self.weapon_assets_table.columnCount()
+            cols = self.weapon_assets_table.columnCount()-1
 
-            excluded_columns = [0]  # 체크박스 열 제외
+
+            excluded_columns = [0, 5]
 
             actual_cols = cols - len(excluded_columns)
             table = cursor.insertTable(rows, actual_cols, table_format)
@@ -856,6 +884,9 @@ class WeaponAssetWindow(QDialog):
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(file_path)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Millimeter)
+                printer.setPageOrientation(QPageLayout.Landscape)
                 document.print_(printer)
                 QMessageBox.information(self, self.tr("저장 완료"), self.tr("PDF가 저장되었습니다: {}").format(file_path))
 

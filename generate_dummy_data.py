@@ -8,10 +8,10 @@ cities = {
     "광주": "Gwangju", "울산": "Ulsan", "세종": "Sejong", "수원": "Suwon", "창원": "Changwon"}
 
 # 군 단위 한영 매칭
-units = {"지상군": "Ground Forces", "해군": "Navy", "공군": "Air Force", "기타": "Other"}
+units = {"지상군": "Ground Force", "해군": "Navy", "공군": "Air Force", "기타": "Other"}
 
-engagement_effectiveness = {None : None, "1단계: 원격발사대":"Phase 1: Remote Launcher", "2단계: 단층방어" : "Phase 2: Single Layered Defense",
-                            "3단계: 중첩방어" : "Phase 3: Overlapping layered Defense", "4단계: 다층방어": "Phase 4: Multi-layered Defense"}
+engagement_effectiveness = {None : None, "1단계: 원격발사대":"Level 1: Remote Launcher", "2단계: 단층방어" : "Level 2: Single-Layered Defense",
+                            "3단계: 중첩방어" : "Level 3: Overlapping layered Defense", "4단계: 다층방어": "Level 4: Multi-layered Defense"}
 
 bmd_priority = {None:None, "지휘통제시설":"C2", "비행단" : "Fighter Group",
                 "군수기지" : "Logistics Base", "해군기지": "Naval Base",
@@ -89,8 +89,8 @@ def generate_dummy_weapon(db_path):
             weapon_asset_en = f"Defense Missile{weapon_asset_num}"
 
             # 한국 내 좌표 생성
-            lat = random.uniform(33.5, 38.0)
-            lon = random.uniform(126.5, 129.5)
+            lat = random.uniform(34.0, 38.0)
+            lon = random.uniform(127.0, 129.0)
             coordinate = f"N{lat:.5f},E{lon:.5f}"
 
             # MGRS 변환

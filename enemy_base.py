@@ -70,7 +70,7 @@ class EnemyBaseInputDialog(QDialog):
             (self.tr("지역"), self.tr("(영문)")),
             (self.tr("위도"), self.tr("경도")),
             self.tr("군사좌표(MGRS)"),
-            self.tr("무기체계")
+            self.tr("미사일 유형")
         ]
 
         # 필드를 저장할 딕셔너리 초기화
@@ -119,7 +119,7 @@ class EnemyBaseInputDialog(QDialog):
                 if label == self.tr("군사좌표(MGRS)"):
                     input_widget = AutoSpacingLineEdit()
                     input_widget.setPlaceholderText("99A AA 99999 99999")
-                elif label == self.tr("무기체계"):
+                elif label == self.tr("미사일 유형"):
                     self.weapon_system_input = QWidget()
                     weapon_layout = QHBoxLayout(self.weapon_system_input)
                     self.weapon_checkboxes = []
@@ -312,7 +312,7 @@ class EnemyBaseInputDialog(QDialog):
                 else:
                     if label == self.tr("군사좌표(MGRS)"):
                         field.setText(self.enemy_data[4])
-                    elif label == self.tr("무기체계"):
+                    elif label == self.tr("미사일 유형"):
                         stored_weapons = self.enemy_data[5].split(", ")
                         for checkbox in self.weapon_checkboxes:
                             checkbox.setChecked(checkbox.text() in stored_weapons)
@@ -409,7 +409,7 @@ class EnemyBaseWindow(QDialog):
         self.enemy_base_table = MyTableWidget()
         self.enemy_base_table.setColumnCount(6)
         self.enemy_base_table.setHorizontalHeaderLabels(
-            ["", self.tr("기지명"), self.tr("지역"), self.tr("경위도"), self.tr("군사좌표(MGRS"), self.tr("무기체계")])
+            ["", self.tr("기지명"), self.tr("지역"), self.tr("경위도"), self.tr("군사좌표(MGRS)"), self.tr("미사일 유형")])
 
         # 행 번호 숨기기
         # self.enemy_base_table.verticalHeader().setVisible(False)
@@ -527,7 +527,7 @@ class EnemyBaseWindow(QDialog):
         right_layout = QVBoxLayout(right_widget)
 
         # 무기체계 체크박스 그룹
-        weapon_group = QGroupBox(self.tr("무기체계"))
+        weapon_group = QGroupBox(self.tr("미사일 유형"))
         weapon_layout = QHBoxLayout()
         weapon_layout.setContentsMargins(10, 5, 10, 5)  # 여백 조정
         weapon_layout.setSpacing(10)  # 체크박스 간 간격 조정

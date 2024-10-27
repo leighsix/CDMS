@@ -30,7 +30,7 @@ class EnemyBaseMapView(QObject):
             'Scud-B': 'red',
             'Scud-C': 'blue',
             'Nodong': 'green',
-            '다종 미사일': 'purple'
+            'Various Types': 'purple'
         }
 
         for base_name, coord, weapon_system in coordinates_list:
@@ -39,7 +39,7 @@ class EnemyBaseMapView(QObject):
                 lat, lon = self.parse_coordinates(coord)
                 # 무기 시스템에 따른 색상 결정
                 if len(weapon_systems_list) > 1:
-                    color = color_map['다종 미사일']
+                    color = color_map['Various Types']
                 else:
                     color = color_map.get(weapon_systems_list[0], 'gray')  # 알 수 없는 타입은 회색으로 표시
 
@@ -80,7 +80,7 @@ class EnemyBaseMapView(QObject):
             <div id="maplegend" style="
                 position: fixed; 
                 bottom: 50px; 
-                right: 50px; 
+                right: 20px; 
                 width: 150px; 
                 height: auto; 
                 background-color: white; 
@@ -96,7 +96,7 @@ class EnemyBaseMapView(QObject):
                     <span style="color:red;">&#9650;</span> Scud-B<br>
                     <span style="color:blue;">&#9650;</span> Scud-C<br>
                     <span style="color:green;">&#9650;</span> Nodong<br>
-                    <span style="color:purple;">&#9650;</span> 다종 미사일
+                    <span style="color:purple;">&#9650;</span> Various Types
                 </div>
             </div>
         """

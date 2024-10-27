@@ -1,34 +1,34 @@
 [
     [
-        "1순위",
+        "1st Priority",
         "C2",
         "Fighter Group",
         "Naval Base",
         "C2"
     ],
     [
-        "2순위",
+        "2nd Priority",
         "Fighter Group",
-        "Naval Base",
+        "C2",
         "Logistics Base",
         "Naval Base"
     ],
     [
-        "3순위",
+        "3rd Priority",
         "Logistics Base",
         "Logistics Base",
         "C2",
         "Fighter Group"
     ],
     [
-        "4순위",
+        "4th Priority",
         "Naval Base",
-        "C2",
+        "Naval Base",
         "Radar Site",
         "Logistics Base"
     ],
     [
-        "5순위",
+        "5th Priority",
         "Radar Site",
         "Radar Site",
         "Fighter Group",

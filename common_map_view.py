@@ -47,8 +47,9 @@ class CommonCalMapView(QObject):
         critical_assets = self.tr("중요자산")
         assets_classification = self.tr("자산구분")
         legend_html = f"""
-        <div style="position: fixed; top: 40px; right: 40px; z-index:9999; font-size:14px; background-color: white; padding: 10px; border: 1px solid grey;">
-            <h4 style="margin-top: 0;">{assets_classification}</h4>
+            <div style="position: fixed; bottom: 200px; right: 20px;width: auto; height: auto; background-color: white; 
+    border: 2px solid grey; z-index:9999; font-size:14px">
+            <strong>{assets_classification}</strong><br>
             <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
             <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
         </div>
@@ -92,8 +93,6 @@ class CommonCalMapView(QObject):
                 print(self.tr(f"좌표 변환 오류 {coordinate}: {e}"))
                 continue
 
-
-
 class CommonWeaponMapView(QObject):
     def __init__(self, coordinates_list, map_obj, show_defense_radius):
         super().__init__()
@@ -132,7 +131,7 @@ class CommonWeaponMapView(QObject):
         # 범례 생성
         # "무기체계"를 .ts 파일에서 번역될 수 있도록 수정
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 50px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>

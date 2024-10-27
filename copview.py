@@ -294,7 +294,7 @@ class CopViewWindow(QDialog):
         right_layout.addWidget(self.enemy_sites_table)
 
         # 우측 중간 테이블 변경
-        right_layout.addWidget(QLabel(self.tr("무기 자산 목록")))
+        right_layout.addWidget(QLabel(self.tr("방공포대 자산 목록")))
 
         # 필터 추가
         self.weapon_filter_layout = QHBoxLayout()

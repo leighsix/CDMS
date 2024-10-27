@@ -31,7 +31,6 @@ from bcrypt import hashpw, gensalt, checkpw # bcrypt 추가
 import secrets # secrets 모듈 추가
 import re, string
 
-
 class AssetManager(QtWidgets.QMainWindow, QObject):
     def __init__(self, db_path='assets_management.db'):
         super(AssetManager, self).__init__()
@@ -180,7 +179,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             ]),
             (self.tr("미사일 방공포대 관리"), [
                 (self.tr("미사일 방공포대 입력/보기"), self.show_weapon_assets_page),
-                (self.tr("방공무기체계"), self.show_weapon_system_page)
+                (self.tr("방공무기체계 제원"), self.show_weapon_system_page)
             ]),
             (self.tr("적 정보"), [
                 (self.tr("적 미사일 발사기지"), self.show_enemy_base_page),
@@ -289,8 +288,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         center_layout.addWidget(background_label, 1)  # stretch factor 1
 
         # 데이터베이스 요약 정보 (테이블)
-        summary_table = self.create_summary_table()
-        center_layout.addWidget(summary_table)
+        self.summary_table = self.create_summary_table()
+        center_layout.addWidget(self.summary_table)
 
         # 저작권 정보
         copyright_label = QLabel("© 2024 ROK AF LT.COL Jo Yongho and ROK Navy CDR Cho Hyunchel. All rights reserved.")
@@ -353,12 +352,33 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
         return table
 
+    def update_summary_table(self):
+        # 데이터 가져오기
+        cal_assets_count = self.get_count("cal_assets_en")
+        dal_assets_count = self.get_count("dal_assets_priority_en")
+        weapon_assets_count = self.get_count("weapon_assets_en")
+        enemy_bases_count = self.get_count("enemy_bases_en")
+
+        # 데이터 업데이트
+        self.summary_table.setItem(0, 0, QTableWidgetItem(str(cal_assets_count)))
+        self.summary_table.setItem(0, 1, QTableWidgetItem(str(dal_assets_count)))
+        self.summary_table.setItem(0, 2, QTableWidgetItem(str(weapon_assets_count)))
+        self.summary_table.setItem(0, 3, QTableWidgetItem(str(enemy_bases_count)))
+
+        # 테이블 아이템 중앙 정렬
+        for i in range(self.summary_table.rowCount()):
+            for j in range(self.summary_table.columnCount()):
+                item = self.summary_table.item(i, j)
+                if item is not None:
+                    item.setTextAlignment(Qt.AlignCenter)
+
     def get_count(self, table_name):
         self.cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
         return self.cursor.fetchone()[0]
 
     def show_main_page(self):
         self.refresh_database()
+        self.update_summary_table()
         self.stacked_widget.setCurrentWidget(self.main_page)
         self.titleBar.update_title(self.tr("C D M S"), self.tr("CAL/DAL Management System"))
 
@@ -444,9 +464,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def show_simulation_page(self):
         self.refresh_database()
-        # self.simulation_page.refresh()
+        # self.simulation_page.reset_simulation()
         self.stacked_widget.setCurrentWidget(self.simulation_page)
-        # self.simulation_page.load_assets()
         self.titleBar.update_title(self.tr("시뮬레이션"), self.tr("미사일궤적 및 최적배치 산출"))
 
     def create_database(self):
@@ -711,7 +730,7 @@ class FancyTitleBar(QWidget):
         center_layout = QHBoxLayout(center_widget)
         self.title_label = TitleLabel(self.tr("C D M S"), self.tr("CAL/DAL Management System"))
         center_layout.addWidget(self.title_label, 0, Qt.AlignCenter)
-        layout.addWidget(center_widget, 2)
+        layout.addWidget(center_widget, 3)
 
         # 오른쪽 섹터
         right_widget = QWidget()
@@ -759,7 +778,10 @@ class TitleLabel(QWidget):
         self.title = title
         self.subtitle = subtitle
         self.setMinimumHeight(70)
-        self.setMinimumWidth(600)  # 최소 너비 설정
+        self.setMinimumWidth(900)  # 최소 너비 설정
+
+    def sizeHint(self):
+        return QSize(900, 70)  # 기본 크기 힌트를 500에서 800으로 증가
 
     def update_title(self, title, subtitle=None):
         self.title = title
@@ -814,9 +836,6 @@ class TitleLabel(QWidget):
 
             painter.drawText(QPointF(x, y), char)
             x += painter.fontMetrics().width(char)
-
-    def sizeHint(self):
-        return QSize(500, 70)  # 적절한 크기 힌트 제공
 
 class LogoTitleWidget(QWidget):
     def __init__(self, parent=None):
@@ -885,7 +904,8 @@ class RightArea(QGroupBox):
         login_layout = QVBoxLayout(login_info)
 
         # 사용자 정보
-        user_label = QLabel(f"사용자: {self.current_user}")
+        user = self.tr('사용자')
+        user_label = QLabel(f"{user}: {self.current_user}")
         user_label.setFont(QFont("Arial", 12, QFont.Bold))
         login_layout.addWidget(user_label)
 
@@ -893,19 +913,21 @@ class RightArea(QGroupBox):
         time_layout = QVBoxLayout()  # QHBoxLayout에서 QVBoxLayout으로 변경
 
         # 로그인 시간
+        login = self.tr('로그인')
         login_time_layout = QHBoxLayout()
         login_time_icon = QLabel()
         login_time_icon.setPixmap(QPixmap("path/to/clock_icon.png").scaled(16, 16, Qt.KeepAspectRatio))
-        login_time_label = QLabel(self.tr(f"로그인: {self.login_time.strftime('%Y-%m-%d %H:%M:%S')}"))
+        login_time_label = QLabel(f"{login}: {self.login_time.strftime('%Y-%m-%d %H:%M:%S')}")
         login_time_layout.addWidget(login_time_icon)
         login_time_layout.addWidget(login_time_label)
         login_time_layout.addStretch()
 
         # 경과 시간
+        duration = self.tr('경과 시간')
         duration_layout = QHBoxLayout()
         duration_icon = QLabel()
         duration_icon.setPixmap(QPixmap("path/to/timer_icon.png").scaled(16, 16, Qt.KeepAspectRatio))
-        self.duration_label = QLabel(self.tr("경과 시간: 00:00:00"))
+        self.duration_label = QLabel(f"{duration}: 00:00:00")
         duration_layout.addWidget(duration_icon)
         duration_layout.addWidget(self.duration_label)
         duration_layout.addStretch()
@@ -1033,10 +1055,11 @@ class RightArea(QGroupBox):
 
     def update_duration(self):
         # 로그인 경과 시간 계산 및 업데이트
+        duration = self.tr('경과 시간')
         elapsed_time = datetime.now() - self.login_time
         hours, remainder = divmod(elapsed_time.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        self.duration_label.setText(f"경과 시간: {hours:02d}:{minutes:02d}:{seconds:02d}")
+        self.duration_label.setText(f"{duration}: {hours:02d}:{minutes:02d}:{seconds:02d}")
 
     @staticmethod
     def toggle_sub_buttons(widget):

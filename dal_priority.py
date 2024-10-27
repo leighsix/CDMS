@@ -92,7 +92,7 @@ class DalPriorityWindow(QDialog):
         self.engagement_filter = QComboBox()
         self.engagement_filter.addItems(
             [self.tr("전체"), self.tr("1단계: 원격발사대"), self.tr("2단계: 단층방어"), self.tr("3단계: 중첩방어"), self.tr("4단계: 다층방어")])
-        self.engagement_filter.setFixedSize(150, 30)
+        self.engagement_filter.setFixedSize(250, 30)
         self.engagement_filter.setStyleSheet("font: 바른공군체; font-size: 16px;")
         filter_layout.addWidget(engagement_filter_label, 1, 2)
         filter_layout.addWidget(self.engagement_filter, 1, 3)
@@ -361,6 +361,7 @@ class DalPriorityWindow(QDialog):
         self.defense_radius_checkbox.setChecked(False)
         self.defense_radius_checkbox.setChecked(False)
         self.load_assets()  # 테이블 데이터 새로고침
+        self.update_map()
 
     def update_map(self):
         self.map = folium.Map(
@@ -576,7 +577,6 @@ class DalPriorityWindow(QDialog):
         if self.unit_filter == self.tr("전체") or self.bmd_priority_filter == self.tr("전체") or self.engagement_filter == self.tr("전체"):
             self.update_priorities()
 
-
     def update_priorities(self):
         for row in range(self.assets_table.rowCount()):
             priority_item = QTableWidgetItem(str(row + 1))
@@ -740,18 +740,42 @@ class DalPriorityWindow(QDialog):
             document = QTextDocument()
             cursor = QTextCursor(document)
 
+            # CSS 스타일 수정
             document.setDefaultStyleSheet("""
-                    body { font-family: 'Arial', sans-serif; }
-                    h1 { color: black; }
-                    .info { padding: 10px; }
-                    table { border-collapse: collapse; width: 100%; }
-                    td, th { border: 1px solid black; padding: 4px; text-align: center; }
-                """)
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Arial', sans-serif;
+                    width: 100%;
+                    margin: 0 auto;
+                }
+                h1 { 
+                    color: black; 
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .info { padding: 1px; }
+                table { 
+                    border-collapse: collapse; 
+                    width: 90%;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                td, th { 
+                    border: 1px solid black; 
+                    padding: 5px; 
+                    text-align: center;
+                }
+            """)
 
             font = QFont("Arial", 8)
             document.setDefaultFont(font)
 
-            cursor.insertHtml("<h1 align='center'>" + self.tr("CAL 목록") + "</h1>")
+            cursor.insertHtml("<h1 align='center'>" + self.tr("DAL 우선순위") + "</h1>")
+            cursor.insertBlock()
+
+            cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
+            cursor.insertHtml(self.tr("보고서 생성 일시: ") + QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
+            cursor.insertHtml("</div>")
             cursor.insertBlock()
 
             table_format = QTextTableFormat()
@@ -763,7 +787,7 @@ class DalPriorityWindow(QDialog):
             rows = self.assets_table.rowCount() + 1
             cols = self.assets_table.columnCount() - 1
 
-            excluded_columns = [0, 1, 4, 5, 9, 10]
+            excluded_columns = [0, 2, 4, 5, 6, 9, 10, 11, 12, 14, 15, 18, 19, 20]
 
             actual_cols = cols - len(excluded_columns)
             table = cursor.insertTable(rows, actual_cols, table_format)
@@ -797,6 +821,9 @@ class DalPriorityWindow(QDialog):
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(file_path)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Millimeter)
+                printer.setPageOrientation(QPageLayout.Landscape)
                 document.print_(printer)
                 QMessageBox.information(self, self.tr("저장 완료"), self.tr("PDF가 저장되었습니다: {}").format(file_path))
 
@@ -804,10 +831,6 @@ class DalPriorityWindow(QDialog):
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), self.tr("다음 오류가 발생했습니다: {}").format(str(e)))
-
-    def show_message(self, message):
-        """메시지 박스 출력 함수"""
-        QMessageBox.information(self, self.tr("정보"), message)
 
     def print_map(self, *args):  # *args를 추가하여 추가 인자를 무시합니다.
         self.printer = QPrinter(QPrinter.HighResolution)
