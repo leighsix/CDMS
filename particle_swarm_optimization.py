@@ -114,8 +114,9 @@ class MissileDefenseOptimizer:
                     np.random.seed(42 + attempt)  # 재현성을 위한 시드 설정
 
                     def objective_function(x):
-                        if self.optimal_found:  # 최적해를 찾았다면 더 이상의 계산을 하지 않음
-                            return -len(self.trajectories)
+                        if self.optimal_found:
+                            return -float('inf')
+
                         self.current_iteration += 1
                         current_progress = (self.current_iteration + attempt * original_max_iterations) / (
                                     3 * original_max_iterations)
@@ -127,26 +128,26 @@ class MissileDefenseOptimizer:
                         azimuth_indices = (x[num_defense_systems:].astype(int) % 36) * 10
                         positions = grid_positions[position_indices]
 
-                        # 벡터화된 연산을 위해 모든 궤적을 한 번에 처리
                         trajectories = np.array([trajectory['trajectory'] for trajectory in self.trajectories])
-                        total_defended = np.zeros(len(self.trajectories), dtype=bool)
+                        priorities = np.array([float(trajectory['priority']) for trajectory in self.trajectories])
 
-                        # 모든 방어 시스템의 결과를 병렬로 계산
+                        # 각 궤적별 방어 횟수를 추적
+                        defense_counts = np.zeros(len(self.trajectories))
+
                         for pos, az, wa in zip(positions, azimuth_indices, selected_weapon_assets):
-                            current_defense = self.engagement_calculator.check_engagement_possibility_vectorized(pos[0],
-                                                                                                                 pos[1],
-                                                                                                                 wa[4],
-                                                                                                                 trajectories,
-                                                                                                                 az)
-                            total_defended |= current_defense
+                            current_defense = self.engagement_calculator.check_engagement_possibility_vectorized(
+                                pos[0], pos[1], wa[4], trajectories, az)
+                            defense_counts += current_defense.astype(int)
 
-                            # 100% 방어율 달성 시 즉시 종료
-                            if np.all(total_defended):
-                                self.optimal_found = True  # 최적해 발견 시 플래그 설정
-                                return -len(self.trajectories)  # 최소화 문제이므로 가장 낮은 값 반환
+                        # 우선순위 가중치 계산 (priority가 작을수록 큰 가중치 부여)
+                        max_priority = np.max(priorities)
+                        priority_weights = max_priority + 1 - priorities
+                        weighted_defense = np.sum(defense_counts * priority_weights)
 
-                        defended_count = np.sum(total_defended)
-                        return -defended_count  # 최소화 문제이므로 음수 반환
+                        # 모든 궤적이 최소 1번 이상 방어되는지 확인
+                        undefended_penalty = -1000000 * np.sum(defense_counts == 0)
+
+                        return -(weighted_defense + undefended_penalty)
 
                     # 최적화 범위 설정
                     num_defense_systems = len(selected_weapon_assets)

@@ -753,7 +753,8 @@ class MissileDefenseApp(QDialog):
                                 'target_name': target_name,
                                 'target_coordinate': (target_lat, target_lon),
                                 'missile_type': enemy_weapon,
-                                'trajectory': trajectory
+                                'trajectory': trajectory,
+                                'priority' : priority
                             })
 
             self.trajectories = all_trajectories
@@ -789,7 +790,7 @@ class MissileDefenseApp(QDialog):
                                 'weapon_type': weapon_type,
                                 'missile_type': trajectory['missile_type'],
                                 'threat_azimuth': threat_azimuth,
-                                'trajectory': trajectory['trajectory']
+                                'trajectory': trajectory['trajectory'],
                             }
                             self.defense_trajectories.append(defense_result)
 
@@ -824,6 +825,11 @@ class MissileDefenseApp(QDialog):
     def update_map_with_trajectories(self):
         """미사일 궤적 및 방어 궤적을 지도에 표시하는 메서드"""
         try:
+            # 맵 생성 전 이전 객체 정리
+            if hasattr(self, 'map'):
+                del self.map
+            gc.collect()
+
             self.map = folium.Map(
                 location=[self.parent.map_app.loadSettings()['latitude'],
                           self.parent.map_app.loadSettings()['longitude']],
@@ -839,19 +845,19 @@ class MissileDefenseApp(QDialog):
 
             self._add_assets_to_map(self.map)
 
-            BATCH_SIZE = 200
+            BATCH_SIZE = 100  # 배치 크기 감소
+            MAX_TRAJECTORIES = 500  # 최대 궤적 수 감소
+
             if hasattr(self, 'trajectories'):
                 # 전체 데이터 수 제한
-                MAX_TRAJECTORIES = 1000
                 trajectories = self.trajectories[:MAX_TRAJECTORIES] if len(
                     self.trajectories) > MAX_TRAJECTORIES else self.trajectories
                 trajectories_batches = [trajectories[i:i + BATCH_SIZE]
                                         for i in range(0, len(trajectories), BATCH_SIZE)]
                 # 메모리 관리를 위한 가비지 컬렉션 추가
-                import gc
                 gc.collect()
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
                     futures = []
                     for batch in trajectories_batches:
                         future = executor.submit(self._process_trajectory_batch, batch,
@@ -863,6 +869,7 @@ class MissileDefenseApp(QDialog):
             self.map.add_child(trajectory_group)
             self.map.add_child(defense_group)
             folium.LayerControl().add_to(self.map)
+            gc.collect()
 
             data = io.BytesIO()
             self.map.save(data, close_file=False)
@@ -1135,7 +1142,7 @@ class MissileDefenseApp(QDialog):
             self.optimizer = MissileDefenseOptimizer(
                 self.trajectories,
                 self.weapon_systems_info,
-                grid_bounds=((34.0, 38.0), (126.0, 129.5)),
+                grid_bounds=((34.4, 38.0), (126.0, 129.4)),
                 engagement_calculator=self.engagement_calculator
             )
 
@@ -1199,7 +1206,7 @@ class MissileDefenseApp(QDialog):
             )
 
             for i, (base_name, _, enemy_weapon) in enumerate(selected_enemy_weapons):
-                for j, (target_name, _, _, _) in enumerate(selected_assets):
+                for j, (target_name, _, _, priority) in enumerate(selected_assets):
                     distance = distances[i, j]
                     missile_types = self.determine_missile_type(distance, base_name)
 
@@ -1216,7 +1223,8 @@ class MissileDefenseApp(QDialog):
                                 'target_name': target_name,
                                 'target_coordinate': tuple(target_positions[j]),
                                 'missile_type': enemy_weapon,
-                                'trajectory': trajectory
+                                'trajectory': trajectory,
+                                'priority': priority
                             }
                             self.trajectories.append(result)
 
@@ -1247,7 +1255,7 @@ class MissileDefenseApp(QDialog):
                                     'weapon_type': optimal_location_dic['weapon_type'],
                                     'missile_type': trajectory_info['missile_type'],
                                     'threat_azimuth': optimal_location_dic['threat_azimuth'],
-                                    'trajectory': trajectory_info['trajectory']
+                                    'trajectory': trajectory_info['trajectory'],
                                 }
                                 self.defense_trajectories.append(defense_result)
 
@@ -1328,10 +1336,12 @@ class MissileDefenseApp(QDialog):
             # 격자 추가
             self._add_grid_to_map(grid_group)
 
-            BATCH_SIZE = 200
+            BATCH_SIZE = 100
+            MAX_TRAJECTORIES = 500
+
             if hasattr(self, 'trajectories'):
                 # 전체 데이터 수 제한
-                MAX_TRAJECTORIES = 1000
+
                 trajectories = self.trajectories[:MAX_TRAJECTORIES] if len(
                     self.trajectories) > MAX_TRAJECTORIES else self.trajectories
 
@@ -1339,10 +1349,9 @@ class MissileDefenseApp(QDialog):
                                         for i in range(0, len(trajectories), BATCH_SIZE)]
 
                 # 메모리 관리를 위한 가비지 컬렉션 추가
-                import gc
                 gc.collect()
 
-                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
                     futures = []
                     for batch in trajectories_batches:
                         future = executor.submit(self._process_trajectory_batch, batch,
@@ -1358,6 +1367,7 @@ class MissileDefenseApp(QDialog):
             self.map.add_child(trajectory_group)
             self.map.add_child(defense_group)
             folium.LayerControl().add_to(self.map)
+            gc.collect()
 
             # 웹뷰 업데이트
             data = io.BytesIO()
@@ -1398,8 +1408,8 @@ class MissileDefenseApp(QDialog):
         coordinates = self.tr('좌표')
         weapon_systems = self.tr("무기체계")
 
-        for defense_trajectory in self.defense_trajectories:
-            optimal_lat, optimal_lon = defense_trajectory['defense_coordinate']
+        for optimal_defense_trajectory in self.optimized_locations:
+            optimal_lat, optimal_lon = optimal_defense_trajectory['defense_coordinate']
 
             icon = folium.DivIcon(html=f"""
                 <div style="
@@ -1423,9 +1433,9 @@ class MissileDefenseApp(QDialog):
                 location=[float(optimal_lat), float(optimal_lon)],
                 icon=icon,
                 popup=folium.Popup(f"""
-                    <b>{optimal_location}:</b> {defense_trajectory['defense_name']}<br>
+                    <b>{optimal_location}:</b> {optimal_defense_trajectory['defense_name']}<br>
                     <b>{coordinates}:</b> {float(optimal_lat):.5f}, {float(optimal_lon):.5f}<br>
-                    <b>{weapon_systems}:</b> {defense_trajectory['weapon_type']}
+                    <b>{weapon_systems}:</b> {optimal_defense_trajectory['weapon_type']}
                 """, max_width=200)
             ).add_to(defense_group)
 
