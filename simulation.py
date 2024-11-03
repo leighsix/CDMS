@@ -1,48 +1,36 @@
 import sys
 import sqlite3
 import csv, json, re, os
-import random
-import math
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget, QFileDialog, QMessageBox, QHBoxLayout, QSplitter, QComboBox, QLineEdit, QTableWidget, QPushButton, QLabel,
                              QGroupBox, QCheckBox, QHeaderView, QDialog, QTableWidgetItem)
 import matplotlib.pyplot as plt
-from folium import PolyLine
-
 from simulation_map_view import SimulationCalMapView, SimulationWeaponMapView, SimulationEnemyBaseMapView, SimulationEnemyWeaponMapView
 import io
 import pandas as pd
-from scipy.optimize import linprog
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox
 import folium
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
-from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect
+from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir, QRect, QPoint
 from PyQt5 import QtCore
-from PyQt5.QtGui import QPageLayout, QPageSize
 from PyQt5.QtCore import QUrl, QSize, QTimer, QTemporaryFile, QDir, QEventLoop, QDateTime
 from setting import MapApp
 import numpy as np
-import math
-from geopy import distance
-from geopy.point import Point
-from simplification.cutil import simplify_coords
+import math, logging
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
+from PyQt5.QtGui import QTextDocument, QTextCursor, QTextTableFormat, QTextFrameFormat, QTextLength, QTextCharFormat, QFont, QTextBlockFormat
+from PyQt5.QtGui import QPagedPaintDevice, QPainter, QImage, QPageSize, QPageLayout
+from PyQt5.QtCore import QUrl, QTemporaryFile, QSize, QTimer, QMarginsF, QThread
 from missile_trajectory_calculator import MissileTrajectoryCalculator
-from particle_swarm_optimization import MissileDefenseOptimizer, OptimizationThread
+from particle_swarm_optimization import MissileDefenseOptimizer, OptimizationWorker
 from engagement_possiblity_calculator import EngagementPossibilityCalculator
-from mpl_toolkits.mplot3d import Axes3D
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import cartopy.crs as ccrs
-from cartopy.feature import LAND, OCEAN
-from pyswarm import pso
 import concurrent.futures
-import numba
-import asyncio
 import gc
-from folium.plugins import MarkerCluster
 
 
 class MissileDefenseApp(QDialog):
@@ -154,38 +142,49 @@ class MissileDefenseApp(QDialog):
             if conn:
                 conn.close()
 
-        if self.cal_df_ko.empty and self.dal_df_ko.empty and self.enemy_bases_df_ko.empty and self.weapon_assets_df_ko:
+        # 수정된 조건문
+        if (self.cal_df_ko.empty and self.dal_df_ko.empty and
+                self.enemy_bases_df_ko.empty and self.weapon_assets_df_ko.empty):
             print("경고: 데이터를 불러오지 못했습니다. 빈 DataFrame을 사용합니다.")
 
     def refresh(self):
-        # 데이터프레임 다시 로드
-        self.load_dataframes()
+        self.trajectories = []
+        self.defense_trajectories = []
+        self.engagement_zones = {}
+        self.optimized_locations = []
+
+        # 테이블 초기화
+        self.assets_table.uncheckAllRows()
+        self.enemy_sites_table.uncheckAllRows()
+        self.weapon_assets_table.uncheckAllRows()
 
         # 필터 초기화
-        # 테이블의 모든 체크박스 해제
-        self.assets_table.uncheckAllRows()
-        self.unit_filter.setCurrentIndex(0)  # '전체'로 설정
-        self.search_filter.clear()  # 검색창 초기화
+        self.unit_filter.setCurrentIndex(0)
+        self.missile_type_combo.setCurrentIndex(0)
+        self.weapon_type_combo.setCurrentIndex(0)
+        self.search_filter.clear()
+        self.search_enemy_filter.clear()
+        self.search_weapon_filter.clear()
 
-        # 테이블의 모든 체크박스 해제
-        self.enemy_sites_table.uncheckAllRows()
-        self.missile_type_combo.setCurrentIndex(0)  # '전체'로 설정
-        self.search_enemy_filter.clear()  # 검색창 초기화
+        # 체크박스 초기화
         self.threat_radius_checkbox.setChecked(False)
+        self.defense_radius_checkbox.setChecked(False)
+        self.dal_select_checkbox.setChecked(False)
 
-        # 테이블의 모든 체크박스 해제
-        self.defense_assets_table.uncheckAllRows()
-        self.weapon_systems_combo.setCurrentIndex(0)  # '전체'로 설정
-        self.search_defense_filter.clear()  # 검색창 초기화
-        self.defense_radius_check.setChecked(False)
+        # 결과 테이블 초기화
+        self.result_table.clear()
+        self.result_table.setRowCount(0)
+        self.result_table.setColumnCount(0)
 
-        # 테이블 데이터 다시 로드
-        self.load_cal_assets()
+        # 데이터 다시 로드
+        self.load_dataframes()
+        self.load_assets()
         self.load_enemy_missile_sites()
         self.load_weapon_assets()
 
-        # 지도 업데이트
+        # 지도 및 그래프 초기화
         self.update_map_with_trajectories()
+        self.update_3d_graph()
 
     def initUI(self):
         """UI 초기화 메서드"""
@@ -327,14 +326,14 @@ class MissileDefenseApp(QDialog):
         bottom_right_layout = QVBoxLayout(bottom_right_widget)
 
         # 우측 중간 테이블 변경
-        bottom_right_layout.addWidget(QLabel(self.tr("방공포대 자산 목록")))
+        bottom_right_layout.addWidget(QLabel(self.tr("방어포대 자산 목록")))
 
         # 필터 추가
         self.weapon_filter_layout = QHBoxLayout()
         # 무기 자산 테이블 검색 기능
         self.weapon_filter_layout = QHBoxLayout()
         self.search_weapon_filter = QLineEdit()
-        self.search_weapon_filter.setPlaceholderText(self.tr("방공포대 검색"))
+        self.search_weapon_filter.setPlaceholderText(self.tr("방어포대 검색"))
         self.search_weapon_button = QPushButton(self.tr("찾기"))
         self.search_weapon_button.clicked.connect(self.load_weapon_assets)
         self.weapon_filter_layout.addWidget(self.search_weapon_filter)
@@ -406,8 +405,8 @@ class MissileDefenseApp(QDialog):
         self.analyze_trajectories_button.clicked.connect(self.run_trajectory_analysis)
         simulate_button_layout.addWidget(self.analyze_trajectories_button)
 
-        # 최적 방공포대 위치 산출 버튼
-        self.optimize_locations_button = QPushButton(self.tr("최적 방공포대 위치산출"))
+        # 최적 방어포대 위치 산출 버튼
+        self.optimize_locations_button = QPushButton(self.tr("최적 방어포대 위치산출"))
         self.optimize_locations_button.setFont(QFont("강한공군체", 12, QFont.Bold))
         self.optimize_locations_button.setFixedSize(200, 30)
         self.optimize_locations_button.setStyleSheet("QPushButton { text-align: center; }")
@@ -457,12 +456,29 @@ class MissileDefenseApp(QDialog):
         # 테이블 위젯
         center_bottom_right_widget = QWidget()
         center_bottom_right_layout = QVBoxLayout(center_bottom_right_widget)
+
+        # 결과 테이블 위에 출력 버튼 추가
+        result_table_layout = QVBoxLayout()
+        result_table_layout.setSpacing(0)
+        result_table_layout.setContentsMargins(0, 0, 0, 0)
+
+        print_button_layout = QHBoxLayout()
+        print_button_layout.setAlignment(Qt.AlignRight)
+        self.print_button = QPushButton(self.tr("결과 테이블 출력"), self)
+        self.print_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+        self.print_button.setFixedSize(150, 30)
+        self.print_button.setStyleSheet("QPushButton { text-align: center; }")
+        self.print_button.clicked.connect(self.print_result_table)
+        print_button_layout.addWidget(self.print_button)
+
         self.result_table = QTableWidget()
         self.result_table.setRowCount(0)
         self.result_table.setColumnCount(0)
-        center_bottom_right_layout.addWidget(self.result_table)
-        center_bottom_right_layout.setSpacing(0)
-        center_bottom_right_layout.setContentsMargins(0, 0, 0, 0)
+
+        result_table_layout.addLayout(print_button_layout)
+        result_table_layout.addWidget(self.result_table)
+
+        center_bottom_right_layout.addLayout(result_table_layout)
 
         # 3D 그래프와 테이블을 수평 레이아웃에 추가
         center_bottom_layout.addWidget(center_bottom_left_widget)
@@ -681,6 +697,7 @@ class MissileDefenseApp(QDialog):
         try:
             # 진행 상태 다이얼로그 생성
             progress = QProgressDialog(self.tr("미사일 궤적 분석 중..."), None, 0, 100, self)
+            progress.setWindowTitle(self.tr("미사일 궤도 분석"))
             progress.setWindowModality(Qt.WindowModal)
             progress.setAutoClose(True)
             progress.setMinimumDuration(0)
@@ -838,8 +855,6 @@ class MissileDefenseApp(QDialog):
                 prefer_canvas=True
             )
 
-            # trajectory_group = MarkerCluster(name="Trajectories", show=True).add_to(self.map)
-            # defense_group = MarkerCluster(name="Defense", show=True).add_to(self.map)
             trajectory_group = folium.FeatureGroup(name="Trajectories", show=True)
             defense_group = folium.FeatureGroup(name="Defense", show=True)
 
@@ -944,7 +959,6 @@ class MissileDefenseApp(QDialog):
         simplified_points.append(points[-1])
 
         return simplified_points
-
 
     @staticmethod
     def _calculate_distance(point1, point2):
@@ -1096,7 +1110,7 @@ class MissileDefenseApp(QDialog):
 
         self.canvas.draw()
 
-    def _simplify_trajectory_for_3d(self, points, tolerance=0.5):
+    def _simplify_trajectory_for_3d(self, points, tolerance=0.3):
         """궤적을 가속화하기 위해 점을 단순화하는 메서드"""
         if len(points) <= 2:  # 최소 두 개의 점을 가져야 함
             return points
@@ -1133,131 +1147,353 @@ class MissileDefenseApp(QDialog):
 
     def run_location_optimization(self):
         try:
+            # optimization_thread가 실제로 실행 중인지 확인
+            if (hasattr(self, 'optimization_thread') and self.optimization_thread.isRunning() and
+                    hasattr(self,'optimization_worker') and self.optimization_worker.is_running):
+                return
+
+            self.optimized_locations = []
+            self.trajectories = []
+            self.defense_trajectories = []
             self.calculate_trajectories_for_optimization()
             selected_weapon_assets = self.get_selected_weapon_assets()
 
             if not selected_weapon_assets:
-                raise ValueError("선택된 방어 자산이 없습니다.")
+                raise ValueError(self.tr("선택된 방어 자산이 없습니다."))
 
             self.optimizer = MissileDefenseOptimizer(
                 self.trajectories,
                 self.weapon_systems_info,
-                grid_bounds=((34.4, 38.0), (126.0, 129.4)),
+                grid_bounds=(
+                    (self.parent.map_app.loadSettings()['lat_min'], self.parent.map_app.loadSettings()['lat_max']),
+                    (self.parent.map_app.loadSettings()['lon_min'], self.parent.map_app.loadSettings()['lon_max'])),
                 engagement_calculator=self.engagement_calculator
             )
 
-            progress_dialog = QProgressDialog(self.tr("최적화 중..."), self.tr("취소"), 0, 100, self)
-            progress_dialog.setWindowTitle(self.tr("최적화 진행 상황"))
-            progress_dialog.setWindowModality(Qt.WindowModal)
-            progress_dialog.canceled.connect(self.cancel_optimization)  # 취소 시그널 연결
-            progress_dialog.show()
+            # 기존 스레드/워커 정리
+            if hasattr(self, 'optimization_worker'):
+                self.optimization_worker.stop()
+                self.optimization_worker.deleteLater()
+            if hasattr(self, 'optimization_thread'):
+                self.optimization_thread.quit()
+                self.optimization_thread.wait()
+                self.optimization_thread.deleteLater()
 
-            self.optimization_thread = OptimizationThread(self.optimizer, selected_weapon_assets)
-            self.optimization_thread.progress_updated.connect(progress_dialog.setValue)
-            self.optimization_thread.optimization_complete.connect(progress_dialog.close)
-            self.optimization_thread.optimization_complete.connect(self.handle_optimization_complete)
-            self.optimization_thread.error_occurred.connect(progress_dialog.close)
-            self.optimization_thread.error_occurred.connect(self.handle_optimization_error)
+            # 새 스레드/워커 생성
+            self.optimization_thread = QThread()
+            self.optimization_worker = OptimizationWorker(
+                self.optimizer,
+                selected_weapon_assets
+            )
+            self.optimization_worker._is_running = True
+
+            # 프로그레스 다이얼로그 설정 부분만 수정
+            self.progress_dialog = QDialog(self)
+            self.progress_dialog.setWindowTitle(self.tr("최적화 진행 상황"))
+            self.progress_dialog.setWindowModality(Qt.WindowModal)
+
+            layout = QVBoxLayout()
+
+            # 전체 진행률 표시
+            total_label = QLabel(self.tr("현재 시도 진행률:"))
+            self.total_progress_bar = QProgressBar()
+            self.total_progress_bar.setRange(0, 100)
+
+            # 현재 반복 진행률 표시
+            iteration_label = QLabel(self.tr("전체 진행률:"))
+            self.iteration_progress_bar = QProgressBar()
+            self.iteration_progress_bar.setRange(0, 100)
+
+            # 취소 버튼
+            cancel_button = QPushButton(self.tr("취소"))
+            cancel_button.setFont(QFont("강한공군체", 12, QFont.Bold))
+            cancel_button.setFixedSize(100, 30)
+            cancel_button.setStyleSheet("QPushButton { text-align: center; }")
+            cancel_button.clicked.connect(self.cancel_optimization)
+
+            layout.addWidget(total_label)
+            layout.addWidget(self.total_progress_bar)
+            layout.addWidget(iteration_label)
+            layout.addWidget(self.iteration_progress_bar)
+            layout.addWidget(cancel_button)
+
+            self.progress_dialog.setLayout(layout)
+
+
+            # run_location_optimization 메서드 내의 시그널 연결 부분을 다음과 같이 수정
+            # 워커를 스레드로 이동하기 전에 시그널 연결
+            self.optimization_worker.finished.connect(self._on_optimization_complete)
+            self.optimization_worker.error.connect(self._on_optimization_error)
+            self.optimization_worker.progress.connect(self._update_total_progress)
+            self.optimization_worker.iteration_progress.connect(self._update_iteration_progress)
+            self.optimization_worker.moveToThread(self.optimization_thread)
+            self.optimization_thread.started.connect(self.optimization_worker.run)
+            self.optimization_thread.finished.connect(self.cleanup_optimization)
+
+            self.progress_dialog.show()
             self.optimization_thread.start()
 
-        except ValueError as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적 방공포대 위치 및 위협방위 산출 오류: {str(e)}"))
+        except Exception as e:
+            if hasattr(self, 'progress_dialog'):
+                self.progress_dialog.close()
+            QMessageBox.critical(self, self.tr("오류"),
+                                 self.tr(f"최적화 실행 중 오류 발생: {str(e)}"))
+
+    def _update_total_progress(self, progress):
+        if hasattr(self, 'progress_dialog') and self.progress_dialog.isVisible():
+            progress = min(progress, 100)
+            self.total_progress_bar.setValue(progress)
+
+    def _update_iteration_progress(self, attempt, progress):
+        if hasattr(self, 'progress_dialog') and self.progress_dialog.isVisible():
+            self.iteration_progress_bar.setValue(progress//10)
+
+    def _on_optimization_complete(self, optimized_locations):
+        try:
+            # 결과 처리를 먼저 수행
+            self.handle_optimization_complete(optimized_locations)
+
+            if hasattr(self, 'progress_dialog') and self.progress_dialog.isVisible():
+                self.progress_dialog.close()
+
+            # 최적화 관련 객체들 정리
+            if hasattr(self, 'optimization_worker'):
+                self.optimization_worker.stop()
+                self.optimization_worker._is_running = False
+                self.optimization_worker.moveToThread(QApplication.instance().thread())
+
+            if hasattr(self, 'optimization_thread'):
+                self.optimization_thread.quit()
+                if not self.optimization_thread.wait(5000):  # 5초 타임아웃
+                    self.optimization_thread.terminate()
+                    self.optimization_thread.wait()
+
+            # 객체 삭제 전에 참조 저장
+            worker = self.optimization_worker if hasattr(self, 'optimization_worker') else None
+            thread = self.optimization_thread if hasattr(self, 'optimization_thread') else None
+
+            # 참조 제거
+            if hasattr(self, 'optimization_worker'):
+                delattr(self, 'optimization_worker')
+            if hasattr(self, 'optimization_thread'):
+                delattr(self, 'optimization_thread')
+
+            # 객체 삭제
+            if worker:
+                worker.deleteLater()
+            if thread:
+                thread.deleteLater()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"),
+                                 self.tr(f"최적화 완료 처리 중 오류 발생: {str(e)}"))
+
+    def cleanup_optimization(self):
+        try:
+            if hasattr(self, 'progress_dialog') and self.progress_dialog.isVisible():
+                self.progress_dialog.close()
+
+            if hasattr(self, 'optimization_worker'):
+                self.optimization_worker.stop()
+                self.optimization_worker._is_running = False
+                self.optimization_worker.moveToThread(QApplication.instance().thread())
+
+            if hasattr(self, 'optimization_thread'):
+                self.optimization_thread.quit()
+                if not self.optimization_thread.wait(5000):
+                    self.optimization_thread.terminate()
+                    self.optimization_thread.wait()
+
+            # 객체 삭제 전에 참조 저장
+            worker = self.optimization_worker if hasattr(self, 'optimization_worker') else None
+            thread = self.optimization_thread if hasattr(self, 'optimization_thread') else None
+
+            # 참조 제거
+            if hasattr(self, 'optimization_worker'):
+                delattr(self, 'optimization_worker')
+            if hasattr(self, 'optimization_thread'):
+                delattr(self, 'optimization_thread')
+
+            # 객체 삭제
+            if worker:
+                worker.deleteLater()
+            if thread:
+                thread.deleteLater()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"),
+                                 self.tr(f"정리 작업 중 오류 발생: {str(e)}"))
+
+    def _on_optimization_error(self, error_message):
+        self.progress_dialog.close()
+        self.handle_optimization_error(error_message)
 
     def cancel_optimization(self):
-        if self.optimization_thread and self.optimization_thread.isRunning():
-            self.optimization_thread.terminate()
-            self.optimization_thread.wait()
-            QMessageBox.information(self, self.tr("최적화 취소"), self.tr("최적화가 사용자에 의해 취소되었습니다."))
-
-    def handle_optimization_complete(self, optimized_locations):
         try:
-            self.optimized_locations = optimized_locations
+            reply = QMessageBox.question(self,
+                                         self.tr("취소 확인"),
+                                         self.tr("최적화를 취소하시겠습니까?"),
+                                         QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                if hasattr(self, 'optimization_worker'):
+                    # 워커 중지 플래그 설정
+                    self.optimization_worker.stop()
+
+                if hasattr(self, 'optimizer'):
+                    # 최적화 프로세스 즉시 중단
+                    self.optimizer.stop_optimization()
+
+                # 스레드 강제 종료
+                self.terminate_thread()
+
+                # 메모리 정리 및 리소스 해제
+                self._cleanup_optimization_resources()
+
+                # UI 업데이트
+                if hasattr(self, 'progress_dialog'):
+                    self.progress_dialog.close()
+
+                QMessageBox.information(self, self.tr("취소 완료"),
+                                        self.tr("최적화가 성공적으로 취소되었습니다."))
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("취소 오류"), self.tr(f"최적화 취소 중 오류가 발생했습니다: {str(e)}"))
+
+        finally:
+            # 상태 초기화 보장
+            self.reset_optimization_state()
+
+    def terminate_thread(self):
+        if hasattr(self, 'optimization_thread'):
+            self.optimization_thread.requestInterruption()
+            self.optimization_thread.quit()
+            self.optimization_thread.terminate()
+            self.optimization_thread.wait()  # 완전한 종료 대기
+
+    def _cleanup_optimization_resources(self):
+        """최적화 관련 리소스 정리를 위한 헬퍼 메서드"""
+        if hasattr(self, 'optimization_worker'):
+            self.optimization_worker.moveToThread(QApplication.instance().thread())
+            self.optimization_worker.deleteLater()
+            delattr(self, 'optimization_worker')
+
+        if hasattr(self, 'optimization_thread'):
+            self.optimization_thread.deleteLater()
+            delattr(self, 'optimization_thread')
+
+    def reset_optimization_state(self):
+        """최적화 상태 초기화를 위한 헬퍼 메서드"""
+        self.optimized_locations = []
+        self.trajectories = []
+        self.defense_trajectories = []
+        self.engagement_zones = {}
+
+    def handle_optimization_complete(self, optimization_result):
+        try:
+            # optimization_result가 튜플이며 첫 번째 요소가 위치 목록, 두 번째 요소가 요약 정보
+            if not isinstance(optimization_result, tuple) or len(optimization_result) != 2:
+                raise ValueError(self.tr("잘못된 최적화 결과 형식입니다"))
+
+            locations, summary = optimization_result
+            self.optimized_locations = locations
+
+            # 관련 데이터 업데이트
             self.calculate_trajectories_for_optimization()
             self.update_result_table_for_optimization()
             self.update_map_with_optimized_locations()
             self.update_3d_graph_for_optimization()
-            QMessageBox.information(self, self.tr("최적화 완료"), self.tr("최적화가 성공적으로 완료되었습니다."))
+
+            # 요약 정보가 있는 경우에만 표시
+            if isinstance(summary, dict):
+                self.show_optimization_summary(summary)
+
+            QMessageBox.information(self, self.tr("최적화 완료"),
+                                    self.tr(f"최적화가 성공적으로 완료되었습니다.\n"
+                                    f"총 방어율: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%"))
+
         except Exception as e:
-            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적화 결과 처리 중 오류 발생: {str(e)}"))
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적화 결과 처리 중 오류가 발생했습니다: {str(e)}"))
 
     def handle_optimization_error(self, error_message):
         QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적화 중 오류 발생: {error_message}"))
 
     def calculate_trajectories_for_optimization(self):
         try:
-            selected_enemy_weapons = self.get_selected_enemy_weapons()
-            selected_assets = self.get_selected_assets()
-            if not selected_enemy_weapons or not selected_assets:
-                return
+            if self.trajectories is not None:
+                selected_enemy_weapons = self.get_selected_enemy_weapons()
+                selected_assets = self.get_selected_assets()
+                if not selected_enemy_weapons or not selected_assets:
+                    return
 
-            self.trajectories = []
-            self.defense_trajectories = []
+                self.trajectories = []
+                self.defense_trajectories = []
 
-            # 모든 미사일 발사 위치와 목표물 위치를 배열로 준비
-            missile_positions = np.array([self.parse_coordinates(weapon[1]) for weapon in selected_enemy_weapons])
-            target_positions = np.array([self.parse_coordinates(asset[1]) for asset in selected_assets])
+                # 모든 미사일 발사 위치와 목표물 위치를 배열로 준비
+                missile_positions = np.array([self.parse_coordinates(weapon[1]) for weapon in selected_enemy_weapons])
+                target_positions = np.array([self.parse_coordinates(asset[1]) for asset in selected_assets])
 
-            # 모든 조합의 거리 계산
-            distances = self.calculate_distance_vectorized(
-                missile_positions[:, 0][:, np.newaxis],
-                missile_positions[:, 1][:, np.newaxis],
-                target_positions[:, 0],
-                target_positions[:, 1]
-            )
+                # 모든 조합의 거리 계산
+                distances = self.calculate_distance_vectorized(
+                    missile_positions[:, 0][:, np.newaxis],
+                    missile_positions[:, 1][:, np.newaxis],
+                    target_positions[:, 0],
+                    target_positions[:, 1]
+                )
 
-            for i, (base_name, _, enemy_weapon) in enumerate(selected_enemy_weapons):
-                for j, (target_name, _, _, priority) in enumerate(selected_assets):
-                    distance = distances[i, j]
-                    missile_types = self.determine_missile_type(distance, base_name)
+                for i, (base_name, _, enemy_weapon) in enumerate(selected_enemy_weapons):
+                    for j, (target_name, _, _, priority) in enumerate(selected_assets):
+                        distance = distances[i, j]
+                        missile_types = self.determine_missile_type(distance, base_name)
 
-                    if missile_types and enemy_weapon in missile_types:
-                        trajectory = self.calculate_trajectory(
-                            tuple(missile_positions[i]),
-                            tuple(target_positions[j]),
-                            enemy_weapon
-                        )
-                        if trajectory:
-                            result = {
-                                'base_name': base_name,
-                                'base_coordinate': tuple(missile_positions[i]),
-                                'target_name': target_name,
-                                'target_coordinate': tuple(target_positions[j]),
-                                'missile_type': enemy_weapon,
-                                'trajectory': trajectory,
-                                'priority': priority
-                            }
-                            self.trajectories.append(result)
-
-                if self.optimized_locations:
-                    defense_positions = np.array([loc['defense_coordinate'] for loc in self.optimized_locations])
-                    weapon_types = [loc['weapon_type'] for loc in self.optimized_locations]
-                    threat_azimuths = np.array([int(loc['threat_azimuth']) for loc in self.optimized_locations])
-
-                    trajectories_array = np.array([t['trajectory'] for t in self.trajectories])
-
-                    for i, optimal_location_dic in enumerate(self.optimized_locations):
-                        engagement_results = self.engagement_calculator.check_engagement_possibility_vectorized(
-                            defense_positions[i][0], defense_positions[i][1],
-                            weapon_types[i], trajectories_array, threat_azimuths[i]
-                        )
-
-                        # NumPy 배열을 개별 boolean 값으로 처리
-                        for j, engagement_possible in enumerate(engagement_results):
-                            if engagement_possible.item():  # .item()을 사용하여 스칼라 값으로 변환
-                                trajectory_info = self.trajectories[j]
-                                defense_result = {
-                                    'base_name': trajectory_info['base_name'],
-                                    'base_coordinate': trajectory_info['base_coordinate'],
-                                    'target_name': trajectory_info['target_name'],
-                                    'target_coordinate': trajectory_info['target_coordinate'],
-                                    'defense_name': optimal_location_dic['defense_name'],
-                                    'defense_coordinate': optimal_location_dic['defense_coordinate'],
-                                    'weapon_type': optimal_location_dic['weapon_type'],
-                                    'missile_type': trajectory_info['missile_type'],
-                                    'threat_azimuth': optimal_location_dic['threat_azimuth'],
-                                    'trajectory': trajectory_info['trajectory'],
+                        if missile_types and enemy_weapon in missile_types:
+                            trajectory = self.calculate_trajectory(
+                                tuple(missile_positions[i]),
+                                tuple(target_positions[j]),
+                                enemy_weapon
+                            )
+                            if trajectory:
+                                result = {
+                                    'base_name': base_name,
+                                    'base_coordinate': tuple(missile_positions[i]),
+                                    'target_name': target_name,
+                                    'target_coordinate': tuple(target_positions[j]),
+                                    'missile_type': enemy_weapon,
+                                    'trajectory': trajectory,
+                                    'priority': priority
                                 }
-                                self.defense_trajectories.append(defense_result)
+                                self.trajectories.append(result)
+
+                else:
+                    if self.optimized_locations:
+                        defense_positions = np.array([loc['defense_coordinate'] for loc in self.optimized_locations])
+                        weapon_types = [loc['weapon_type'] for loc in self.optimized_locations]
+                        threat_azimuths = np.array([int(loc['threat_azimuth']) for loc in self.optimized_locations])
+
+                        trajectories_array = np.array([t['trajectory'] for t in self.trajectories])
+
+                        for i, optimal_location_dic in enumerate(self.optimized_locations):
+                            engagement_results = self.engagement_calculator.check_engagement_possibility_vectorized(
+                                defense_positions[i][0], defense_positions[i][1],
+                                weapon_types[i], trajectories_array, threat_azimuths[i]
+                            )
+
+                            # NumPy 배열을 개별 boolean 값으로 처리
+                            for j, engagement_possible in enumerate(engagement_results):
+                                if engagement_possible.item():  # .item()을 사용하여 스칼라 값으로 변환
+                                    trajectory_info = self.trajectories[j]
+                                    defense_result = {
+                                        'base_name': trajectory_info['base_name'],
+                                        'base_coordinate': trajectory_info['base_coordinate'],
+                                        'target_name': trajectory_info['target_name'],
+                                        'target_coordinate': trajectory_info['target_coordinate'],
+                                        'defense_name': optimal_location_dic['defense_name'],
+                                        'defense_coordinate': optimal_location_dic['defense_coordinate'],
+                                        'weapon_type': optimal_location_dic['weapon_type'],
+                                        'missile_type': trajectory_info['missile_type'],
+                                        'threat_azimuth': optimal_location_dic['threat_azimuth'],
+                                        'trajectory': trajectory_info['trajectory'],
+                                    }
+                                    self.defense_trajectories.append(defense_result)
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("에러"), self.tr(f"궤적 계산 중 오류 발생: {str(e)}"))
@@ -1265,30 +1501,35 @@ class MissileDefenseApp(QDialog):
     def update_result_table_for_optimization(self):
         self.result_table.clear()
         self.result_table.setRowCount(0)
-        self.result_table.setColumnCount(7)
+        self.result_table.setColumnCount(6)  # 컬럼 수를 6개로 변경
         self.result_table.setHorizontalHeaderLabels([
             self.tr("최적 위치명"), self.tr("최적 위치 좌표"), self.tr("무기체계"), self.tr("위협 방위각"),
-            self.tr("방어 가능 자산"), self.tr("미사일 유형"), self.tr("방어율")
+            self.tr("방어 가능 자산(미사일 유형)"), self.tr("방어율")
         ])
+
         for optimal_location in self.optimized_locations:
             row = self.result_table.rowCount()
             self.result_table.insertRow(row)
+
+            # 방어 가능 자산과 미사일 유형을 결합
+            defense_assets_missiles = []
+            for dt in self.defense_trajectories:
+                if dt['defense_name'] == optimal_location['defense_name']:
+                    defense_assets_missiles.append(f"{dt['target_name']}({dt['base_name']}, {dt['missile_type']})")
+
             for col, value in enumerate([
                 str(optimal_location['defense_name']),
                 f"{optimal_location['defense_coordinate'][0]:.5f}, {optimal_location['defense_coordinate'][1]:.5f}",
                 optimal_location['weapon_type'],
                 f"{optimal_location['threat_azimuth']}",
-                ', '.join(
-                    defense_trajectory_dic['target_name'] for defense_trajectory_dic in self.defense_trajectories if
-                    defense_trajectory_dic['defense_name'] == optimal_location['defense_name']),
-                ', '.join(
-                    defense_trajectory_dic['missile_type'] for defense_trajectory_dic in self.defense_trajectories if
-                    defense_trajectory_dic['defense_name'] == optimal_location['defense_name']),
+                '\n'.join(defense_assets_missiles),  # 줄바꿈으로 표시
                 f"{optimal_location['defense_rate']:.2f}%"
             ]):
                 item = QTableWidgetItem(value)
                 item.setTextAlignment(Qt.AlignCenter)
                 self.result_table.setItem(row, col, item)
+                if col == 4:  # 방어 가능 자산 컬럼의 경우
+                    self.result_table.verticalHeader().setSectionResizeMode(row, QHeaderView.ResizeToContents)
 
         # 총 방어율 계산 및 추가
         total_trajectories = len(self.trajectories)
@@ -1305,7 +1546,7 @@ class MissileDefenseApp(QDialog):
 
         row = self.result_table.rowCount()
         self.result_table.insertRow(row)
-        for col, value in enumerate([self.tr("총 방어율"), "", "", "", "", "", f"{defense_rate:.2f}%"]):
+        for col, value in enumerate([self.tr("총 방어율"), "", "", "", "", f"{defense_rate:.2f}%"]):
             if value:
                 item = QTableWidgetItem(value)
                 item.setTextAlignment(Qt.AlignCenter)
@@ -1522,6 +1763,25 @@ class MissileDefenseApp(QDialog):
 
         self.canvas.draw()
 
+    def show_optimization_summary(self, summary):
+        try:
+            msg = self.tr(f"""최적화 결과 요약:
+    - 총 {summary.get('attempts', 0)}회 최적화 시도 수행
+    - {'최적화된 위치가 더 우수함' if summary.get('is_improved', False) else '최초 위치가 더 우수하여 유지'}
+
+    최종 선택된 위치의 점수:
+    - 우선순위 가점: {summary.get('best_scores', {}).get('priority_score', 0):.0f}점
+    - 방어율 가점: {summary.get('best_scores', {}).get('defense_rate_score', 0):.0f}점
+    - 최소방어율 페널티: {summary.get('best_scores', {}).get('min_defense_penalty', 0):.0f}점
+    - 방어범위 페널티: {summary.get('best_scores', {}).get('coverage_penalty', 0):.0f}점
+    - 중복방어 페널티: {summary.get('best_scores', {}).get('overlap_penalty', 0):.0f}점
+    - 총 방어율: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%
+    - 최종 점수: {summary.get('best_scores', {}).get('total_score', 0):.0f}점
+    """)
+            QMessageBox.information(None, self.tr("최적화 결과 요약"), msg)
+        except Exception as e:
+            QMessageBox.critical(None, self.tr("오류"), self.tr(f"결과 요약 표시 중 오류 발생: {str(e)}"))
+
     def get_selected_assets(self):
         selected_assets = []
         asset_info_ko = pd.DataFrame()
@@ -1663,7 +1923,7 @@ class MissileDefenseApp(QDialog):
         self.preview = QPrintPreviewDialog(self.printer, self)
         self.preview.setMinimumSize(1000, 800)
         self.preview.paintRequested.connect(self.handle_print_requested)
-        self.preview.finished.connect(self.print_finished)
+        self.preview.finished.connect(self.print_map_finished)
         self.preview.exec_()
 
     def handle_print_requested(self, printer):
@@ -1703,11 +1963,107 @@ class MissileDefenseApp(QDialog):
         else:
             self.print_success = True
 
-    def print_finished(self, result):
+    def print_map_finished(self, result):
         if self.print_success:
             QMessageBox.information(self, self.tr("인쇄 완료"), self.tr("지도가 성공적으로 출력되었습니다."))
         else:
             QMessageBox.warning(self, self.tr("인쇄 실패"), self.tr("지도 출력 중 오류가 발생했습니다."))
+
+    def print_result_table(self):
+        try:
+            document = QTextDocument()
+            cursor = QTextCursor(document)
+
+            # CSS 스타일 수정
+            document.setDefaultStyleSheet("""
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Arial', sans-serif;
+                    width: 100%;
+                    margin: 0 auto;
+                }
+                h1 { 
+                    color: black; 
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .info { padding: 1px; }
+                table { 
+                    border-collapse: collapse; 
+                    width: 90%;
+                    margin: 0 auto;
+                    text-align: center;
+                }
+                td, th { 
+                    border: 1px solid black; 
+                    padding: 5px; 
+                    text-align: center;
+                }
+            """)
+
+            font = QFont("Arial", 8)
+            document.setDefaultFont(font)
+
+            if self.result_table.columnCount() == 3:
+                cursor.insertHtml("<h1 align='center'>" + self.tr("미사일 궤적 분석 결과") + "</h1>")
+            else:
+                cursor.insertHtml("<h1 align='center'>" + self.tr("최적 방어포대 위치 및 위협 방위각") + "</h1>")
+            cursor.insertBlock()
+
+            cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
+            cursor.insertHtml(self.tr("보고서 생성 일시: ") + QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss"))
+            cursor.insertHtml("</div>")
+            cursor.insertBlock()
+
+            table_format = QTextTableFormat()
+            table_format.setBorderStyle(QTextFrameFormat.BorderStyle_Solid)
+            table_format.setCellPadding(1)
+            table_format.setAlignment(Qt.AlignCenter)
+            table_format.setWidth(QTextLength(QTextLength.PercentageLength, 100))
+
+            rows = self.result_table.rowCount() + 1
+            cols = self.result_table.columnCount()
+
+            table = cursor.insertTable(rows, cols, table_format)
+
+            # 테이블 헤더 삽입
+            header_row = table.cellAt(0, 0).firstCursorPosition()
+            for col in range(cols):
+                header_row.insertHtml(f"<th>{self.result_table.horizontalHeaderItem(col).text()}</th>")
+                header_row.movePosition(QTextCursor.NextCell)
+
+            # 테이블 데이터 삽입
+            for row in range(self.result_table.rowCount()):
+                data_row = table.cellAt(row + 1, 0).firstCursorPosition()
+                for col in range(cols):
+                    item = self.result_table.item(row, col)
+                    if item:
+                        if row == self.result_table.rowCount() - 1 and col == cols - 1 and cols > 3:
+                            data_row.insertHtml(f"{item.text()}<br>")
+                        else:
+                            data_row.insertText(item.text())
+                            data_row.movePosition(QTextCursor.NextCell)
+
+            preview = QPrintPreviewDialog()
+            preview.setWindowIcon(QIcon("image/logo.png"))
+            preview.paintRequested.connect(lambda p: document.print_(p))
+            preview.exec_()
+
+            file_path, _ = QFileDialog.getSaveFileName(self, self.tr("PDF 저장"), "", "PDF Files (*.pdf)")
+            if file_path:
+                printer = QPrinter(QPrinter.HighResolution)
+                printer.setOutputFormat(QPrinter.PdfFormat)
+                printer.setOutputFileName(file_path)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                printer.setPageMargins(QMarginsF(20, 20, 20, 20), QPageLayout.Millimeter)
+                printer.setPageOrientation(QPageLayout.Landscape)
+                document.print_(printer)
+                QMessageBox.information(self, self.tr("저장 완료"), self.tr("PDF가 저장되었습니다: {}").format(file_path))
+
+            QCoreApplication.processEvents()
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"), self.tr("다음 오류가 발생했습니다: {}").format(str(e)))
 
 class CenteredCheckBox(QWidget):
     def __init__(self, parent=None):

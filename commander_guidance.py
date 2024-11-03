@@ -224,6 +224,7 @@ class EngagementEffectWindow(QtWidgets.QDialog):
     def __init__(self, parent):
         super(EngagementEffectWindow, self).__init__(parent)
         self.parent = parent
+        self.db_path = parent.db_path  # db_path 속성 추가
         self.setMinimumSize(1024, 768)
         self.initUI()
 
@@ -396,7 +397,7 @@ class EngagementEffectWindow(QtWidgets.QDialog):
         search_text = self.asset_search_input.text().lower()
 
         try:
-            conn = sqlite3.connect('assets_management.db')
+            conn = sqlite3.connect(self.parent.db_path)
             cursor = conn.cursor()
 
             table_name = f"cal_assets_{self.parent.selected_language}"
@@ -471,7 +472,7 @@ class EngagementEffectWindow(QtWidgets.QDialog):
         ]
 
         try:
-            conn = sqlite3.connect('assets_management.db')
+            conn = sqlite3.connect(self.db_path)  # db_path 사용
             cursor = conn.cursor()
 
             table_name = f"cal_assets_{self.parent.selected_language}"
@@ -658,6 +659,7 @@ class EngagementEffect(QtWidgets.QDialog):
     def __init__(self, parent):
         super(EngagementEffect, self).__init__(parent)
         self.parent = parent
+        self.db_path = parent.db_path  # db_path 속성 추가
         self.initUI()
 
     def initUI(self):
@@ -742,7 +744,7 @@ class EngagementEffect(QtWidgets.QDialog):
         ]
 
         try:
-            conn = sqlite3.connect('assets_management.db')
+            conn = sqlite3.connect(self.db_path)  # db_path 사용
             cursor = conn.cursor()
 
             table_name = f"cal_assets_{self.parent.parent.selected_language}"

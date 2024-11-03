@@ -456,8 +456,8 @@ class AddAssetWindow(QDialog, QObject):
         lon_pattern = r'^[EW]\d{3}\.\d{5}'
 
         if not re.match(lat_pattern, lat_input) or not re.match(lon_pattern, lon_input):
-            QMessageBox.warning(self, "입력 오류",
-                                "위도와 경도 형식이 올바르지 않습니다.\n올바른 형식: N##.######° 또는 S##.######°, E###.######° 또는 W###.######°")
+            QMessageBox.warning(self, self.tr("입력 오류"),
+                                self.tr("위도와 경도 형식이 올바르지 않습니다.\n올바른 형식: N##.######° 또는 S##.######°, E###.######° 또는 W###.######°"))
             return
 
         try:
@@ -473,9 +473,9 @@ class AddAssetWindow(QDialog, QObject):
             mgrs_coord = m.toMGRS(lat, lon)
             self.asset_info_fields[self.tr("군사좌표(MGRS)")].setText(mgrs_coord)
         except ValueError as e:
-            QMessageBox.warning(self, "변환 오류", f"좌표 변환 중 오류가 발생했습니다: {e}")
+            QMessageBox.warning(self, self.tr("변환 오류"), self.tr(f"좌표 변환 중 오류가 발생했습니다: {e}"))
         except Exception as e:
-            QMessageBox.critical(self, "오류", f"예기치 않은 오류가 발생했습니다: {e}")
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"예기치 않은 오류가 발생했습니다: {e}"))
 
     @staticmethod
     def getting_unit(unit):
@@ -518,7 +518,6 @@ class AddAssetWindow(QDialog, QObject):
                     value = field.text().strip()
                 else:
                     continue
-
                 if not value and label != self.tr("임무/기능(국/영문)"):
                     QMessageBox.warning(self, self.tr("입력 오류"), self.tr(f"{label} 값을 입력하세요."))
                     return
@@ -560,10 +559,8 @@ class AddAssetWindow(QDialog, QObject):
                             weapon_system.append(f"{weapon}({ammo})")
                             total_ammo += int(ammo)
             weapon_system_str = ", ".join(weapon_system) if weapon_system else None
-            print(weapon_system_str)
 
             threat_degree = int(self.threat_degree_edit.text()) if dal_select and self.threat_degree_edit.text() else None
-            print(threat_degree)
 
             # 교전효과 수준과 BMD 우선순위의 영문 버전 매핑
             engagement_effectiveness_ko = {
@@ -605,7 +602,6 @@ class AddAssetWindow(QDialog, QObject):
             if self.parent.selected_language == "ko" :
                 engagement_effectiveness_ko = self.engagement_combo.currentText().strip()
                 engagement_effectiveness_en = engagement_effectiveness_en.get(engagement_effectiveness_ko, '')
-                print(engagement_effectiveness_en)
                 if engagement_effectiveness_ko == '':
                     engagement_effectiveness_ko = None
                     engagement_effectiveness_en = None

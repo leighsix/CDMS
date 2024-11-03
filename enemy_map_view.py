@@ -20,17 +20,39 @@ class EnemyBaseMapView(QObject):
     def load_map(self, coordinates_list, map_obj):
         if not coordinates_list:
             return
-        m_conv = mgrs.MGRS()
         enemy_bases = self.tr("적 미사일 기지")
         weapon_systems = self.tr("적 보유 미사일")
         coordinates = self.tr("좌표")
+        max_radius = self.tr('최대반경')
 
-        # 색상 정의
-        color_map = {
-            'Scud-B': 'red',
-            'Scud-C': 'blue',
-            'Nodong': 'green',
-            'Various Types': 'purple'
+        # JSON 파일에서 데이터 로드
+        with open('missile_info.json', 'r', encoding='utf-8') as file:
+            missile_data = json.load(file)
+
+        # 무기체계 특성에 따른 자동 색상 할당
+        weapon_types = list(missile_data.keys())
+        color_spectrum = [
+            '#%02x%02x%02x' % (
+                int(255 * (1 - 0.8 * i / len(weapon_types))),  # 빨간색 성분 강화
+                int(255 * (0.3 + 0.7 * i / len(weapon_types))),  # 녹색 성분 범위 확대
+                int(255 * (0.2 + 0.8 * i / len(weapon_types)))  # 파란색 성분 범위 확대
+            ) for i in range(len(weapon_types))
+        ]
+
+        # weapon_info 딕셔너리 생성
+        weapon_info = {}
+        for idx, (missile, info) in enumerate(missile_data.items()):
+            weapon_info[missile] = {
+                "color": color_spectrum[idx],
+                "max_radius": int(info["max_radius"]),
+                "function": info["function"]
+            }
+
+        # Various Types를 위한 기본 색상 추가
+        weapon_info['Various Types'] = {
+            "color": "#800080",  # 보라색
+            "max_radius": 0,
+            "function": ""
         }
 
         for base_name, coord, weapon_system in coordinates_list:
@@ -39,9 +61,9 @@ class EnemyBaseMapView(QObject):
                 lat, lon = self.parse_coordinates(coord)
                 # 무기 시스템에 따른 색상 결정
                 if len(weapon_systems_list) > 1:
-                    color = color_map['Various Types']
+                    color = weapon_info['Various Types']['color']
                 else:
-                    color = color_map.get(weapon_systems_list[0], 'gray')  # 알 수 없는 타입은 회색으로 표시
+                    color = weapon_info.get(weapon_systems_list[0], {"color": "#808080"})["color"]
 
                 # 마커 아이콘을 삼각형으로 변경
                 icon = folium.DivIcon(html=f"""
@@ -81,7 +103,7 @@ class EnemyBaseMapView(QObject):
                 position: fixed; 
                 bottom: 50px; 
                 right: 20px; 
-                width: 150px; 
+                width: auto; 
                 height: auto; 
                 background-color: white; 
                 border: 2px solid grey; 
@@ -93,10 +115,10 @@ class EnemyBaseMapView(QObject):
             ">
                 <b>{weapon_systems}</b><br>
                 <div style="margin-top: 5px;">
-                    <span style="color:red;">&#9650;</span> Scud-B<br>
-                    <span style="color:blue;">&#9650;</span> Scud-C<br>
-                    <span style="color:green;">&#9650;</span> Nodong<br>
-                    <span style="color:purple;">&#9650;</span> Various Types
+        """
+        for weapon_type, info in weapon_info.items():
+            legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type} ({max_radius}: {info["max_radius"]}km)<br>'
+        legend_html += """
                 </div>
             </div>
         """
@@ -121,37 +143,40 @@ class EnemyWeaponMapView(QObject):
     def load_map(self, coordinates_list, map_obj):
         if not coordinates_list:
             return
-        # 무기체계별 색상 및 반경 정의
         # JSON 파일에서 데이터 로드
         with open('missile_info.json', 'r', encoding='utf-8') as file:
             missile_data = json.load(file)
 
-        # 색상 정보 (JSON에 없으므로 별도로 정의)
-        colors = {
-            "Scud-B": "#FFB3B3",
-            "Scud-C": "#B3B3FF",
-            "Nodong": "#C5F5C5"
-        }
+        # 무기체계 특성에 따른 자동 색상 할당
+        weapon_types = list(missile_data.keys())
+        color_spectrum = [
+            '#%02x%02x%02x' % (
+                int(255 * (1 - 0.8 * i / len(weapon_types))),  # 빨간색 성분 강화
+                int(255 * (0.3 + 0.7 * i / len(weapon_types))),  # 녹색 성분 범위 확대
+                int(255 * (0.2 + 0.8 * i / len(weapon_types)))  # 파란색 성분 범위 확대
+            ) for i in range(len(weapon_types))
+        ]
 
         # weapon_info 딕셔너리 생성
         weapon_info = {}
-        for missile, info in missile_data.items():
+        for idx, (missile, info) in enumerate(missile_data.items()):
             weapon_info[missile] = {
-                "color": colors[missile],
+                "color": color_spectrum[idx],
                 "max_radius": int(info["max_radius"]),
                 "function": info["function"]
             }
+
         for base_name, coord, weapon_system in coordinates_list:
+            weapon_systems_list = weapon_system.split(", ")
             try:
                 lat, lon = self.parse_coordinates(coord)
 
-                # 무기체계에 따른 색상 및 반경 선택
-                info = weapon_info.get(weapon_system, {"color": "#000000", "max_radius": 0})
-                color = info["color"]
-                max_radius = info["max_radius"]
-                    # 방어 반경 그리기
-                if self.show_threat_radius:
-                    self.draw_threat_radius(map_obj, lat, lon, color, max_radius)
+                # 각 무기체계별로 위협반경 그리기
+                for weapon in weapon_systems_list:
+                    if weapon in weapon_info:
+                        info = weapon_info[weapon]
+                        if self.show_threat_radius:
+                            self.draw_threat_radius(map_obj, lat, lon, info["color"], info["max_radius"])
 
             except Exception as e:
                 logging.error(self.tr(f"좌표 변환 오류 {coord}: {e}"))
@@ -166,7 +191,7 @@ class EnemyWeaponMapView(QObject):
             weight=1,
             fill=True,
             fillColor=color,
-            fillOpacity=0.2
+            fillOpacity=0.05
         ).add_to(map_obj)
 
 

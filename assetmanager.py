@@ -25,11 +25,15 @@ from PyQt5.QtGui import QPainter, QColor, QLinearGradient, QFont, QPen, QPainter
 from PyQt5.QtCore import Qt, QSize, QParallelAnimationGroup, QRect, QTimer, QDateTime
 from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QEvent
 from datetime import datetime
 from bcrypt import hashpw, gensalt, checkpw # bcrypt 추가
+import bcrypt
 import secrets # secrets 모듈 추가
 import re, string
+import os
+import hashlib
+
 
 class AssetManager(QtWidgets.QMainWindow, QObject):
     def __init__(self, db_path='assets_management.db'):
@@ -47,6 +51,7 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         # stacked_widget 초기화 추가
         self.stacked_widget = QStackedWidget()
         self.start_application()
+
 
     def load_custom_font(self):
         # 실행 파일의 경로 확인
@@ -75,15 +80,22 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             if self.login_window.exec_() == QDialog.Accepted:
                 self.current_user = self.login_window.username
                 self.db_path = self.login_window.db_name
-                self.login_time = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                self.login_time = QDateTime.currentDateTime()  # 로그인 시간 기록
                 self.create_database()
                 self.refresh_database()
                 self.initUI()
                 self.show()  # 메인 창 표시
+                self.installEventFilter(self)  # 이벤트 필터 설치
             else:
                 sys.exit()
         else:
             sys.exit()
+
+
+    def logoff(self):
+        self.close()
+        new_instance = AssetManager()
+        new_instance.show()
 
     def initUI(self):
         self.setWindowTitle(self.tr("CDMS"))
@@ -155,7 +167,6 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.stacked_widget.addWidget(self.enemy_base_page)
         self.stacked_widget.addWidget(self.enemy_spec_page)
         self.stacked_widget.addWidget(self.setting_page)
-
         self.stacked_widget.setCurrentWidget(self.main_page)
 
         # 창 크기 및 위치 설정
@@ -177,8 +188,8 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                 (self.tr("DAL 보기"), self.show_dal_view_page),
                 (self.tr("DAL 우선순위"), self.show_dal_priority_page)
             ]),
-            (self.tr("미사일 방공포대 관리"), [
-                (self.tr("미사일 방공포대 입력/보기"), self.show_weapon_assets_page),
+            (self.tr("미사일 방어포대 관리"), [
+                (self.tr("미사일 방어포대 입력/보기"), self.show_weapon_assets_page),
                 (self.tr("방공무기체계 제원"), self.show_weapon_system_page)
             ]),
             (self.tr("적 정보"), [
@@ -305,21 +316,35 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         table.setRowCount(1)
 
         # 테이블 헤더 설정
-        table.setHorizontalHeaderLabels([self.tr("CAL 자산"), self.tr("DAL 자산"), self.tr("미사일 방공포대"), self.tr("적 기지")])
+        table.setHorizontalHeaderLabels([self.tr("CAL 자산"), self.tr("DAL 자산"),
+                                         self.tr("미사일 방어포대"), self.tr("적 기지")])
 
-        # 데이터 가져오기
-        cal_assets_count = self.get_count("cal_assets_en")
-        dal_assets_count = self.get_count("dal_assets_priority_en")
-        weapon_assets_count = self.get_count("weapon_assets_en")
-        enemy_bases_count = self.get_count("enemy_bases_en")
+        try:
+            # 각 데이터 개수 조회 시 예외 처리
+            cal_assets_count = self.get_count("cal_assets_en") or 0
+            dal_assets_count = self.get_dal_assets_count("cal_assets_en") or 0
+            weapon_assets_count = self.get_count("weapon_assets_en") or 0
+            enemy_bases_count = self.get_count("enemy_bases_en") or 0
 
-        # 데이터 설정
-        table.setItem(0, 0, QTableWidgetItem(str(cal_assets_count)))
-        table.setItem(0, 1, QTableWidgetItem(str(dal_assets_count)))
-        table.setItem(0, 2, QTableWidgetItem(str(weapon_assets_count)))
-        table.setItem(0, 3, QTableWidgetItem(str(enemy_bases_count)))
+            # 데이터 설정
+            table.setItem(0, 0, QTableWidgetItem(str(cal_assets_count)))
+            table.setItem(0, 1, QTableWidgetItem(str(dal_assets_count)))
+            table.setItem(0, 2, QTableWidgetItem(str(weapon_assets_count)))
+            table.setItem(0, 3, QTableWidgetItem(str(enemy_bases_count)))
 
-        # 테이블 스타일 설정
+        except Exception:
+            # 오류 발생 시 모든 셀을 0으로 설정
+            for i in range(4):
+                table.setItem(0, i, QTableWidgetItem("0"))
+
+        # 테이블 아이템 중앙 정렬
+        for i in range(table.rowCount()):
+            for j in range(table.columnCount()):
+                item = table.item(i, j)
+                if item:
+                    item.setTextAlignment(Qt.AlignCenter)
+
+        # 테이블 스타일 및 크기 설정
         table.setStyleSheet("""
             QTableWidget {
                 background-color: #f0f0f0;
@@ -335,27 +360,17 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
             }
         """)
 
-        # 테이블 크기 조정
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        table.setFixedHeight(100)  # 테이블의 높이를 고정
-
-        # 행 번호 열 숨기기
+        table.setFixedHeight(100)
         table.verticalHeader().setVisible(False)
-
-        # 테이블 아이템 중앙 정렬
-        for i in range(table.rowCount()):
-            for j in range(table.columnCount()):
-                item = table.item(i, j)
-                if item is not None:
-                    item.setTextAlignment(Qt.AlignCenter)
 
         return table
 
     def update_summary_table(self):
         # 데이터 가져오기
         cal_assets_count = self.get_count("cal_assets_en")
-        dal_assets_count = self.get_count("dal_assets_priority_en")
+        dal_assets_count = self.get_dal_assets_count("cal_assets_en")
         weapon_assets_count = self.get_count("weapon_assets_en")
         enemy_bases_count = self.get_count("enemy_bases_en")
 
@@ -372,6 +387,32 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
                 if item is not None:
                     item.setTextAlignment(Qt.AlignCenter)
 
+    def get_dal_assets_count(self, table_name):
+        try:
+            # 먼저 테이블이 존재하는지 확인
+            self.cursor.execute(f"""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name=?
+            """, (table_name,))
+
+            if not self.cursor.fetchone():
+                return 0
+
+            # dal_select 컬럼이 존재하는지 확인
+            self.cursor.execute(f"PRAGMA table_info({table_name})")
+            columns = [col[1] for col in self.cursor.fetchall()]
+
+            if 'dal_select' not in columns:
+                return 0
+
+            # dal_select가 1인 레코드 수 계산
+            self.cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE dal_select = 1")
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
+
+        except sqlite3.Error:
+            return 0
+
     def get_count(self, table_name):
         self.cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
         return self.cursor.fetchone()[0]
@@ -384,18 +425,25 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def show_bmd_priority_page(self):
         self.refresh_database()
+        self.bmd_priority_page = BmdPriorityWindow(self)  # 새 인스턴스 생성
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(1))  # 기존 페이지 제거
+        self.stacked_widget.insertWidget(1, self.bmd_priority_page)  # 새 페이지 추가
         self.stacked_widget.setCurrentWidget(self.bmd_priority_page)
         self.titleBar.update_title(self.tr("지휘관 지침"), self.tr("연합사령관 BMD 전력배치 우선순위"))
 
     def show_engagement_effect_page(self):
         self.refresh_database()
-        self.engagement_effect_page.refresh()
+        self.engagement_effect_page = EngagementEffectWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(2))
+        self.stacked_widget.insertWidget(2, self.engagement_effect_page)
         self.stacked_widget.setCurrentWidget(self.engagement_effect_page)
         self.titleBar.update_title(self.tr("지휘관 지침"), self.tr("교전효과 수준"))
 
     def show_add_asset_page(self):
         self.refresh_database()
-        self.add_asset_page.refresh()
+        self.add_asset_page = AddAssetWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(3))
+        self.stacked_widget.insertWidget(3, self.add_asset_page)
         self.stacked_widget.setCurrentWidget(self.add_asset_page)
         self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 입력"))
 
@@ -406,38 +454,65 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
 
     def show_cal_view_page(self):
         self.refresh_database()
-        self.cal_view_page.refresh()
+        self.cal_view_page = CalViewWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(4))
+        self.stacked_widget.insertWidget(4, self.cal_view_page)
         self.stacked_widget.setCurrentWidget(self.cal_view_page)
         self.cal_view_page.load_assets()
         self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 보기"))
 
     def show_cal_priority_page(self):
         self.refresh_database()
-        self.cal_priority_page.refresh()
+        self.cal_priority_page = CalPriorityWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(5))
+        self.stacked_widget.insertWidget(5, self.cal_priority_page)
         self.stacked_widget.setCurrentWidget(self.cal_priority_page)
         self.cal_priority_page.load_assets()
         self.titleBar.update_title(self.tr("CAL 관리"), self.tr("CAL 우선순위"))
 
     def show_dal_view_page(self):
         self.refresh_database()
-        self.dal_view_page.refresh()
+        self.dal_view_page = DalViewWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(6))
+        self.stacked_widget.insertWidget(6, self.dal_view_page)
         self.stacked_widget.setCurrentWidget(self.dal_view_page)
         self.dal_view_page.load_assets()
         self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 보기"))
 
     def show_dal_priority_page(self):
         self.refresh_database()
-        self.dal_priority_page.refresh()
+        self.dal_priority_page = DalPriorityWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(7))
+        self.stacked_widget.insertWidget(7, self.dal_priority_page)
         self.stacked_widget.setCurrentWidget(self.dal_priority_page)
         self.dal_priority_page.load_assets()
         self.titleBar.update_title(self.tr("DAL 관리"), self.tr("DAL 우선순위"))
 
     def show_weapon_assets_page(self):
         self.refresh_database()
-        self.weapon_assets_page.refresh()
+        self.weapon_assets_page = WeaponAssetWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(8))
+        self.stacked_widget.insertWidget(8, self.weapon_assets_page)
         self.stacked_widget.setCurrentWidget(self.weapon_assets_page)
         self.weapon_assets_page.load_all_assets()
-        self.titleBar.update_title(self.tr("미사일 방공포대 관리"), )
+        self.titleBar.update_title(self.tr("미사일 방어포대 관리"), )
+
+    def show_cop_view_page(self):
+        self.refresh_database()
+        self.cop_view_page = CopViewWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(9))
+        self.stacked_widget.insertWidget(9, self.cop_view_page)
+        self.stacked_widget.setCurrentWidget(self.cop_view_page)
+        self.cop_view_page.load_assets()
+        self.titleBar.update_title(self.tr("공통상황도"), self.tr("Common Operational Picture"))
+
+    def show_simulation_page(self):
+        self.refresh_database()
+        self.simulation_page = MissileDefenseApp(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(10))
+        self.stacked_widget.insertWidget(10, self.simulation_page)
+        self.stacked_widget.setCurrentWidget(self.simulation_page)
+        self.titleBar.update_title(self.tr("시뮬레이션"), self.tr("미사일궤적 및 최적배치 산출"))
 
     def show_weapon_system_page(self):
         # 방공무기체계 페이지 구현
@@ -447,26 +522,15 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
     def show_enemy_base_page(self):
         # 적 미사일 발사기지 페이지 구현
         self.refresh_database()
-        self.enemy_base_page.refresh()
+        self.enemy_base_page = EnemyBaseWindow(self)
+        self.stacked_widget.removeWidget(self.stacked_widget.widget(12))
+        self.stacked_widget.insertWidget(12, self.enemy_base_page)
         self.stacked_widget.setCurrentWidget(self.enemy_base_page)
         self.titleBar.update_title(self.tr("적 미사일 기지정보"), self.tr("적 미사일 발사위치"))
 
     def show_enemy_spec_page(self):
         enemy_spec_window = EnemySpecWindow(self)
         enemy_spec_window.show()
-
-    def show_cop_view_page(self):
-        self.refresh_database()
-        self.cop_view_page.refresh()
-        self.stacked_widget.setCurrentWidget(self.cop_view_page)
-        self.cop_view_page.load_assets()
-        self.titleBar.update_title(self.tr("공통상황도"), self.tr("Common Operational Picture"))
-
-    def show_simulation_page(self):
-        self.refresh_database()
-        # self.simulation_page.reset_simulation()
-        self.stacked_widget.setCurrentWidget(self.simulation_page)
-        self.titleBar.update_title(self.tr("시뮬레이션"), self.tr("미사일궤적 및 최적배치 산출"))
 
     def create_database(self):
         """SQLite 데이터베이스 생성 및 테이블 설정"""
@@ -705,13 +769,6 @@ class AssetManager(QtWidgets.QMainWindow, QObject):
         self.refresh_database()  # 데이터 갱신
         self.cal_view_page.load_assets()
 
-    def logoff(self):
-        reply = QMessageBox.question(self, self.tr('로그아웃'), self.tr("정말 로그아웃하시겠습니까?"),
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.close()
-            new_instance = AssetManager()
-            new_instance.show()
 
 class FancyTitleBar(QWidget):
     def __init__(self, parent=None):
@@ -1114,16 +1171,58 @@ class RightArea(QGroupBox):
             return False
         return True
 
+def hash_password(password):
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password.hex(), salt.hex()
+
 class ChangePasswordWindow(QDialog):
     def __init__(self, username, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("비밀번호 변경"))
         self.username = username
+        self.setFixedSize(400, 300)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #2b2b2b;
+            }
+            QLabel {
+                font: 강한공군체;
+                color: #ffffff;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QLineEdit {
+                font: 강한공군체;
+                padding: 8px;
+                border: 2px solid #404040;
+                border-radius: 5px;
+                font-size: 18px;
+                min-height: 30px;
+                background-color: #ffffff;
+                color: #000000;
+            }
+            QPushButton {
+                font: 강한공군체;
+                background-color: #007BFF;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+        """)
         self.initUI()
 
     def initUI(self):
         layout = QVBoxLayout(self)
+        layout.setSpacing(20)
         form = QFormLayout()
+        form.setSpacing(15)
 
         self.current_pw_input = QLineEdit()
         self.current_pw_input.setEchoMode(QLineEdit.Password)
@@ -1131,47 +1230,103 @@ class ChangePasswordWindow(QDialog):
 
         self.new_pw_input = QLineEdit()
         self.new_pw_input.setEchoMode(QLineEdit.Password)
+        self.new_pw_input.editingFinished.connect(self.validate_password_input)
         form.addRow(self.tr("새 비밀번호:"), self.new_pw_input)
 
         self.confirm_pw_input = QLineEdit()
         self.confirm_pw_input.setEchoMode(QLineEdit.Password)
+        self.confirm_pw_input.editingFinished.connect(self.check_password_match)
         form.addRow(self.tr("비밀번호 확인:"), self.confirm_pw_input)
 
         self.ok_button = QPushButton(self.tr("확인"))
         self.ok_button.clicked.connect(self.check_password)
+
         layout.addLayout(form)
-        layout.addWidget(self.ok_button)
+        layout.addWidget(self.ok_button, alignment=Qt.AlignCenter)
+
+    def validate_password(self, password):
+        if len(password) < 8:
+            return False
+        if not any(c.islower() for c in password):
+            return False
+        if not any(c.isdigit() for c in password):
+            return False
+        if not any(not c.isalnum() for c in password):
+            return False
+        return True
+
+    def validate_password_input(self):
+        password = self.new_pw_input.text()
+        if password and not self.validate_password(password):
+            QMessageBox.warning(self, self.tr("비밀번호 오류"),
+                                self.tr("비밀번호는 다음 조건을 만족해야 합니다:\n"
+                                        "- 최소 8자 이상\n"
+                                        "- 영문 소문자 포함\n"
+                                        "- 숫자 포함\n"
+                                        "- 특수문자 포함"))
+            self.new_pw_input.clear()
+            self.new_pw_input.setFocus()
+
+    def check_password_match(self):
+        if self.new_pw_input.text() != self.confirm_pw_input.text():
+            QMessageBox.warning(self, self.tr("비밀번호 오류"),
+                                self.tr("비밀번호가 일치하지 않습니다."))
+            self.confirm_pw_input.clear()
+            self.confirm_pw_input.setFocus()
 
     def check_password(self):
-        current_pw = self.current_pw_input.text()
-        new_pw = self.new_pw_input.text()
-        confirm_pw = self.confirm_pw_input.text()
+        try:
+            current_pw = self.current_pw_input.text()
+            new_pw = self.new_pw_input.text()
+            confirm_pw = self.confirm_pw_input.text()
 
-        # 현재 비밀번호와 새 비밀번호가 같은지 확인
-        if current_pw == new_pw:
-            QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호와 다른 비밀번호를 입력해야됩니다."))
-            return
+            if current_pw == new_pw:
+                QMessageBox.warning(self, self.tr("오류"),
+                                    self.tr("현재 비밀번호와 다른 비밀번호를 입력해야 됩니다."))
+                return
 
-        conn = sqlite3.connect('user_credentials.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT password FROM users WHERE username=?", (self.username,))
-        db_password = cursor.fetchone()[0]
-        conn.close()
+            conn = sqlite3.connect('user_credentials.db')
+            cursor = conn.cursor()
+            cursor.execute("SELECT password, salt FROM users WHERE username=?", (self.username,))
+            result = cursor.fetchone()
 
-        # 비밀번호 복잡성 검사 추가 - RightArea의 메서드 활용
-        if self.parent().check_password_complexity(new_pw):
-            if new_pw == confirm_pw:
-                if checkpw(current_pw.encode('utf-8'), db_password):
-                    self.new_password = new_pw
-                    # RightArea에서 비밀번호 업데이트 및 결과 처리
-                    if self.parent().update_password_in_db(self.username, new_pw):
-                        self.accept()
+            if not result:
+                QMessageBox.warning(self, self.tr("오류"),
+                                    self.tr("사용자를 찾을 수 없습니다."))
+                return
+
+            stored_password, stored_salt = result
+
+            # bcrypt로 현재 비밀번호 검증
+            if bcrypt.checkpw(current_pw.encode('utf-8'), bytes.fromhex(stored_password)):
+                if self.validate_password(new_pw):
+                    if new_pw == confirm_pw:
+                        # 새 비밀번호 해싱
+                        hashed_password, salt = hash_password(new_pw)
+                        cursor.execute("UPDATE users SET password=?, salt=? WHERE username=?",
+                                       (hashed_password, salt, self.username))
+                        conn.commit()
+                        QMessageBox.information(self, self.tr("성공"),
+                                                self.tr("비밀번호가 성공적으로 변경되었습니다."))
+                        self.close()  # accept() 대신 close() 사용
+                    else:
+                        QMessageBox.warning(self, self.tr("오류"),
+                                            self.tr("새 비밀번호가 일치하지 않습니다."))
                 else:
-                    QMessageBox.warning(self, self.tr("오류"), self.tr("현재 비밀번호가 일치하지 않습니다."))
+                    QMessageBox.warning(self, self.tr("오류"),
+                                        self.tr("비밀번호는 최소 8자 이상이어야 하며, "
+                                                "영문, 숫자 및 특수 문자를 포함해야 합니다."))
             else:
-                QMessageBox.warning(self, self.tr("오류"), self.tr("새 비밀번호가 일치하지 않습니다."))
-        else:
-            QMessageBox.warning(self,self.tr("오류"), self.tr("비밀번호는 최소 8자 이상이어야 하며, 대문자, 소문자, 숫자 및 특수 문자를 포함해야 합니다."))
+                QMessageBox.warning(self, self.tr("오류"),
+                                    self.tr("현재 비밀번호가 일치하지 않습니다."))
+
+        except Exception as e:
+            QMessageBox.critical(self, self.tr("오류"),
+                                 self.tr(f"비밀번호 변경 중 오류가 발생했습니다: {str(e)}"))
+        finally:
+            conn.close()
+
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)  # QApplication 인스턴스 생성

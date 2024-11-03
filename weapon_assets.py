@@ -38,18 +38,18 @@ class AddWeaponAssetWindow(QDialog):
         self.asset_info_fields = {}  # 여기에 asset_info_fields 딕셔너리 초기화
         self.initUI()
         if self.edit_mode and self.asset_data:
-            self.setWindowTitle(self.tr("미사일 방공포대 정보수정"))
+            self.setWindowTitle(self.tr("미사일 방어포대 정보수정"))
             self.populate_fields()  # initUI 호출 후에 populate_fields 호출
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
 
 
     def initUI(self):
-        self.setWindowTitle(self.tr("미사일 방공포대 입력"))
+        self.setWindowTitle(self.tr("미사일 방어포대 입력"))
         main_layout = QVBoxLayout()
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        asset_info_group = QGroupBox(self.tr("미사일 방공포대 정보"))
+        asset_info_group = QGroupBox(self.tr("미사일 방어포대 정보"))
         asset_info_group.setStyleSheet("font: 강한공군체; font-size: 20px; font-weight: bold;")
         asset_info_layout = QVBoxLayout(asset_info_group)
 
@@ -63,7 +63,7 @@ class AddWeaponAssetWindow(QDialog):
         labels = [
             self.tr("구성군"),
             (self.tr("지역구분"), self.tr("(영문)")),
-            (self.tr("방공포대명"), self.tr("(영문)")),
+            (self.tr("방어포대명"), self.tr("(영문)")),
             (self.tr("위도"), self.tr("경도")),
             self.tr("군사좌표(MGRS)"),
             self.tr("무기체계"),
@@ -83,9 +83,10 @@ class AddWeaponAssetWindow(QDialog):
 
                 for i, sub_label in enumerate(label):
                     if label == (self.tr("위도"), self.tr("경도")):
-                        input_widget = CoordinateEdit(sub_label)
-                        input_widget.editingFinished.connect(
-                            self.check_coordinates)  # textChanged에서 editingFinished로 변경
+                        input_widget = UnderlineEdit()
+                        input_widget.setPlaceholderText(
+                            f"Ex: {'N39.99999' if sub_label == self.tr('위도') else 'E128.99999'}")
+                        input_widget.editingFinished.connect(self.check_coordinates)
                     else:
                         input_widget = UnderlineEdit()
                     input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -269,7 +270,7 @@ class AddWeaponAssetWindow(QDialog):
                     cursor.execute(
                         "UPDATE weapon_assets_ko SET unit=?, area=?, asset_name=?, coordinate=?, mgrs=?, weapon_system=?, ammo_count=?, threat_degree=?, dal_select=? WHERE id=?",
                         (unit_tuple[0], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][0],
-                         asset_data[(self.tr("방공포대명"), self.tr("(영문)"))][0], lat_lon,
+                         asset_data[(self.tr("방어포대명"), self.tr("(영문)"))][0], lat_lon,
                          asset_data[self.tr("군사좌표(MGRS)")],
                          weapon_system, asset_data[self.tr("보유탄수")], asset_data[self.tr("위협방위")], dal_select,
                          self.asset_id)
@@ -278,7 +279,7 @@ class AddWeaponAssetWindow(QDialog):
                     cursor.execute(
                         "UPDATE weapon_assets_en SET unit=?, area=?, asset_name=?, coordinate=?, mgrs=?, weapon_system=?, ammo_count=?, threat_degree=?, dal_select=? WHERE id=?",
                         (unit_tuple[1], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][1],
-                         asset_data[(self.tr("방공포대명"), self.tr("(영문)"))][1], lat_lon,
+                         asset_data[(self.tr("방어포대명"), self.tr("(영문)"))][1], lat_lon,
                          asset_data[self.tr("군사좌표(MGRS)")],
                          weapon_system, asset_data[self.tr("보유탄수")], asset_data[self.tr("위협방위")], dal_select,
                          self.asset_id)
@@ -287,14 +288,14 @@ class AddWeaponAssetWindow(QDialog):
                     cursor.execute(
                         "INSERT INTO weapon_assets_ko (unit, area, asset_name, coordinate, mgrs, weapon_system, ammo_count, threat_degree, dal_select) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (unit_tuple[0], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][0],
-                         asset_data[(self.tr("방공포대명"), self.tr("(영문)"))][0], lat_lon,
+                         asset_data[(self.tr("방어포대명"), self.tr("(영문)"))][0], lat_lon,
                          asset_data[self.tr("군사좌표(MGRS)")],
                          weapon_system, asset_data[self.tr("보유탄수")], asset_data[self.tr("위협방위")], dal_select)
                     )
                     cursor.execute(
                         "INSERT INTO weapon_assets_en (unit, area, asset_name, coordinate, mgrs, weapon_system, ammo_count, threat_degree, dal_select) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (unit_tuple[1], asset_data[(self.tr("지역구분"), self.tr("(영문)"))][1],
-                         asset_data[(self.tr("방공포대명"), self.tr("(영문)"))][1], lat_lon,
+                         asset_data[(self.tr("방어포대명"), self.tr("(영문)"))][1], lat_lon,
                          asset_data[self.tr("군사좌표(MGRS)")],
                          weapon_system, asset_data[self.tr("보유탄수")], asset_data[self.tr("위협방위")], dal_select)
                     )
@@ -328,7 +329,7 @@ class AddWeaponAssetWindow(QDialog):
                         print(f1, f2)
                         f1.setText(str(asset_data1[2]))
                         f2.setText(str(asset_data2[2]))
-                    elif label == (self.tr("방공포대명"), self.tr("(영문)")):
+                    elif label == (self.tr("방어포대명"), self.tr("(영문)")):
                         f1, f2 = field
                         f1.setText(str(asset_data1[3]))
                         f2.setText(str(asset_data2[3]))
@@ -477,7 +478,7 @@ class WeaponAssetWindow(QDialog):
         self.weapon_assets_table.setColumnCount(10)  # 삭제 버튼 열 추가
         self.weapon_assets_table.setAlternatingRowColors(True)
         self.weapon_assets_table.setHorizontalHeaderLabels([
-            "", self.tr("구성군"), self.tr("지역구분"), self.tr("방공포대명"), self.tr("경위도"), self.tr("군사좌표(MGRS)"),
+            "", self.tr("구성군"), self.tr("지역구분"), self.tr("방어포대명"), self.tr("경위도"), self.tr("군사좌표(MGRS)"),
             self.tr("무기체계"), self.tr("보유탄수"), self.tr("위협방위"), self.tr("삭제")])
 
         # 행 번호 숨기기
@@ -585,7 +586,6 @@ class WeaponAssetWindow(QDialog):
         self.setLayout(main_layout)
         # 초기 분할 비율 설정 (1:3)
         splitter.setSizes([100, 300])
-
 
         # 지도 뷰
         self.map_view = QWebEngineView()
@@ -832,7 +832,7 @@ class WeaponAssetWindow(QDialog):
             font = QFont("Arial", 8)
             document.setDefaultFont(font)
 
-            cursor.insertHtml("<h1 align='center'>" + self.tr("미사일 방공포대 목록") + "</h1>")
+            cursor.insertHtml("<h1 align='center'>" + self.tr("미사일 방어포대 목록") + "</h1>")
             cursor.insertBlock()
 
             cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
@@ -954,7 +954,7 @@ class WeaponAssetWindow(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(self.tr("미사일 방공포대 관리"))
+        self.setWindowTitle(self.tr("미사일 방어포대 관리"))
         self.selected_language = "ko"
         self.map_app = MapApp()
         self.setGeometry(100, 100, 1024, 768)
@@ -1014,11 +1014,11 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
 
-        title = QLabel(self.tr("미사일 방공포대 관리 시스템"))
+        title = QLabel(self.tr("미사일 방어포대 관리 시스템"))
         title.setAlignment(Qt.AlignCenter)
         title.setFont(QtGui.QFont("Arial", 24))
         layout.addWidget(title)
-        manage_assets_button = QPushButton(self.tr("미사일 방공포대 관리"))
+        manage_assets_button = QPushButton(self.tr("미사일 방어포대 관리"))
         manage_assets_button.setFont(QtGui.QFont("Arial", 16))
         manage_assets_button.clicked.connect(self.show_defense_assets_page)
         layout.addWidget(manage_assets_button)
@@ -1098,13 +1098,6 @@ class MyTableWidget(QTableWidget):
         # 헤더 체크박스도 해제
         self.horizontalHeader().isOn = False
         self.horizontalHeader().updateSection(0)
-
-class CoordinateEdit(UnderlineEdit):
-    def __init__(self, coordinate_type, parent=None):
-        super().__init__(parent)
-        self.coordinate_type = coordinate_type
-        self.setPlaceholderText(f"예: {'N39.99999' if coordinate_type == '위도' else 'E128.99999'}")
-
 
 
 if __name__ == "__main__":

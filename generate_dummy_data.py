@@ -85,12 +85,12 @@ def generate_dummy_weapon(db_path):
             area_ko = random.choice(list(cities.keys()))
             area_en = cities[area_ko]
             weapon_asset_num = random.randint(1, 100)
-            weapon_asset_ko = f"방공포대{weapon_asset_num}"
+            weapon_asset_ko = f"방어포대{weapon_asset_num}"
             weapon_asset_en = f"Defense Missile{weapon_asset_num}"
 
             # 한국 내 좌표 생성
-            lat = random.uniform(34.0, 38.0)
-            lon = random.uniform(127.0, 129.0)
+            lat = random.uniform(34.4, 38.2)
+            lon = random.uniform(126.0, 129.6)
             coordinate = f"N{lat:.5f},E{lon:.5f}"
 
             # MGRS 변환

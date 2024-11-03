@@ -87,9 +87,10 @@ class EnemyBaseInputDialog(QDialog):
 
                 for i, sub_label in enumerate(label):
                     if label == (self.tr("위도"), self.tr("경도")):
-                        input_widget = CoordinateEdit(sub_label)
-                        input_widget.editingFinished.connect(
-                            self.check_coordinates)  # textChanged에서 editingFinished로 변경
+                        input_widget = UnderlineEdit()
+                        input_widget.setPlaceholderText(
+                            f"Ex: {'N39.99999' if sub_label == self.tr('위도') else 'E128.99999'}")
+                        input_widget.editingFinished.connect(self.check_coordinates)
                     else:
                         input_widget = UnderlineEdit()
                     input_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -871,12 +872,6 @@ class MyTableWidget(QTableWidget):
         # 헤더 체크박스도 해제
         self.horizontalHeader().isOn = False
         self.horizontalHeader().updateSection(0)
-
-class CoordinateEdit(UnderlineEdit):
-    def __init__(self, coordinate_type, parent=None):
-        super().__init__(parent)
-        self.coordinate_type = coordinate_type
-        self.setPlaceholderText(f"예: {'N39.99999' if coordinate_type == '위도' else 'E128.99999'}")
 
 class MainWindow(QtWidgets.QMainWindow, QObject):
     def __init__(self):

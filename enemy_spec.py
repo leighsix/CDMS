@@ -80,12 +80,10 @@ class EnemySpecWindow(QDialog):
         form_layout = QFormLayout()
         self.name_edit = QLineEdit()
         self.min_radius_edit = QLineEdit()
-        self.min_radius_edit.setInputMask("9999999")
-        self.min_radius_edit.setPlaceholderText("99999km")
+        self.min_radius_edit.setPlaceholderText("00km")
 
         self.max_radius_edit = QLineEdit()
-        self.max_radius_edit.setInputMask("9999999")
-        self.max_radius_edit.setPlaceholderText("99999km")
+        self.max_radius_edit.setPlaceholderText("00km")
         self.function_edit = QTextEdit()
         self.function_edit.setMinimumHeight(100)
 

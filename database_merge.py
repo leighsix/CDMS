@@ -13,6 +13,7 @@ class DatabaseIntegrationWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("데이터베이스 통합"))
+        self.parent = parent
         self.setMinimumSize(600, 400)
         self.setStyleSheet("""
             QDialog {
@@ -130,7 +131,7 @@ class DatabaseIntegrationWindow(QDialog):
             integration_conn = sqlite3.connect(self.integration_file)
             integration_cursor = integration_conn.cursor()
 
-            tables = ['cal_assets_en', 'cal_assets_ko', 'dal_assets_en', 'dal_assets_ko']
+            tables = ['cal_assets_en', 'cal_assets_ko']
 
             total_steps = len(self.sub_files) * len(tables)
             current_step = 0
@@ -143,12 +144,40 @@ class DatabaseIntegrationWindow(QDialog):
                     for table in tables:
                         self.log_text.append(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 중...")
 
-                        sub_cursor.execute(f"SELECT * FROM {table}")
+                        # 통합 데이터베이스의 기존 데이터 가져오기
+                        integration_cursor.execute(f"SELECT unit, asset_number, coordinate FROM {table}")
+                        existing_data = {(row[0], row[1], row[2]) for row in integration_cursor.fetchall()}
+
+                        # 중복 데이터 선택
+                        integration_cursor.execute(
+                            f"SELECT unit, asset_number, coordinate, MIN(ROWID) AS min_rowid "
+                            f"FROM {table} "
+                            f"GROUP BY unit, asset_number, coordinate "
+                            f"HAVING COUNT(*) > 1"
+                        )
+                        duplicate_rows = integration_cursor.fetchall()
+
+                        # 중복 데이터 삭제
+                        for unit, asset_number, coordinate, min_rowid in duplicate_rows:
+                            integration_cursor.execute(
+                                f"DELETE FROM {table} "
+                                f"WHERE unit=? AND asset_number=? AND coordinate=? AND ROWID <> ?",
+                                (unit, asset_number, coordinate, min_rowid)
+                            )
+
+                        integration_conn.commit()
+
+                        sub_cursor.execute(
+                            f"SELECT unit, asset_number, manager, contact, target_asset, area, coordinate, mgrs, description, dal_select, weapon_system, ammo_count, threat_degree, engagement_effectiveness, bmd_priority, criticality, criticality_bonus_center, criticality_bonus_function, vulnerability_damage_protection, vulnerability_damage_dispersion, vulnerability_recovery_time, vulnerability_recovery_ability, threat_attack, threat_detection FROM {table}")
                         rows = sub_cursor.fetchall()
 
                         for row in rows:
-                            integration_cursor.execute(
-                                f"INSERT OR REPLACE INTO {table} VALUES ({','.join(['?' for _ in row])})", row)
+                            unit, asset_number, coordinate = row[0], row[1], row[6]
+                            if (unit, asset_number, coordinate) not in existing_data:
+                                integration_cursor.execute(
+                                    f"INSERT INTO {table} (unit, asset_number, manager, contact, target_asset, area, coordinate, mgrs, description, dal_select, weapon_system, ammo_count, threat_degree, engagement_effectiveness, bmd_priority, criticality, criticality_bonus_center, criticality_bonus_function, vulnerability_damage_protection, vulnerability_damage_dispersion, vulnerability_recovery_time, vulnerability_recovery_ability, threat_attack, threat_detection) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                    row)
+                                existing_data.add((unit, asset_number, coordinate))
 
                         integration_conn.commit()
                         self.log_text.append(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 완료")
@@ -159,13 +188,21 @@ class DatabaseIntegrationWindow(QDialog):
                     sub_conn.close()
                 except Exception as e:
                     self.log_text.append(f"[{os.path.basename(sub_file)}] 오류 발생: {str(e)}")
-                    QMessageBox.critical(self, self.tr("오류"), self.tr(f"[{os.path.basename(sub_file)}] 데이터베이스 통합 중 오류가 발생했습니다."))
+                    QMessageBox.critical(self, self.tr("오류"),
+                                         self.tr(f"[{os.path.basename(sub_file)}] 데이터베이스 통합 중 오류가 발생했습니다."))
 
             integration_conn.close()
 
             self.log_text.append("모든 테이블 통합 완료")
             QMessageBox.information(self, self.tr("완료"), self.tr("데이터베이스 통합이 완료되었습니다."))
+            self.parent.parent.update_summary_table()
 
         except Exception as e:
             self.log_text.append(f"오류 발생: {str(e)}")
             QMessageBox.critical(self, self.tr("오류"), self.tr("데이터베이스 통합 중 오류가 발생했습니다."))
+
+
+
+
+
+

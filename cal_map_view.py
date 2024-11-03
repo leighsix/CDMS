@@ -1,26 +1,7 @@
 import sys, logging
 import folium
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox, QApplication
-import io, json
-import mgrs
-import re
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt, QCoreApplication, QTranslator, QObject, QDir
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QCheckBox, QPushButton
-import math
-from PyQt5.QtGui import QPagedPaintDevice, QPainter, QImage, QPageSize, QPageLayout
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
-from PyQt5.QtCore import QUrl, QTemporaryFile, QSize, QTimer, QMarginsF
-from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
-import os
 from branca.colormap import LinearColormap
-import configparser
-import os
-from generate_dummy_data import engagement_effectiveness, bmd_priority
 
 
 class CalMapView(QObject):

@@ -30,6 +30,7 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
     def __init__(self, parent):
         super(CalViewWindow, self).__init__(parent)
         self.parent = parent
+        self.db_path = self.parent.db_path
         self.setMinimumSize(1024, 768)
         self.map = folium.Map(
             location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
@@ -661,7 +662,7 @@ class MainWindow(QMainWindow, QObject):
         """데이터베이스 연결을 새로 고치기 위한 메서드"""
         if hasattr(self, 'conn') and self.conn:
             self.conn.close()
-        self.conn = sqlite3.connect('assets_management.db')
+        self.conn = sqlite3.connect(self.parent.db_path)
         self.cursor = self.conn.cursor()
 
 class CheckBoxHeader(QHeaderView):

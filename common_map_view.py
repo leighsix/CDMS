@@ -1,17 +1,9 @@
 import folium
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QMessageBox, QApplication
-from PyQt5.QtGui import QIcon
 from branca.colormap import LinearColormap
 from PyQt5.QtCore import QObject, QCoreApplication
 import sys, logging, io
 import mgrs
-import re, json
-import html
-from PyQt5.QtCore import QUrl, QTemporaryFile
-from PyQt5.QtGui import QPainter, QPagedPaintDevice
-from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
-import os
+import re, json, colorsys
 import math
 
 class CommonCalMapView(QObject):
@@ -48,11 +40,12 @@ class CommonCalMapView(QObject):
         assets_classification = self.tr("자산구분")
         legend_html = f"""
             <div style="position: fixed; bottom: 200px; right: 20px;width: auto; height: auto; background-color: white; 
-    border: 2px solid grey; z-index:9999; font-size:14px">
+            border: 2px solid grey; z-index:9999; font-size:14px; padding: 10px; border-radius: 5px;">
             <strong>{assets_classification}</strong><br>
+            <div style="margin-top: 5px;">
             <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
             <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
-        </div>
+        </div></div>
         """
         map_obj.get_root().html.add_child(folium.Element(legend_html))
 
@@ -107,50 +100,72 @@ class CommonWeaponMapView(QObject):
         lon = float(lon_str[1:])  # 'E' 제거
         return lat, lon
 
+    @staticmethod
+    def generate_distinct_colors(n):
+        colors = []
+        for i in range(n):
+            hue = i / n
+            saturation = 0.7 + (i % 3) * 0.1  # 0.7-0.9 사이의 채도
+            value = 0.8 + (i % 2) * 0.1  # 0.8-0.9 사이의 명도
+
+            rgb = colorsys.hsv_to_rgb(hue, saturation, value)
+            hex_color = '#%02x%02x%02x' % (
+                int(rgb[0] * 255),
+                int(rgb[1] * 255),
+                int(rgb[2] * 255)
+            )
+            colors.append(hex_color)
+        return colors
+
     def load_map(self, coordinates_list, map_obj):
         if not coordinates_list:
             return
         # JSON 파일에서 무기 정보 불러오기
         with open('weapon_systems.json', 'r', encoding='utf-8') as file:
             weapon_info = json.load(file)
-        # 색상 정보 추가 (JSON 파일에 없으므로 기존 색상 정보 유지)
-        color_info = {
-            "KM-SAM2": "#FF0000",
-            "PAC-2": "#0000FF",
-            "PAC-3": "#FFFF00",
-            "MSE": "#FF00FF",
-            "L-SAM": "#00FFFF",
-            "THAAD": "#FFA500"
-        }
+
+        # 무기체계 목록 추출
+        weapon_types = list(weapon_info.keys())
+
+        # 무기체계 수에 따라 색상 자동 생성
+        colors = self.generate_distinct_colors(len(weapon_types))
+
+        # 무기체계별 색상 매핑
+        color_info = dict(zip(weapon_types, colors))
+
         # 무기 정보에 색상 추가
         for weapon, data in weapon_info.items():
-            data['color'] = color_info.get(weapon, "#000000")  # 기본 색상은 검정색
+            data['color'] = color_info[weapon]
 
         defense_assets = self.tr("방어자산")
         weapon_systems = self.tr("무기체계")
+        max_radius = self.tr("최대반경")
+
         # 범례 생성
-        # "무기체계"를 .ts 파일에서 번역될 수 있도록 수정
         legend_html = f"""
         <div style="position: fixed; bottom: 50px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
+        <div style="margin-top: 5px;">
         """
 
         for weapon, info in weapon_info.items():
-            legend_html += f'<span style="background-color: {info["color"]}; color: {info["color"]}; border: 1px solid black;">__</span> {weapon}<br>'
-        legend_html += "</div>"
+            legend_html += (f'<span style="background-color: {info["color"]}; color: {info["color"]}; '
+                            f'border: 1px solid black;">__</span> {weapon} ({max_radius}: {info["max_radius"]}km)<br>')
+        legend_html += "</div></div>"
         map_obj.get_root().html.add_child(folium.Element(legend_html))
 
         for unit, area, asset_name, coord, weapon_system, ammo_count, threat_degree, dal_select in coordinates_list:
             try:
                 lat, lon = self.parse_coordinates(coord)
 
-                # 무기체계에 따른 색상 및 반경 선택
-                info = weapon_info.get(weapon_system, {"color": "#000000", "max_radius": 0, "angle": 0})
-                color = info["color"]
-                max_radius = info["max_radius"]
-                angle = info["angle"]
+                # 무기체계에 따른 정보 가져오기
+                info = weapon_info.get(weapon_system, {})
+                color = info.get('color', '#000000')
+                max_radius = info.get('max_radius', 0)
+                angle = info.get('angle', 0)
+
                 # 커스텀 아이콘 생성
                 icon = folium.DivIcon(html=f"""
                                     <div style="
@@ -198,7 +213,7 @@ class CommonWeaponMapView(QObject):
                 weight=1,
                 fill=True,
                 fillColor=color,
-                fillOpacity=0.2
+                fillOpacity=0.05
             ).add_to(map_obj)
 
         else:
@@ -206,7 +221,8 @@ class CommonWeaponMapView(QObject):
             end_angle = (threat_degree + (angle / 2) + 360) % 360
             self.draw_sector(map_obj, lat, lon, max_radius, start_angle, end_angle, color)
 
-    def draw_sector(self, map_obj, lat, lon, max_radius, start_angle, end_angle, color):
+    @staticmethod
+    def draw_sector(map_obj, lat, lon, max_radius, start_angle, end_angle, color):
         points = [(lat, lon)]  # 중심점 추가
 
         # 시계 방향으로 각도 계산
@@ -228,7 +244,7 @@ class CommonWeaponMapView(QObject):
             fill=True,
             weight=1,
             fillColor=color,
-            fillOpacity=0.2
+            fillOpacity=0.05
         ).add_to(map_obj)
 
 

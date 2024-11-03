@@ -39,72 +39,81 @@ class CopViewWindow(QDialog):
 
             try:
                 query = "SELECT * FROM cal_assets_priority_ko"
-                self.cal_df_ko = pd.read_sql_query(query, conn,)
+                self.cal_df_ko = pd.read_sql_query(query, conn, )
                 query = "SELECT * FROM cal_assets_priority_en"
-                self.cal_df_en = pd.read_sql_query(query, conn,)
+                self.cal_df_en = pd.read_sql_query(query, conn, )
 
             except sqlite3.OperationalError:
                 print("assets_priority 테이블이 존재하지 않습니다.")
                 self.cal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
                                                        "target_asset", "area", "coordinate", "mgrs", "description",
                                                        "dal_select", "weapon_system", "ammo_count", "threat_degree",
-                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality",
+                                                       "vulnerability",
                                                        "threat", "total_score"])
                 self.cal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
                                                        "target_asset", "area", "coordinate", "mgrs", "description",
                                                        "dal_select", "weapon_system", "ammo_count", "threat_degree",
-                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality",
+                                                       "vulnerability",
                                                        "threat", "total_score"])
-
 
             try:
                 query = "SELECT * FROM dal_assets_priority_ko"
-                self.dal_df_ko = pd.read_sql_query(query, conn,)
+                self.dal_df_ko = pd.read_sql_query(query, conn, )
                 query = "SELECT * FROM dal_assets_priority_en"
-                self.dal_df_en = pd.read_sql_query(query, conn,)
+                self.dal_df_en = pd.read_sql_query(query, conn, )
             except sqlite3.OperationalError:
                 print("defense_assets 테이블이 존재하지 않습니다.")
                 self.dal_df_ko = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
                                                        "target_asset", "area", "coordinate", "mgrs", "description",
                                                        "dal_select", "weapon_system", "ammo_count", "threat_degree",
-                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality",
+                                                       "vulnerability",
                                                        "threat", "total_score"])
                 self.dal_df_en = pd.DataFrame(columns=["id", "priority", "unit", "asset_number", "manager", "contact",
                                                        "target_asset", "area", "coordinate", "mgrs", "description",
                                                        "dal_select", "weapon_system", "ammo_count", "threat_degree",
-                                                       "engagement_effectiveness", "bmd_priority", "criticality", "vulnerability",
+                                                       "engagement_effectiveness", "bmd_priority", "criticality",
+                                                       "vulnerability",
                                                        "threat", "total_score"])
 
             try:
                 query = "SELECT * FROM enemy_bases_ko"
-                self.enemy_bases_df_ko = pd.read_sql_query(query, conn,)
+                self.enemy_bases_df_ko = pd.read_sql_query(query, conn, )
                 query = "SELECT * FROM enemy_bases_en"
-                self.enemy_bases_df_en = pd.read_sql_query(query, conn,)
+                self.enemy_bases_df_en = pd.read_sql_query(query, conn, )
             except sqlite3.OperationalError:
-                print("defense_assets 테이블이 존재하지 않습니다.")
-                self.enemy_bases_df_ko = pd.DataFrame(columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
-                self.enemy_bases_df_en = pd.DataFrame(columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
-
+                print("enemy_bases 테이블이 존재하지 않습니다.")
+                self.enemy_bases_df_ko = pd.DataFrame(
+                    columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
+                self.enemy_bases_df_en = pd.DataFrame(
+                    columns=["id", "base_name", "area", "coordinate", "mgrs", "weapon_system"])
 
             try:
                 query = "SELECT * FROM weapon_assets_ko"
-                self.weapon_assets_df_ko = pd.read_sql_query(query, conn,)
+                self.weapon_assets_df_ko = pd.read_sql_query(query, conn, )
                 query = "SELECT * FROM weapon_assets_en"
-                self.weapon_assets_df_en = pd.read_sql_query(query, conn,)
-
+                self.weapon_assets_df_en = pd.read_sql_query(query, conn, )
             except sqlite3.OperationalError:
-                print("defense_assets 테이블이 존재하지 않습니다.")
-                self.weapon_assets_df_ko = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree", "dal_select"])
-                self.weapon_assets_df_en = pd.DataFrame(columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count", "threat_degree", "dal_select"])
+                print("weapon_assets 테이블이 존재하지 않습니다.")
+                self.weapon_assets_df_ko = pd.DataFrame(
+                    columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count",
+                             "threat_degree", "dal_select"])
+                self.weapon_assets_df_en = pd.DataFrame(
+                    columns=["id", "unit", "area", "asset_name", "coordinate", "mgrs", "weapon_system", "ammo_count",
+                             "threat_degree", "dal_select"])
 
         except sqlite3.Error as e:
             print(f"데이터베이스 연결 오류: {e}")
 
         finally:
-            if conn:
+            if 'conn' in locals():
                 conn.close()
 
-        if self.cal_df_ko.empty and self.dal_df_ko.empty and self.enemy_bases_df_ko.empty and self.weapon_assets_df_ko:
+        # DataFrame 비어있는지 확인하는 조건문 수정
+        if (self.cal_df_ko.empty and self.dal_df_ko.empty and
+                self.enemy_bases_df_ko.empty and self.weapon_assets_df_ko.empty):
             print("경고: 데이터를 불러오지 못했습니다. 빈 DataFrame을 사용합니다.")
 
     def refresh(self):
@@ -294,14 +303,14 @@ class CopViewWindow(QDialog):
         right_layout.addWidget(self.enemy_sites_table)
 
         # 우측 중간 테이블 변경
-        right_layout.addWidget(QLabel(self.tr("방공포대 자산 목록")))
+        right_layout.addWidget(QLabel(self.tr("방어포대 자산 목록")))
 
         # 필터 추가
         self.weapon_filter_layout = QHBoxLayout()
         # 무기 자산 테이블 검색 기능
         self.weapon_filter_layout = QHBoxLayout()
         self.search_weapon_filter = QLineEdit()
-        self.search_weapon_filter.setPlaceholderText(self.tr("방공포대 검색"))
+        self.search_weapon_filter.setPlaceholderText(self.tr("방어포대 검색"))
         self.search_weapon_button = QPushButton(self.tr("찾기"))
         self.search_weapon_button.clicked.connect(self.load_weapon_assets)
         self.weapon_filter_layout.addWidget(self.search_weapon_filter)

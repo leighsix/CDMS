@@ -1,6 +1,5 @@
 import math
 import numpy as np
-import cupy as cp
 
 class EngagementPossibilityCalculator:
     def __init__(self, weapon_systems_info, missile_info):
@@ -64,13 +63,15 @@ class EngagementPossibilityCalculator:
 
     def check_engagement_possibility_vectorized(self, defense_lat, defense_lon, weapon_type, trajectories,
                                                 threat_azimuth):
-        # 빈 궤적 체크
-        if isinstance(trajectories, np.ndarray) and trajectories.size == 0:
-            return np.array([])  # 빈 배열 반환
-
-        # trajectories가 올바른 형태인지 확인
+        # 입력 데이터 형태 검증 및 변환
         trajectories = np.array(trajectories)
-        if trajectories.ndim < 3:  # 차원 확인
+        if trajectories.size == 0:
+            return np.array([])
+
+        # 3차원 배열로 형상 변환 확인 및 조정
+        if trajectories.ndim == 2:
+            trajectories = trajectories.reshape(1, -1, 3)
+        elif trajectories.ndim != 3:
             return np.array([False] * len(trajectories))
 
         range_tuple = (self.weapon_systems_info[weapon_type].get('min_radius'),
@@ -80,19 +81,25 @@ class EngagementPossibilityCalculator:
         angle = self.weapon_systems_info[weapon_type].get('angle')
 
         try:
-            starts = trajectories[:, :-1, :]
-            ends = trajectories[:, 1:, :]
-            all_points = np.concatenate([starts, ends], axis=1)
+            # defense_lat과 defense_lon을 적절한 shape으로 확장
+            defense_lat = np.array(defense_lat).reshape(-1, 1)
+            defense_lon = np.array(defense_lon).reshape(-1, 1)
 
-            distances = self.calculate_distance_vectorized(defense_lat, defense_lon,
-                                                           all_points[:, :, 0].astype(float),
-                                                           all_points[:, :, 1].astype(float))
-
-            altitude_condition = np.logical_and(
-                all_points[:, :, 2] >= altitude_tuple[0],
-                all_points[:, :, 2] <= altitude_tuple[1]
+            # 거리 계산
+            distances = self.calculate_distance_vectorized(
+                defense_lat,
+                defense_lon,
+                trajectories[:, :, 0],
+                trajectories[:, :, 1]
             )
 
+            # 고도 조건 확인
+            altitude_condition = np.logical_and(
+                trajectories[:, :, 2] >= altitude_tuple[0],
+                trajectories[:, :, 2] <= altitude_tuple[1]
+            )
+
+            # 거리 조건 확인
             range_condition = np.logical_and(
                 distances >= range_tuple[0],
                 distances <= range_tuple[1]
@@ -101,23 +108,34 @@ class EngagementPossibilityCalculator:
             if angle >= 360:
                 engagement_possible = np.any(np.logical_and(range_condition, altitude_condition), axis=1)
             else:
-                delta_lon = all_points[:, :, 1].astype(float) - defense_lon
-                delta_lat = all_points[:, :, 0].astype(float) - defense_lat
+                # 방위각 계산
+                delta_lon = trajectories[:, :, 1] - defense_lon
+                delta_lat = trajectories[:, :, 0] - defense_lat
                 missile_azimuths = (np.degrees(np.arctan2(delta_lon, delta_lat)) + 360) % 360
 
-                azimuth_diff = np.minimum((missile_azimuths - threat_azimuth) % 360,
-                                          (threat_azimuth - missile_azimuths) % 360)
+                # threat_azimuth을 적절한 shape으로 확장
+                threat_azimuth = np.array(threat_azimuth).reshape(-1, 1)
+
+                # 방위각 차이 계산
+                azimuth_diff = np.minimum(
+                    (missile_azimuths - threat_azimuth) % 360,
+                    (threat_azimuth - missile_azimuths) % 360
+                )
 
                 angle_condition = azimuth_diff <= angle / 2
-
-                combined_condition = np.logical_and.reduce((range_condition, altitude_condition, angle_condition))
+                combined_condition = np.logical_and.reduce((
+                    range_condition,
+                    altitude_condition,
+                    angle_condition
+                ))
                 engagement_possible = np.any(combined_condition, axis=1)
 
             return engagement_possible
 
-        except (IndexError, ValueError) as e:
+        except Exception as e:
             print(f"궤적 처리 중 오류 발생: {e}")
-            return np.array([False] * len(trajectories))
+            print(f"trajectories shape: {trajectories.shape}")
+            return np.array([False] * trajectories.shape[0])
 
     @staticmethod
     def calculate_distance_vectorized(lat1, lon1, lat2, lon2):

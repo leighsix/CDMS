@@ -30,6 +30,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
     def __init__(self, parent):
         super(DalViewWindow, self).__init__(parent)
         self.parent = parent
+        self.db_path = self.parent.db_path
         self.setMinimumSize(1024, 768)
         self.map = folium.Map(
             location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
@@ -546,7 +547,7 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
             font = QFont("Arial", 8)
             document.setDefaultFont(font)
 
-            cursor.insertHtml("<h1 align='center'>" + self.tr("CAL 목록") + "</h1>")
+            cursor.insertHtml("<h1 align='center'>" + self.tr("DAL 목록") + "</h1>")
             cursor.insertBlock()
 
             cursor.insertHtml("<div class='info' style='text-align: left; font-size: 0.9em;'>")
@@ -672,6 +673,7 @@ class MainWindow(QMainWindow, QObject):
     def __init__(self):
         super().__init__()
         self.conn = sqlite3.connect('assets_management.db')
+        self.db_path = 'assets_management.db'
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setWindowTitle(self.tr("DAL 자산 보기"))
         self.cursor = self.conn.cursor()

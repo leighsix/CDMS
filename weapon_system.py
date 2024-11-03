@@ -77,15 +77,15 @@ class WeaponSystemWindow(QDialog):
         form_layout = QFormLayout()
         self.name_edit = QLineEdit()
         self.min_altitude_edit = QLineEdit()
-        self.min_altitude_edit.setInputMask("9999999")
+        self.min_altitude_edit.setPlaceholderText("00km")
         self.max_altitude_edit = QLineEdit()
-        self.max_altitude_edit.setInputMask("9999999")
+        self.max_altitude_edit.setPlaceholderText("00km")
         self.min_radius_edit = QLineEdit()
-        self.min_radius_edit.setInputMask("9999999")
+        self.min_radius_edit.setPlaceholderText("00km")
         self.max_radius_edit = QLineEdit()
-        self.max_radius_edit.setInputMask("9999999")
+        self.max_radius_edit.setPlaceholderText("00km")
         self.angle_edit = QLineEdit()
-        self.angle_edit.setInputMask("999")
+        self.angle_edit.setPlaceholderText("000°")
         self.function_edit = QTextEdit()  # QLineEdit에서 QTextEdit로 변경
         self.function_edit.setMinimumHeight(100)  # 최소 높이 설정
 

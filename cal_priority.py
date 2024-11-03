@@ -34,6 +34,7 @@ class CalPriorityWindow(QDialog):
     def __init__(self, parent):
         super(CalPriorityWindow, self).__init__(parent)
         self.parent = parent
+        self.db_path = self.parent.db_path
         self.setMinimumSize(1024, 768)
         self.map = folium.Map(
             location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
@@ -324,6 +325,7 @@ class CalPriorityWindow(QDialog):
         self.engagement_filter.setCurrentIndex(0)
         self.bmd_priority_filter.setCurrentIndex(0)
         self.asset_search_input.clear()  # 검색 입력창 비우기
+        self.assets_table.uncheckAllRows()
         self.load_assets()  # 테이블 데이터 새로고침
         self.update_map()
 
@@ -512,9 +514,17 @@ class CalPriorityWindow(QDialog):
 
     def update_priorities(self):
         for row in range(self.assets_table.rowCount()):
-            priority_item = QTableWidgetItem(str(row + 1))
-            priority_item.setTextAlignment(Qt.AlignCenter)
-            self.assets_table.setItem(row, 1, priority_item)
+            asset_id = int(self.assets_table.item(row, 2).text())
+            if asset_id in self.df_ko['id'].values:
+                self.df_ko.loc[self.df_ko['id'] == asset_id, 'priority'] = row + 1
+                self.df_en.loc[self.df_en['id'] == asset_id, 'priority'] = row + 1
+                priority_item = QTableWidgetItem(str(row + 1))
+                priority_item.setTextAlignment(Qt.AlignCenter)
+                self.assets_table.setItem(row, 1, priority_item)
+            else:
+                priority_item = QTableWidgetItem(str(row + 1))
+                priority_item.setTextAlignment(Qt.AlignCenter)
+                self.assets_table.setItem(row, 1, priority_item)
 
     def move_checked_items(self, direction):
         checked_rows = []
@@ -567,7 +577,7 @@ class CalPriorityWindow(QDialog):
                 self.parent.cursor.execute(f"DELETE FROM cal_assets_priority_{lang}")
             self.parent.conn.commit()
             self.refresh()
-            QMessageBox.information(self, "알림", "우선순위가 초기화되었습니다.")
+            QMessageBox.information(self, self.tr("알림"), self.tr("우선순위가 초기화되었습니다."))
 
     def set_priority(self):
         try:
@@ -827,6 +837,7 @@ class MainWindow(QMainWindow, QObject):
     def __init__(self):
         super().__init__()
         self.conn = sqlite3.connect('assets_management.db')
+        self.db_path = 'assets_management.db'
         self.setWindowIcon(QIcon("image/logo.png"))
         self.setWindowTitle(self.tr("CAL 우선순위"))
         self.cursor = self.conn.cursor()
@@ -863,7 +874,7 @@ class MainWindow(QMainWindow, QObject):
         """데이터베이스 연결을 새로 고치기 위한 메서드"""
         if hasattr(self, 'conn') and self.conn:
             self.conn.close()
-        self.conn = sqlite3.connect('assets_management.db')
+        self.conn = sqlite3.connect(self.parent.db_path)
         self.cursor = self.conn.cursor()
 
 class CheckBoxHeader(QHeaderView):
