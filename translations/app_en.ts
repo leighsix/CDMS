@@ -560,7 +560,7 @@ Longitude: E###.##### or W###.#####</translation>
     <message>
         <location filename="../addasset.py" line="261"/>
         <source>연합사 BMD 우선순위</source>
-        <translation>CFC&apos;s BMD Priority</translation>
+        <translation>CFC's BMD Priority</translation>
     </message>
     <message>
         <location filename="../addasset.py" line="456"/>
@@ -742,12 +742,12 @@ Longitude: E###.##### or W###.#####</translation>
     <message>
         <location filename="../assetmanager.py" line="440"/>
         <source>지휘관 지침</source>
-        <translation>Commander&apos;s Guidance</translation>
+        <translation>Commander's Guidance</translation>
     </message>
     <message>
         <location filename="../assetmanager.py" line="432"/>
         <source>연합사령관 BMD 전력배치 우선순위</source>
-        <translation>CFC&apos;s BMD deployment priority</translation>
+        <translation>CFC's BMD deployment priority</translation>
     </message>
     <message>
         <location filename="../assetmanager.py" line="440"/>
@@ -998,7 +998,7 @@ Longitude: E###.##### or W###.#####</translation>
     <message>
         <location filename="../commander_guidance.py" line="194"/>
         <source>연합사령관 BMD 전력배치 우선순위</source>
-        <translation>CFC&apos;s BMD deployment priority</translation>
+        <translation>CFC's BMD deployment priority</translation>
     </message>
     <message>
         <location filename="../commander_guidance.py" line="60"/>
@@ -1388,8 +1388,8 @@ Longitude: E###.##### or W###.#####</translation>
     </message>
     <message>
         <location filename="../cal_priority.py" line="660"/>
-        <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</source>
-        <translation>Are you sure you want to delete &apos;{}&apos; (ID: {}) from the table?</translation>
+        <source>정말로 '{}' (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</source>
+        <translation>Are you sure you want to delete '{}' (ID: {}) from the table?</translation>
     </message>
     <message>
         <location filename="../cal_priority.py" line="714"/>
@@ -1701,8 +1701,8 @@ Longitude: E###.##### or W###.#####</translation>
     </message>
     <message>
         <location filename="../cal_view.py" line="451"/>
-        <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</source>
-        <translation>Are you sure you want to delete &apos;{}&apos; (ID: {})?</translation>
+        <source>정말로 '{}' (ID: {}) 을(를) 삭제하시겠습니까?</source>
+        <translation>Are you sure you want to delete '{}' (ID: {})?</translation>
     </message>
     <message>
         <location filename="../cal_view.py" line="503"/>
@@ -2477,8 +2477,8 @@ Longitude: E###.##### or W###.#####</translation>
     </message>
     <message>
         <location filename="../dal_priority.py" line="752"/>
-        <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</source>
-        <translation>Are you sure you want to delete &apos;{}&apos; (ID: {}) from the table?</translation>
+        <source>정말로 '{}' (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</source>
+        <translation>Are you sure you want to delete '{}' (ID: {}) from the table?</translation>
     </message>
     <message>
         <location filename="../dal_priority.py" line="852"/>
@@ -2770,8 +2770,8 @@ Longitude: E###.##### or W###.#####</translation>
     </message>
     <message>
         <location filename="../dal_view.py" line="490"/>
-        <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</source>
-        <translation>Are you sure you want to delete &apos;{}&apos; (ID: {})?</translation>
+        <source>정말로 '{}' (ID: {}) 을(를) 삭제하시겠습니까?</source>
+        <translation>Are you sure you want to delete '{}' (ID: {})?</translation>
     </message>
     <message>
         <location filename="../dal_view.py" line="620"/>
@@ -3920,17 +3920,17 @@ Longitude: E###.##### or W###.#####</translation>
         <translation>DAL View</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1022"/>
+        <location filename="../weapon_assets.py" line="1020"/>
         <source>Database Error</source>
         <translation>Database Error</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="979"/>
+        <location filename="../weapon_assets.py" line="977"/>
         <source>데이터베이스 연결 오류: {e}</source>
         <translation>Database Connection Error: {e}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1022"/>
+        <location filename="../weapon_assets.py" line="1020"/>
         <source>테이블 생성 오류: {e}</source>
         <translation>Table Creation Error: {e}</translation>
     </message>
@@ -3945,12 +3945,12 @@ Longitude: E###.##### or W###.#####</translation>
         <translation>Enemy Base Management</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1033"/>
+        <location filename="../weapon_assets.py" line="1031"/>
         <source>미사일 방어포대 관리</source>
         <translation>Missile Defense  Battery Management</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1029"/>
+        <location filename="../weapon_assets.py" line="1027"/>
         <source>미사일 방어포대 관리 시스템</source>
         <translation>Missile Defense  Battery Management System</translation>
     </message>
@@ -4972,7 +4972,7 @@ Longitude: E###.##### or W###.#####</translation>
         <translation>Group</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="674"/>
+        <location filename="../weapon_assets.py" line="672"/>
         <source>전체</source>
         <translation>All</translation>
     </message>
@@ -5017,137 +5017,137 @@ Longitude: E###.##### or W###.#####</translation>
         <translation>Search</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>구성군</source>
         <translation>Group</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>지역구분</source>
         <translation>Area</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>경위도</source>
         <translation>Lat and Lon</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>군사좌표(MGRS)</source>
         <translation>MGRS</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="545"/>
+        <location filename="../weapon_assets.py" line="543"/>
         <source>무기체계</source>
         <translation>Weapon System</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>보유탄수</source>
         <translation>Ammo Count</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>위협방위</source>
         <translation>Threat Direction</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>삭제</source>
         <translation>Delete</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="524"/>
+        <location filename="../weapon_assets.py" line="522"/>
         <source>입력</source>
         <translation>Input</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="525"/>
+        <location filename="../weapon_assets.py" line="523"/>
         <source>수정</source>
         <translation>Edit</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="527"/>
+        <location filename="../weapon_assets.py" line="525"/>
         <source>메인화면</source>
         <translation>Main Screen</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="578"/>
+        <location filename="../weapon_assets.py" line="576"/>
         <source>방어반경 표시</source>
         <translation>Defense Radius Display</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="583"/>
+        <location filename="../weapon_assets.py" line="581"/>
         <source>지도 출력</source>
         <translation>Map Print</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="737"/>
+        <location filename="../weapon_assets.py" line="735"/>
         <source>경고</source>
         <translation>Warning</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="737"/>
+        <location filename="../weapon_assets.py" line="735"/>
         <source>수정을 위해 정확히 하나의 자산을 선택해주세요.</source>
         <translation>Please select exactly one asset for modification.</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="851"/>
+        <location filename="../weapon_assets.py" line="849"/>
         <source>보고서 생성 일시: </source>
         <translation>Report Generation Time: </translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="894"/>
+        <location filename="../weapon_assets.py" line="892"/>
         <source>PDF 저장</source>
         <translation>PDF Save</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="903"/>
+        <location filename="../weapon_assets.py" line="901"/>
         <source>저장 완료</source>
         <translation>Save Complete</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="903"/>
+        <location filename="../weapon_assets.py" line="901"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF saved: {}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="908"/>
+        <location filename="../weapon_assets.py" line="906"/>
         <source>오류</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="908"/>
+        <location filename="../weapon_assets.py" line="906"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>The following error occurred: {}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="949"/>
+        <location filename="../weapon_assets.py" line="947"/>
         <source>인쇄 일시: {current_time}</source>
         <translation>Print time: {current_time}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="954"/>
+        <location filename="../weapon_assets.py" line="952"/>
         <source>인쇄 중 오류 발생: {str(e)}</source>
         <translation>Error occurred during printing: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="961"/>
+        <location filename="../weapon_assets.py" line="959"/>
         <source>인쇄 완료</source>
         <translation>Printing completed</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="961"/>
+        <location filename="../weapon_assets.py" line="959"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>The map has been successfully printed.</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="963"/>
+        <location filename="../weapon_assets.py" line="961"/>
         <source>인쇄 실패</source>
         <translation>Print failed</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="963"/>
+        <location filename="../weapon_assets.py" line="961"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>An error occurred while printing the map.</translation>
     </message>
@@ -5157,17 +5157,17 @@ Longitude: E###.##### or W###.#####</translation>
         <translation>DAL only display</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="526"/>
+        <location filename="../weapon_assets.py" line="524"/>
         <source>출력</source>
         <translation>Print</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="480"/>
+        <location filename="../weapon_assets.py" line="479"/>
         <source>방어포대명</source>
         <translation>Battery Name</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="847"/>
+        <location filename="../weapon_assets.py" line="845"/>
         <source>미사일 방어포대 목록</source>
         <translation>Missile Defense Battery List</translation>
     </message>

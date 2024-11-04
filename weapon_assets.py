@@ -476,18 +476,16 @@ class WeaponAssetWindow(QDialog):
         # 테이블
         self.weapon_assets_table = MyTableWidget()
         self.weapon_assets_table.setColumnCount(10)  # 삭제 버튼 열 추가
-        self.weapon_assets_table.setAlternatingRowColors(True)
         self.weapon_assets_table.setHorizontalHeaderLabels([
             "", self.tr("구성군"), self.tr("지역구분"), self.tr("방어포대명"), self.tr("경위도"), self.tr("군사좌표(MGRS)"),
             self.tr("무기체계"), self.tr("보유탄수"), self.tr("위협방위"), self.tr("삭제")])
 
         # 행 번호 숨기기
         # self.weapon_assets_table.verticalHeader().setVisible(False)
+        self.weapon_assets_table.setAlternatingRowColors(True)
         self.weapon_assets_table.setStyleSheet("QTableWidget {background-color: #ffffff; font: 바른공군체; font-size: 16px;}"
                                         "QTableWidget::item { padding: 1px; }")
         self.weapon_assets_table.setSelectionBehavior(QTableView.SelectRows)
-
-
         font = QFont("강한공군체", 13)
         font.setBold(True)
         self.weapon_assets_table.horizontalHeader().setFont(font)
@@ -515,7 +513,7 @@ class WeaponAssetWindow(QDialog):
 
         # 헤더 높이 자동 조절
         self.weapon_assets_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        self.weapon_assets_table.verticalHeader().setDefaultSectionSize(50)
+        self.weapon_assets_table.verticalHeader().setDefaultSectionSize(60)
 
         left_layout.addWidget(self.weapon_assets_table)
 

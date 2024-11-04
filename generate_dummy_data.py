@@ -25,13 +25,15 @@ def convert_to_mgrs(lat, lon):
     return m.toMGRS(lat, lon)
 
 def making_weapon_systems():
-    selected_weapons = random.sample(weapons, random.randint(1, 2))
+    # 5:1:1:1:1:1 비율로 무기 선택
+    weights = [5, 1, 1, 1, 1, 1]  # KM-SAM2가 5배 높은 확률
+    selected_weapons = random.choices(weapons, weights=weights, k=random.randint(1, 2))
 
     weapon_counts = []
     total_count = 0
 
     for weapon in selected_weapons:
-        count = random.randint(1, 10)  # 각 무기 시스템의 개수 (1~5 사이)
+        count = random.randint(1, 10)
         weapon_counts.append(f"{weapon}({count})")
         total_count += count
 
@@ -96,7 +98,8 @@ def generate_dummy_weapon(db_path):
             # MGRS 변환
             m = mgrs.MGRS()
             mgrs_coord = m.toMGRS(lat, lon)
-            weapon = random.choice(weapons)
+            weights = [5, 1, 1, 1, 1, 1]  # KM-SAM2가 5배 높은 확률
+            weapon = random.choices(weapons, weights=weights)[0]
             ammo_count = random.randint(1, 10)  # 각 무기 시스템의 개수 (1~5 사이)
             threat_degree = random_angle()
             dal_select = 0

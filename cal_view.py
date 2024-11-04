@@ -146,7 +146,7 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
 
         self.assets_table.setAlternatingRowColors(True)
         self.assets_table.setStyleSheet("QTableWidget {background-color: #ffffff; font: 바른공군체; font-size: 16px;}"
-                                        "QTableWidget::item { padding: 5px; }")
+                                        "QTableWidget::item { padding: 1px; }")
         self.assets_table.setSelectionBehavior(QTableView.SelectRows)
         self.assets_table.itemChanged.connect(self.on_checkbox_changed)
 

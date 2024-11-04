@@ -105,7 +105,8 @@ class MissileDefenseOptimizer:
         self.priority_weights = max_priority + 1 - priorities
         self.grid_positions = np.array(list(self.grid_centers.values()))
 
-    def get_optimal_thread_count(self, attempts):
+    @staticmethod
+    def get_optimal_thread_count(attempts):
         # 시스템의 CPU 코어 수 확인
         cpu_count = multiprocessing.cpu_count()
         # 시도 횟수와 CPU 코어 수 중 작은 값을 선택
@@ -269,7 +270,7 @@ class MissileDefenseOptimizer:
             # 페널티 계산
             min_defense_penalty = 0 if min_system_defense >= 0.2 else -20000 * (0.2 - min_system_defense)
             coverage_penalty = 0 if defense_rate >= 0.8 else -20000 * (0.8 - defense_rate)
-            overlap_penalty = -5000 * (np.sum(defense_counts > 1) / len(self.trajectories))
+            overlap_penalty = -5000 * (np.sum(defense_counts > 4) / len(self.trajectories))
 
             return {
                 'priority_score': priority_score * 2000,
@@ -336,10 +337,9 @@ class MissileDefenseOptimizer:
                     min_system_defense = np.min(system_defense_rates)
 
                     # 페널티 계산 최적화
-
                     min_defense_penalty = np.where(min_system_defense < 0.2, -20000 * (0.2 - min_system_defense), 0)
                     coverage_penalty = np.where(defense_rate < 0.8, -20000 * (0.8 - defense_rate), 0)
-                    overlap_penalty = -5000 * (np.sum(defense_counts > 1) / len(self.trajectories))
+                    overlap_penalty = -5000 * (np.sum(defense_counts > 4) / len(self.trajectories))
 
 
                     final_penalty = -(priority_score * 2000 + np.mean(
@@ -414,7 +414,7 @@ class MissileDefenseOptimizer:
             # 페널티 계산 강화
             min_defense_penalty = 0 if min_system_defense >= 0.2 else -20000 * (0.2 - min_system_defense)
             coverage_penalty = 0 if defense_rate >= 0.8 else -20000 * (0.8 - defense_rate)
-            overlap_penalty = -5000 * (np.sum(defense_counts > 1) / len(self.trajectories))
+            overlap_penalty = -5000 * (np.sum(defense_counts > 4) / len(self.trajectories))
 
             # 최종 점수 계산
             final_score = (priority_score * 2000 +
