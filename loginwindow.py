@@ -539,8 +539,14 @@ class RegisterDialog(QDialog):
                 conn.commit()
 
                 self.show_message(self.tr("등록 성공"), self.tr("사용자 등록이 완료되었습니다."), QMessageBox.Information)
-
-                self.close()  # accept() 대신 close() 사용
+                # 폼 초기화
+                self.military_combo.setCurrentIndex(0)
+                self.mil_num_input.clear()
+                self.name_input.clear()
+                self.id_input.clear()
+                self.pw_input.clear()
+                self.pw_confirm_input.clear()
+                # self.accept()  # accept() 대신 close() 사용
                 return True
 
             except sqlite3.Error as e:

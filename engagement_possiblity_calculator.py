@@ -74,11 +74,18 @@ class EngagementPossibilityCalculator:
         elif trajectories.ndim != 3:
             return np.array([False] * len(trajectories))
 
-        range_tuple = (self.weapon_systems_info[weapon_type].get('min_radius'),
-                       self.weapon_systems_info[weapon_type].get('max_radius'))
-        altitude_tuple = (self.weapon_systems_info[weapon_type].get('min_altitude'),
-                          self.weapon_systems_info[weapon_type].get('max_altitude'))
-        angle = self.weapon_systems_info[weapon_type].get('angle')
+        # weapon_type이 없는 경우를 처리하기 위한 기본값 설정
+        weapon_info = self.weapon_systems_info.get(weapon_type, {
+            'min_radius': 0,
+            'max_radius': 0,
+            'min_altitude': 0,
+            'max_altitude': 0,
+            'angle': 0
+        })
+
+        range_tuple = (weapon_info.get('min_radius'), weapon_info.get('max_radius'))
+        altitude_tuple = (weapon_info.get('min_altitude'), weapon_info.get('max_altitude'))
+        angle = weapon_info.get('angle')
 
         try:
             # defense_lat과 defense_lon을 적절한 shape으로 확장

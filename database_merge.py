@@ -131,7 +131,15 @@ class DatabaseIntegrationWindow(QDialog):
             integration_conn = sqlite3.connect(self.integration_file)
             integration_cursor = integration_conn.cursor()
 
-            tables = ['cal_assets_en', 'cal_assets_ko']
+            # 통합할 테이블 목록 확장
+            tables = [
+                ('cal_assets_en', ['unit', 'asset_number', 'coordinate']),
+                ('cal_assets_ko', ['unit', 'asset_number', 'coordinate']),
+                ('weapon_assets_en', ['unit', 'asset_name', 'coordinate']),
+                ('weapon_assets_ko', ['unit', 'asset_name', 'coordinate']),
+                ('enemy_bases_en', ['base_name', 'coordinate']),
+                ('enemy_bases_ko', ['base_name', 'coordinate'])
+            ]
 
             total_steps = len(self.sub_files) * len(tables)
             current_step = 0
@@ -141,64 +149,74 @@ class DatabaseIntegrationWindow(QDialog):
                     sub_conn = sqlite3.connect(sub_file)
                     sub_cursor = sub_conn.cursor()
 
-                    for table in tables:
-                        self.log_text.append(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 중...")
+                    for table, key_fields in tables:
+                        self.log_text.append(self.tr(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 중..."))
 
-                        # 통합 데이터베이스의 기존 데이터 가져오기
-                        integration_cursor.execute(f"SELECT unit, asset_number, coordinate FROM {table}")
-                        existing_data = {(row[0], row[1], row[2]) for row in integration_cursor.fetchall()}
+                        # 기존 데이터 가져오기
+                        key_fields_str = ", ".join(key_fields)
+                        integration_cursor.execute(f"SELECT {key_fields_str} FROM {table}")
+                        existing_data = {tuple(row) for row in integration_cursor.fetchall()}
 
-                        # 중복 데이터 선택
+                        # 중복 데이터 처리
+                        where_clause = " AND ".join([f"{field}=?" for field in key_fields])
                         integration_cursor.execute(
-                            f"SELECT unit, asset_number, coordinate, MIN(ROWID) AS min_rowid "
+                            f"SELECT {key_fields_str}, MIN(ROWID) AS min_rowid "
                             f"FROM {table} "
-                            f"GROUP BY unit, asset_number, coordinate "
+                            f"GROUP BY {key_fields_str} "
                             f"HAVING COUNT(*) > 1"
                         )
                         duplicate_rows = integration_cursor.fetchall()
 
-                        # 중복 데이터 삭제
-                        for unit, asset_number, coordinate, min_rowid in duplicate_rows:
+                        for row in duplicate_rows:
+                            params = row[:-1]  # 마지막 min_rowid 제외
+                            min_rowid = row[-1]
                             integration_cursor.execute(
                                 f"DELETE FROM {table} "
-                                f"WHERE unit=? AND asset_number=? AND coordinate=? AND ROWID <> ?",
-                                (unit, asset_number, coordinate, min_rowid)
+                                f"WHERE {where_clause} AND ROWID <> ?",
+                                params + (min_rowid,)
                             )
 
                         integration_conn.commit()
 
-                        sub_cursor.execute(
-                            f"SELECT unit, asset_number, manager, contact, target_asset, area, coordinate, mgrs, description, dal_select, weapon_system, ammo_count, threat_degree, engagement_effectiveness, bmd_priority, criticality, criticality_bonus_center, criticality_bonus_function, vulnerability_damage_protection, vulnerability_damage_dispersion, vulnerability_recovery_time, vulnerability_recovery_ability, threat_attack, threat_detection FROM {table}")
+                        # 새 데이터 가져오기 부분을 다음과 같이 수정
+                        sub_cursor.execute(f"SELECT * FROM {table}")
+                        columns = [description[0] for description in sub_cursor.description]
                         rows = sub_cursor.fetchall()
 
                         for row in rows:
-                            unit, asset_number, coordinate = row[0], row[1], row[6]
-                            if (unit, asset_number, coordinate) not in existing_data:
+                            key_values = tuple(row[columns.index(field)] for field in key_fields)
+                            if key_values not in existing_data:
+                                # id 필드 제외
+                                filtered_columns = [col for col in columns if col.lower() != 'id']
+                                filtered_row = [row[columns.index(col)] for col in filtered_columns]
+
+                                placeholders = ",".join(["?" for _ in range(len(filtered_columns))])
                                 integration_cursor.execute(
-                                    f"INSERT INTO {table} (unit, asset_number, manager, contact, target_asset, area, coordinate, mgrs, description, dal_select, weapon_system, ammo_count, threat_degree, engagement_effectiveness, bmd_priority, criticality, criticality_bonus_center, criticality_bonus_function, vulnerability_damage_protection, vulnerability_damage_dispersion, vulnerability_recovery_time, vulnerability_recovery_ability, threat_attack, threat_detection) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                    row)
-                                existing_data.add((unit, asset_number, coordinate))
+                                    f"INSERT INTO {table} ({','.join(filtered_columns)}) VALUES ({placeholders})",
+                                    filtered_row
+                                )
+                                existing_data.add(key_values)
 
                         integration_conn.commit()
-                        self.log_text.append(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 완료")
+                        self.log_text.append(self.tr(f"[{os.path.basename(sub_file)}] 테이블 {table} 통합 완료"))
 
                         current_step += 1
                         self.progress_bar.setValue(int(current_step / total_steps * 100))
 
                     sub_conn.close()
                 except Exception as e:
-                    self.log_text.append(f"[{os.path.basename(sub_file)}] 오류 발생: {str(e)}")
+                    self.log_text.append(self.tr(f"[{os.path.basename(sub_file)}] 오류 발생: {str(e)}"))
                     QMessageBox.critical(self, self.tr("오류"),
                                          self.tr(f"[{os.path.basename(sub_file)}] 데이터베이스 통합 중 오류가 발생했습니다."))
 
             integration_conn.close()
 
-            self.log_text.append("모든 테이블 통합 완료")
+            self.log_text.append(self.tr("모든 테이블 통합 완료"))
             QMessageBox.information(self, self.tr("완료"), self.tr("데이터베이스 통합이 완료되었습니다."))
             self.parent.parent.update_summary_table()
 
         except Exception as e:
-            self.log_text.append(f"오류 발생: {str(e)}")
+            self.log_text.append(self.tr(f"오류 발생: {str(e)}"))
             QMessageBox.critical(self, self.tr("오류"), self.tr("데이터베이스 통합 중 오류가 발생했습니다."))
 
 

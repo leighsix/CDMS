@@ -39,7 +39,7 @@ class CommonCalMapView(QObject):
         critical_assets = self.tr("중요자산")
         assets_classification = self.tr("자산구분")
         legend_html = f"""
-            <div style="position: fixed; bottom: 200px; right: 20px;width: auto; height: auto; background-color: white; 
+            <div style="position: fixed; top: 70px; right: 20px;width: auto; height: auto; background-color: white; 
             border: 2px solid grey; z-index:9999; font-size:14px; padding: 10px; border-radius: 5px;">
             <strong>{assets_classification}</strong><br>
             <div style="margin-top: 5px;">
@@ -143,7 +143,7 @@ class CommonWeaponMapView(QObject):
 
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 20px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>

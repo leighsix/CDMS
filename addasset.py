@@ -22,21 +22,18 @@ from PyQt5.QtCore import Qt
 class AddAssetWindow(QDialog, QObject):
     """자산 추가 및 수정 다이얼로그 클래스"""
 
-    def __init__(self, parent, main_window=None, asset_id=None):
+    def __init__(self, parent, main_window=None):
         super(AddAssetWindow, self).__init__(parent)  # 부모 클래스 초기화
         self.parent = parent  # 부모 위젯 참조
         self.edit_mode = False
+        self.asset_id = None
         self.setWindowTitle(self.tr("CAL/DAL Management System"))  # 창 제목 설정
         self.setWindowIcon(QIcon("logo.png"))
         self.setMinimumSize(800, 600)  # 최소 크기 설정
         self.main_window = main_window  # 메인 윈도우 참조
-        self.asset_id = asset_id  # 자산 ID (수정 시 사용)
         self.asset_info_fields = {}  # 자산 정보 필드를 저장할 딕셔너리
         self.checkboxes = {}  # 체크박스를 저장할 딕셔너리
         self.sections = []  # 체크박스 섹션 저장
-        self.language = self.parent.selected_language
-        if self.asset_id:
-            self.set_data(self.asset_id)  # 자산 ID가 있는 경우 데이터 로드
         self.initUI()  # UI 초기화
 
     def initUI(self):
@@ -666,7 +663,6 @@ class AddAssetWindow(QDialog, QObject):
             self.parent.cursor.execute(f"SELECT id FROM cal_assets_{self.parent.selected_language} WHERE id=?",
                                        (self.asset_id,))
             existing_asset = self.parent.cursor.fetchone()
-
             if self.edit_mode and existing_asset:
                 # UPDATE 쿼리 (한국어 테이블)
                 self.parent.cursor.execute(f'''
@@ -792,7 +788,7 @@ class AddAssetWindow(QDialog, QObject):
                 QMessageBox.information(self, self.tr("성공"), self.tr("자산 및 CVT 점수 저장 성공!"))  # 성공 메시지
             self.parent.conn.commit()  # 변경사항 커밋
             self.parent.show_cal_view_page()
-
+            self.asset_id = None
         except sqlite3.Error as e:
             QMessageBox.critical(self, self.tr("Database Error"), self.tr(f"오류 발생: {e}"))  # 데이터베이스 오류 처리
         except Exception as e:
@@ -800,65 +796,72 @@ class AddAssetWindow(QDialog, QObject):
 
     def set_data(self, asset_id):
         self.asset_id = asset_id
-        self.parent.cursor.execute(f"SELECT * FROM cal_assets_{self.parent.selected_language} WHERE id=?", (asset_id,))
-        asset_data = self.parent.cursor.fetchone()
-        if asset_data:
+        print(self.asset_id)
+        self.parent.cursor.execute(f"SELECT * FROM cal_assets_ko WHERE id=?", (asset_id,))
+        asset_data_ko = self.parent.cursor.fetchone()
+        self.parent.cursor.execute(f"SELECT * FROM cal_assets_en WHERE id=?", (asset_id,))
+        asset_data_en = self.parent.cursor.fetchone()
+        if asset_data_ko:
             self.reset_data()  # 먼저 모든 필드를 초기화
 
             # 구성군(콤보박스 특성)
-            self.unit_combo.setCurrentText(asset_data[1])
+            if self.parent.selected_language == 'ko':
+                self.unit_combo.setCurrentText(asset_data_ko[1])
+                # 지휘관 지침 관련 설정
+                self.engagement_combo.setCurrentText(asset_data_ko[14] if asset_data_ko[14] is not None else "")
+                self.bmd_priority_combo.setCurrentText(asset_data_ko[15] if asset_data_ko[15] is not None else "")
+            else:
+                self.unit_combo.setCurrentText(asset_data_en[1])
+                self.engagement_combo.setCurrentText(asset_data_en[14] if asset_data_en[14] is not None else "")
+                self.bmd_priority_combo.setCurrentText(asset_data_en[15] if asset_data_en[15] is not None else "")
 
             for label, field in self.asset_info_fields.items():
                 if isinstance(field, tuple):
                     if label == (self.tr("담당자"), self.tr("(영문)")):
-                        field[0].setText(asset_data[3])
-                        field[1].setText(asset_data[3])  # 영문 테이블에서 가져와야 함
+                        field[0].setText(asset_data_ko[3])
+                        field[1].setText(asset_data_en[3])  # 영문 테이블에서 가져와야 함
                     elif label == (self.tr("방어대상자산"), self.tr("(영문)")):
-                        field[0].setText(asset_data[5])
-                        field[1].setText(asset_data[5])  # 영문 테이블에서 가져와야 함
+                        field[0].setText(asset_data_ko[5])
+                        field[1].setText(asset_data_en[5])  # 영문 테이블에서 가져와야 함
                     elif label == (self.tr("지역구분"), self.tr("(영문)")):
-                        field[0].setText(asset_data[6])
-                        field[1].setText(asset_data[6])  # 영문 테이블에서 가져와야 함
+                        field[0].setText(asset_data_ko[6])
+                        field[1].setText(asset_data_en[6])  # 영문 테이블에서 가져와야 함
                     elif label == (self.tr("위도"), self.tr("경도")):
-                        lat, lon = asset_data[7].split(',')
+                        lat, lon = asset_data_ko[7].split(',')
                         field[0].setText(lat.strip())
                         field[1].setText(lon.strip())
                 else:
                     if label == self.tr("자산번호"):
-                        field.setText(str(asset_data[2]))
+                        field.setText(str(asset_data_ko[2]))
                     elif label == self.tr("연락처"):
-                        field.setText(asset_data[4])
+                        field.setText(asset_data_ko[4])
                     elif label == self.tr("군사좌표(MGRS)"):
-                        field.setText(asset_data[8])
+                        field.setText(asset_data_ko[8])
                     elif label == self.tr("임무/기능(국/영문)"):
-                        field.setPlainText(asset_data[9])
+                        field.setPlainText(asset_data_ko[9])
 
             # DAL 정보 설정
-            self.dal_checkbox.setChecked(asset_data[10])
-            if asset_data[11]:  # weapon_system
-                weapons = asset_data[11].split(', ')
+            self.dal_checkbox.setChecked(asset_data_ko[10])
+            if asset_data_ko[11]:  # weapon_system
+                weapons = asset_data_ko[11].split(', ')
                 for weapon in weapons:
                     weapon_name, ammo = weapon.split('(')
                     ammo = ammo.rstrip(')')
                     if weapon_name in self.weapon_checkboxes:
                         self.weapon_checkboxes[weapon_name].setChecked(True)
                         self.ammo_inputs[weapon_name].setText(ammo)
-            self.threat_degree_edit.setText(str(asset_data[13]) if asset_data[13] is not None else "")
-
-            # 지휘관 지침 관련 설정
-            self.engagement_combo.setCurrentText(asset_data[14] if asset_data[14] is not None else "")
-            self.bmd_priority_combo.setCurrentText(asset_data[15] if asset_data[15] is not None else "")
+            self.threat_degree_edit.setText(str(asset_data_ko[13]) if asset_data_ko[13] is not None else "")
 
             # 체크박스 상태 설정
-            self.set_checkbox_state(self.tr("중요도"), asset_data[16])
-            self.set_checkbox_state(self.tr("중요도_중요도 가점(중심)"), asset_data[17])
-            self.set_checkbox_state(self.tr("중요도_중요도 가점(기능)"), asset_data[18])
-            self.set_checkbox_state(self.tr("취약성_피해민감도_방호강도"), asset_data[19])
-            self.set_checkbox_state(self.tr("취약성_피해민감도_분산배치"), asset_data[20])
-            self.set_checkbox_state(self.tr("취약성_복구가능성_복구시간"), asset_data[21])
-            self.set_checkbox_state(self.tr("취약성_복구가능성_복구능력"), asset_data[22])
-            self.set_checkbox_state(self.tr("위협_공격가능성"), asset_data[23])
-            self.set_checkbox_state(self.tr("위협_탐지가능성"), asset_data[24])
+            self.set_checkbox_state(self.tr("중요도"), asset_data_ko[16])
+            self.set_checkbox_state(self.tr("중요도_중요도 가점(중심)"), asset_data_ko[17])
+            self.set_checkbox_state(self.tr("중요도_중요도 가점(기능)"), asset_data_ko[18])
+            self.set_checkbox_state(self.tr("취약성_피해민감도_방호강도"), asset_data_ko[19])
+            self.set_checkbox_state(self.tr("취약성_피해민감도_분산배치"), asset_data_ko[20])
+            self.set_checkbox_state(self.tr("취약성_복구가능성_복구시간"), asset_data_ko[21])
+            self.set_checkbox_state(self.tr("취약성_복구가능성_복구능력"), asset_data_ko[22])
+            self.set_checkbox_state(self.tr("위협_공격가능성"), asset_data_ko[23])
+            self.set_checkbox_state(self.tr("위협_탐지가능성"), asset_data_ko[24])
 
     def set_edit_mode(self, edit_mode):
         self.edit_mode = edit_mode
@@ -870,8 +873,6 @@ class AddAssetWindow(QDialog, QObject):
 
     def reset_data(self):
         """모든 입력 필드와 체크박스를 초기화합니다."""
-        # 자산 ID 초기화
-        self.asset_id = None
         # 구성군 콤보박스 초기화
         self.unit_combo.setCurrentIndex(0)
 

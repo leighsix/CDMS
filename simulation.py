@@ -9,7 +9,6 @@ import io
 import pandas as pd
 import folium
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
-from PyQt5.QtPrintSupport import QPrinter, QPrintPreviewDialog
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont, QIcon, QLinearGradient, QColor, QPainter, QPainterPath, QPen
@@ -1406,10 +1405,14 @@ class MissileDefenseApp(QDialog):
             # 요약 정보가 있는 경우에만 표시
             if isinstance(summary, dict):
                 self.show_optimization_summary(summary)
-
-            QMessageBox.information(self, self.tr("최적화 완료"),
-                                    self.tr(f"최적화가 성공적으로 완료되었습니다.\n"
-                                    f"총 방어율: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%"))
+            if self.parent.selected_language == 'ko':
+                QMessageBox.information(self, "최적화 완료",
+                                        f"최적화가 성공적으로 완료되었습니다.\n"
+                                        f"총 방어율: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%")
+            if self.parent.selected_language == 'en':
+                QMessageBox.information(self, "Optimization Complete",
+                                        f"Optimization has been successfully completed.\n"
+                                        f"Total defense rate: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%")
 
         except Exception as e:
             QMessageBox.critical(self, self.tr("오류"), self.tr(f"최적화 결과 처리 중 오류가 발생했습니다: {str(e)}"))
@@ -1765,7 +1768,8 @@ class MissileDefenseApp(QDialog):
 
     def show_optimization_summary(self, summary):
         try:
-            msg = self.tr(f"""최적화 결과 요약:
+            if self.parent.selected_language == 'ko':
+                msg = f"""최적화 결과 요약:
     - 총 {summary.get('attempts', 0)}회 최적화 시도 수행
     - {'최적화된 위치가 더 우수함' if summary.get('is_improved', False) else '최초 위치가 더 우수하여 유지'}
 
@@ -1777,7 +1781,22 @@ class MissileDefenseApp(QDialog):
     - 중복방어 페널티: {summary.get('best_scores', {}).get('overlap_penalty', 0):.0f}점
     - 총 방어율: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%
     - 최종 점수: {summary.get('best_scores', {}).get('total_score', 0):.0f}점
-    """)
+    """
+            else:
+                msg = f"""Optimization Result Summary:
+    - Total optimization attempts: {summary.get('attempts', 0)}
+    - {'Optimized position is better' if summary.get('is_improved', False) else 'Initial position maintained as better'}
+
+    Final Selected Position Scores:
+    - Priority bonus: {summary.get('best_scores', {}).get('priority_score', 0):.0f} points
+    - Defense rate bonus: {summary.get('best_scores', {}).get('defense_rate_score', 0):.0f} points  
+    - Minimum defense rate penalty: {summary.get('best_scores', {}).get('min_defense_penalty', 0):.0f} points
+    - Coverage penalty: {summary.get('best_scores', {}).get('coverage_penalty', 0):.0f} points
+    - Overlap penalty: {summary.get('best_scores', {}).get('overlap_penalty', 0):.0f} points
+    - Total defense rate: {summary.get('best_scores', {}).get('total_defense_rate', 0):.1f}%
+    - Final score: {summary.get('best_scores', {}).get('total_score', 0):.0f} points
+    """
+
             QMessageBox.information(None, self.tr("최적화 결과 요약"), msg)
         except Exception as e:
             QMessageBox.critical(None, self.tr("오류"), self.tr(f"결과 요약 표시 중 오류 발생: {str(e)}"))

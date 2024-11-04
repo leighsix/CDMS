@@ -41,7 +41,6 @@ class EnemyBaseInputDialog(QDialog):
                 self.populate_fields()
         self.setWindowFlags(self.windowFlags() | Qt.WindowMaximizeButtonHint | Qt.WindowMinimizeButtonHint)
 
-
     def initUI(self):
         # 창 제목 및 아이콘 설정
         self.setWindowTitle(self.tr("적 미사일 기지 정보 입력"))
@@ -529,20 +528,32 @@ class EnemyBaseWindow(QDialog):
 
         # 무기체계 체크박스 그룹
         weapon_group = QGroupBox(self.tr("미사일 유형"))
-        weapon_layout = QHBoxLayout()
+        weapon_layout = QGridLayout()
         weapon_layout.setContentsMargins(10, 5, 10, 5)  # 여백 조정
         weapon_layout.setSpacing(10)  # 체크박스 간 간격 조정
         self.enemy_weapon_system_checkboxes = {}
         enemy_weapon_system = []
+
         with open('missile_info.json', 'r', encoding='utf-8') as file:
             weapon_systems_dic = json.load(file)
+
         for weapon in weapon_systems_dic.keys():
             enemy_weapon_system.append(weapon)
+
+        max_columns = 4  # 한 줄에 표시할 최대 체크박스 수
+        row = 0
+        col = 0
+
         for weapon in enemy_weapon_system:
             checkbox = QCheckBox(weapon)
             checkbox.stateChanged.connect(self.update_map)
             self.enemy_weapon_system_checkboxes[weapon] = checkbox
-            weapon_layout.addWidget(checkbox)
+            weapon_layout.addWidget(checkbox, row, col)
+            col += 1
+            if col >= max_columns:
+                col = 0
+                row += 1
+
         weapon_group.setLayout(weapon_layout)
         weapon_group.setFixedHeight(weapon_layout.sizeHint().height() + 20)  # 높이 조정
         right_layout.addWidget(weapon_group)
@@ -684,6 +695,7 @@ class EnemyBaseWindow(QDialog):
 
             QMessageBox.information(self, self.tr('알림'), self.tr('선택한 기지들이 삭제되었습니다.'))
             self.load_all_enemy_bases()  # 테이블 새로고침
+            self.update_map()
 
     def correct_enemy_base(self):
         checked_rows = [row for row in range(self.enemy_base_table.rowCount())

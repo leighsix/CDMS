@@ -90,7 +90,7 @@ def generate_dummy_weapon(db_path):
 
             # 한국 내 좌표 생성
             lat = random.uniform(34.4, 38.2)
-            lon = random.uniform(126.0, 129.6)
+            lon = random.uniform(126.0, 129.8)
             coordinate = f"N{lat:.5f},E{lon:.5f}"
 
             # MGRS 변환

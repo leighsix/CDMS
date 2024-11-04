@@ -507,8 +507,6 @@ class CopViewWindow(QDialog):
         selected_weapon_assets = self.get_selected_weapon_assets()
         selected_enemy_weapons = self.get_selected_enemy_weapons()
 
-        m_conv = mgrs.MGRS()
-
         # weapon_systems.json 파일 로드
         with open('weapon_systems.json', 'r', encoding='utf-8') as f:
             weapon_systems = json.load(f)

@@ -300,7 +300,7 @@ class AddWeaponAssetWindow(QDialog):
                          weapon_system, asset_data[self.tr("보유탄수")], asset_data[self.tr("위협방위")], dal_select)
                     )
                 self.parent.parent.conn.commit()
-                self.accept()
+                self.close()
                 if self.edit_mode:
                     QMessageBox.information(self, self.tr("성공"), self.tr("자산이 성공적으로 수정되었습니다."))
                 else:
@@ -543,18 +543,30 @@ class WeaponAssetWindow(QDialog):
 
         # 무기체계 체크박스 그룹
         weapon_group = QGroupBox(self.tr("무기체계"))
-        weapon_layout = QHBoxLayout()
+        weapon_layout = QGridLayout()
         weapon_layout.setContentsMargins(10, 5, 10, 5)  # 여백 조정
         weapon_layout.setSpacing(10)  # 체크박스 간 간격 조정
         self.weapon_system_checkboxes = {}
+
+        # 한 줄에 표시할 최대 체크박스 개수
+        max_columns = 4
+        current_row = 0
+        current_col = 0
+
         # weapon_systems.json 파일에서 무기체계 목록 가져오기
         with open('weapon_systems.json', 'r', encoding='utf-8') as f:
             weapon_systems = json.load(f)
+
         for weapon in weapon_systems:
             checkbox = QCheckBox(weapon)
             checkbox.stateChanged.connect(self.update_map)
             self.weapon_system_checkboxes[weapon] = checkbox
-            weapon_layout.addWidget(checkbox)
+            weapon_layout.addWidget(checkbox, current_row, current_col)
+            current_col += 1
+            if current_col >= max_columns:
+                current_col = 0
+                current_row += 1
+
         weapon_group.setLayout(weapon_layout)
         weapon_group.setFixedHeight(weapon_layout.sizeHint().height() + 20)  # 높이 조정
         right_layout.addWidget(weapon_group)

@@ -76,7 +76,7 @@ class DalMapView(QObject):
 
         # 구성군 범례 생성
         legend_html = f'''
-        <div style="position: fixed; bottom: 50px; right: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; right: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{composition_group}</strong><br>
@@ -92,7 +92,7 @@ class DalMapView(QObject):
 
         # BMD 우선순위 범례 생성
         bmd_legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{bmd_priorities}</strong><br>
@@ -227,7 +227,7 @@ class WeaponMapView(QObject):
         max_radius = self.tr("최대반경")
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; top: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; top: 20px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
@@ -247,7 +247,7 @@ class WeaponMapView(QObject):
                 info = weapon_info.get(weapon_system, {})
                 color = info.get('color', '#000000')
                 max_radius = info.get('max_radius', 0)
-                angle = info.get('angle', 0)
+                angle = info.get('angle', 360)
 
                 # 방어 반경 그리기
                 if show_defense_radius:
@@ -383,7 +383,7 @@ class PriorityDalMapView(QObject):
 
         # BMD 우선순위 범례 생성
         bmd_legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{bmd_priorities}</strong><br>
@@ -486,7 +486,7 @@ class PriorityWeaponMapView(QObject):
         max_radius = self.tr("최대반경")
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; top: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 20px; right: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
@@ -505,7 +505,7 @@ class PriorityWeaponMapView(QObject):
                 info = weapon_info.get(weapon_system, {})
                 color = info.get('color', '#000000')
                 max_radius = info.get('max_radius', 0)
-                angle = info.get('angle', 0)
+                angle = info.get('angle', 360)
 
                 # 방어 반경 그리기
                 if show_defense_radius:

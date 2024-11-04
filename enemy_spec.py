@@ -159,7 +159,7 @@ class EnemySpecWindow(QDialog):
 
             # 필수 입력값 검증
             if not all([name, min_radius, max_radius, function]):
-                QMessageBox.warning(self, "경고", "모든 필드를 입력해주세요.")
+                QMessageBox.warning(self, self.tr("경고"), self.tr("모든 필드를 입력해주세요."))
                 return
 
             # JSON 파일 읽기
@@ -171,16 +171,16 @@ class EnemySpecWindow(QDialog):
 
             # 기존 데이터 확인
             if name in data:
-                reply = QMessageBox.question(self, '확인',
-                                             '이미 존재하는 미사일 정보입니다. 수정하시겠습니까?',
+                reply = QMessageBox.question(self, self.tr('확인'),
+                                             self.tr('이미 존재하는 미사일 정보입니다. 수정하시겠습니까?'),
                                              QMessageBox.Yes | QMessageBox.No)
                 if reply == QMessageBox.No:
                     return
 
-            # 기본 계수값 설정
+            # 미사일 계수 처리 Nathan J. Siegel의 "Modeling and Simulation of Ballistic Missile Trajectories" (2016) 논문
             default_coefficients = {
-                "alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
-                "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}
+                "alpha": {"a1": -0.1024, "a2": -0.0285, "b1": -0.0228, "b2": -0.0072},
+                "beta": {"a1": 2.82, "a2": -0.0334, "b1": 2.35, "b2": -0.00268}
             }
 
             # 궤적 계수 처리
@@ -211,10 +211,10 @@ class EnemySpecWindow(QDialog):
 
             self.load_missile_info()
             self.clear_inputs()
-            QMessageBox.information(self, "성공", "미사일 정보가 저장되었습니다.")
+            QMessageBox.information(self, self.tr("성공"), self.tr("미사일 정보가 저장되었습니다."))
 
         except Exception as e:
-            QMessageBox.critical(self, "오류", f"저장 중 오류가 발생했습니다: {str(e)}")
+            QMessageBox.critical(self, self.tr("오류"), self.tr(f"저장 중 오류가 발생했습니다: {str(e)}"))
 
     def load_missile_info(self):
         try:
@@ -286,10 +286,10 @@ class EnemySpecWindow(QDialog):
             self.max_radius_edit.setText(self.table.item(row, 3).text())
             self.function_edit.setText(self.table.item(row, 4).text())
 
-            # 미사일 계수 처리
+            # 미사일 계수 처리 Nathan J. Siegel의 "Modeling and Simulation of Ballistic Missile Trajectories" (2016) 논문
             default_coefficients = {
-                "alpha": {"a1": -0.0974, "a2": -0.0262, "b1": -0.0215, "b2": -0.006},
-                "beta": {"a1": 2.75, "a2": -0.0323, "b1": 2.27, "b2": -0.00246}
+                "alpha": {"a1": -0.1024, "a2": -0.0285, "b1": -0.0228, "b2": -0.0072},
+                "beta": {"a1": 2.82, "a2": -0.0334, "b1": 2.35, "b2": -0.00268}
             }
 
             trajectory_coefficients = default_coefficients
@@ -323,7 +323,7 @@ class EnemySpecWindow(QDialog):
         reply = QMessageBox.question(self, self.tr('확인'), self.tr('선택한 항목을 삭제하시겠습니까?'),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            with open('weapon_systems.json', 'r', encoding='utf-8') as file:
+            with open('missile_info.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
 
             for row in sorted(checked_rows, reverse=True):
@@ -332,10 +332,11 @@ class EnemySpecWindow(QDialog):
                     del data[name]
                 self.table.removeRow(row)
 
-            with open('weapon_systems.json', 'w', encoding='utf-8') as file:
+            with open('missile_info.json', 'w', encoding='utf-8') as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
 
-            self.load_weapon_systems()
+            self.load_missile_info()
+            self.clear_inputs()
 
 class CheckBoxHeader(QHeaderView):
     def __init__(self, orientation, parent):

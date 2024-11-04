@@ -4,407 +4,407 @@
 <context>
     <name>AddAssetWindow</name>
     <message>
-        <location filename="../addasset.py" line="47"/>
+        <location filename="../addasset.py" line="44"/>
         <source>CAL/DAL Management System</source>
         <translation>CAL/DAL Management System</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="54"/>
+        <location filename="../addasset.py" line="51"/>
         <source>CAL 정보</source>
         <translation>CAL 정보</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="143"/>
+        <location filename="../addasset.py" line="140"/>
         <source>구성군</source>
         <translation>구성군</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="827"/>
+        <location filename="../addasset.py" line="834"/>
         <source>자산번호</source>
         <translation>자산번호</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="813"/>
+        <location filename="../addasset.py" line="820"/>
         <source>담당자</source>
         <translation>담당자</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="819"/>
+        <location filename="../addasset.py" line="826"/>
         <source>(영문)</source>
         <translation>(영문)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="829"/>
+        <location filename="../addasset.py" line="836"/>
         <source>연락처</source>
         <translation>연락처</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="816"/>
+        <location filename="../addasset.py" line="823"/>
         <source>방어대상자산</source>
         <translation>방어대상자산</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="819"/>
+        <location filename="../addasset.py" line="826"/>
         <source>지역구분</source>
         <translation>지역구분</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="978"/>
+        <location filename="../addasset.py" line="979"/>
         <source>위도</source>
         <translation>위도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="978"/>
+        <location filename="../addasset.py" line="979"/>
         <source>경도</source>
         <translation>경도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="831"/>
+        <location filename="../addasset.py" line="838"/>
         <source>군사좌표(MGRS)</source>
         <translation>군사좌표(MGRS)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="833"/>
+        <location filename="../addasset.py" line="840"/>
         <source>임무/기능(국/영문)</source>
         <translation>임무/기능(국/영문)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="146"/>
+        <location filename="../addasset.py" line="143"/>
         <source>지상군</source>
         <translation>지상군</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="146"/>
+        <location filename="../addasset.py" line="143"/>
         <source>해군</source>
         <translation>해군</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="146"/>
+        <location filename="../addasset.py" line="143"/>
         <source>공군</source>
         <translation>공군</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="146"/>
+        <location filename="../addasset.py" line="143"/>
         <source>기타</source>
         <translation>기타</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="180"/>
+        <location filename="../addasset.py" line="177"/>
         <source>방어자산(DAL) 정보</source>
         <translation>방어자산(DAL) 정보</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="184"/>
+        <location filename="../addasset.py" line="181"/>
         <source>방어자산(DAL)</source>
         <translation>방어자산(DAL)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="190"/>
+        <location filename="../addasset.py" line="187"/>
         <source>무기체계</source>
         <translation>무기체계</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="205"/>
+        <location filename="../addasset.py" line="202"/>
         <source>탄수</source>
         <translation>탄수</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="230"/>
+        <location filename="../addasset.py" line="227"/>
         <source>위협방위</source>
         <translation>위협방위</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="248"/>
+        <location filename="../addasset.py" line="245"/>
         <source>교전효과 수준</source>
         <translation>교전효과 수준</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="254"/>
+        <location filename="../addasset.py" line="251"/>
         <source>1단계: 원격발사대</source>
         <translation>1단계: 원격발사대</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="254"/>
+        <location filename="../addasset.py" line="251"/>
         <source>2단계: 단층방어</source>
         <translation>2단계: 단층방어</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="254"/>
+        <location filename="../addasset.py" line="251"/>
         <source>3단계: 중첩방어</source>
         <translation>3단계: 중첩방어</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="254"/>
+        <location filename="../addasset.py" line="251"/>
         <source>4단계: 다층방어</source>
         <translation>4단계: 다층방어</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="270"/>
+        <location filename="../addasset.py" line="267"/>
         <source>지휘통제시설</source>
         <translation>지휘통제시설</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="270"/>
+        <location filename="../addasset.py" line="267"/>
         <source>비행단</source>
         <translation>비행단</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="270"/>
+        <location filename="../addasset.py" line="267"/>
         <source>군수기지</source>
         <translation>군수기지</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="270"/>
+        <location filename="../addasset.py" line="267"/>
         <source>해군기지</source>
         <translation>해군기지</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="270"/>
+        <location filename="../addasset.py" line="267"/>
         <source>주요레이다</source>
         <translation>주요레이다</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="292"/>
+        <location filename="../addasset.py" line="289"/>
         <source>CVT 점수 평가</source>
         <translation>CVT 점수 평가</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1035"/>
+        <location filename="../addasset.py" line="1036"/>
         <source>중요도</source>
         <translation>중요도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>작전계획 실행 중단 초래</source>
         <translation>작전계획 실행 중단 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>작전계획 실행 위험 초래</source>
         <translation>작전계획 실행 위험 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>작전계획 중요 변경 초래</source>
         <translation>작전계획 중요 변경 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>차기 작전계획 단계 실행 지연</source>
         <translation>차기 작전계획 단계 실행 지연</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>임무전환/자산 위치 조정하기</source>
         <translation>임무전환/자산 위치 조정하기</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>중요도 가점(중심)</source>
         <translation>중요도 가점(중심)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>작계 1,2,3단계의 중심</source>
         <translation>작계 1,2,3단계의 중심</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>중요도 가점(기능)</source>
         <translation>중요도 가점(기능)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="299"/>
+        <location filename="../addasset.py" line="296"/>
         <source>비전투원 후송작전 통제소, 양륙공항, 양륙항만</source>
         <translation>비전투원 후송작전 통제소, 양륙공항, 양륙항만</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1036"/>
+        <location filename="../addasset.py" line="1037"/>
         <source>취약성</source>
         <translation>취약성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>피해민감도</source>
         <translation>피해민감도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>방호강도</source>
         <translation>방호강도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 29%미만으로 방호 가능</source>
         <translation>시설의 29%미만으로 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 30~74%로 방호 가능</source>
         <translation>시설의 30~74%로 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 75%이상 방호 가능</source>
         <translation>시설의 75%이상 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>분산배치</source>
         <translation>분산배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 29%미만으로 분산 배치</source>
         <translation>시설의 29%미만으로 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 30~74%로 분산 배치</source>
         <translation>시설의 30~74%로 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>시설의 75%이상 분산 배치</source>
         <translation>시설의 75%이상 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>복구가능성</source>
         <translation>복구가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>복구시간</source>
         <translation>복구시간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>7일 이상 또는 영구적 폐쇄</source>
         <translation>7일 이상 또는 영구적 폐쇄</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>1~7일 임시 폐쇄</source>
         <translation>1~7일 임시 폐쇄</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>1일 이상 75~100% 임무제한</source>
         <translation>1일 이상 75~100% 임무제한</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>1일 이상 25~74% 임무제한</source>
         <translation>1일 이상 25~74% 임무제한</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>복구능력</source>
         <translation>복구능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>부대 25% 복원 능력</source>
         <translation>부대 25% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>부대 26~75% 복원 능력</source>
         <translation>부대 26~75% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="310"/>
+        <location filename="../addasset.py" line="307"/>
         <source>부대 100% 복원 능력</source>
         <translation>부대 100% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1037"/>
+        <location filename="../addasset.py" line="1038"/>
         <source>위협</source>
         <translation>위협</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>공격가능성</source>
         <translation>공격가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>공격가능성 높음</source>
         <translation>공격가능성 높음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>공격가능성 중간</source>
         <translation>공격가능성 중간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>공격가능성 낮음</source>
         <translation>공격가능성 낮음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>탐지가능성</source>
         <translation>탐지가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>탐지가능성 높음</source>
         <translation>탐지가능성 높음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>탐지 가능성 중간</source>
         <translation>탐지 가능성 중간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="337"/>
+        <location filename="../addasset.py" line="334"/>
         <source>탐지 가능성 낮음</source>
         <translation>탐지 가능성 낮음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="401"/>
+        <location filename="../addasset.py" line="398"/>
         <source>총합 점수: 0</source>
         <translation>총합 점수: 0</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="869"/>
+        <location filename="../addasset.py" line="872"/>
         <source>저장</source>
         <translation>저장</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="420"/>
+        <location filename="../addasset.py" line="417"/>
         <source>출력</source>
         <translation>출력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="424"/>
+        <location filename="../addasset.py" line="421"/>
         <source>메인화면</source>
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="509"/>
+        <location filename="../addasset.py" line="506"/>
         <source>총합 점수: {total_score}</source>
         <translation>총합 점수: {total_score}</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="522"/>
+        <location filename="../addasset.py" line="519"/>
         <source>입력 오류</source>
         <translation>입력 오류</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="522"/>
+        <location filename="../addasset.py" line="519"/>
         <source>{label} 값을 입력하세요.</source>
         <translation>{label} 값을 입력하세요.</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="542"/>
+        <location filename="../addasset.py" line="539"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="542"/>
+        <location filename="../addasset.py" line="539"/>
         <source>올바른 경위도 형식을 입력해주세요.
 위도: N##.##### 또는 S##.#####
 경도: E###.##### 또는 W###.#####</source>
@@ -413,174 +413,174 @@
 경도: E###.##### 또는 W###.#####</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="854"/>
+        <location filename="../addasset.py" line="857"/>
         <source>중요도_중요도 가점(중심)</source>
         <translation>중요도_중요도 가점(중심)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="855"/>
+        <location filename="../addasset.py" line="858"/>
         <source>중요도_중요도 가점(기능)</source>
         <translation>중요도_중요도 가점(기능)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="856"/>
+        <location filename="../addasset.py" line="859"/>
         <source>취약성_피해민감도_방호강도</source>
         <translation>취약성_피해민감도_방호강도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="857"/>
+        <location filename="../addasset.py" line="860"/>
         <source>취약성_피해민감도_분산배치</source>
         <translation>취약성_피해민감도_분산배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="858"/>
+        <location filename="../addasset.py" line="861"/>
         <source>취약성_복구가능성_복구시간</source>
         <translation>취약성_복구가능성_복구시간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="859"/>
+        <location filename="../addasset.py" line="862"/>
         <source>취약성_복구가능성_복구능력</source>
         <translation>취약성_복구가능성_복구능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="860"/>
+        <location filename="../addasset.py" line="863"/>
         <source>위협_공격가능성</source>
         <translation>위협_공격가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="861"/>
+        <location filename="../addasset.py" line="864"/>
         <source>위협_탐지가능성</source>
         <translation>위협_탐지가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="792"/>
+        <location filename="../addasset.py" line="788"/>
         <source>성공</source>
         <translation>성공</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="731"/>
+        <location filename="../addasset.py" line="727"/>
         <source>자산 정보가 수정되었습니다!</source>
         <translation>자산 정보가 수정되었습니다!</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="792"/>
+        <location filename="../addasset.py" line="788"/>
         <source>자산 및 CVT 점수 저장 성공!</source>
         <translation>자산 및 CVT 점수 저장 성공!</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="797"/>
+        <location filename="../addasset.py" line="793"/>
         <source>Database Error</source>
         <translation>Database Error</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="797"/>
+        <location filename="../addasset.py" line="793"/>
         <source>오류 발생: {e}</source>
         <translation>오류 발생: {e}</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="799"/>
+        <location filename="../addasset.py" line="795"/>
         <source>Error</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="799"/>
+        <location filename="../addasset.py" line="795"/>
         <source>예기치 않은 오류 발생: {str(e)}</source>
         <translation>예기치 않은 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="867"/>
+        <location filename="../addasset.py" line="870"/>
         <source>수정</source>
         <translation>수정</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="961"/>
+        <location filename="../addasset.py" line="962"/>
         <source>자산 CVT 평가자료</source>
         <translation>자산 CVT 평가자료</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="968"/>
+        <location filename="../addasset.py" line="969"/>
         <source>자산정보</source>
         <translation>자산정보</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="969"/>
+        <location filename="../addasset.py" line="970"/>
         <source>경위도</source>
         <translation>경위도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1033"/>
+        <location filename="../addasset.py" line="1034"/>
         <source>CVT 점수평가</source>
         <translation>CVT 점수평가</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1034"/>
+        <location filename="../addasset.py" line="1035"/>
         <source>총계</source>
         <translation>총계</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1172"/>
+        <location filename="../addasset.py" line="1173"/>
         <source>항목</source>
         <translation>항목</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1173"/>
+        <location filename="../addasset.py" line="1174"/>
         <source>점수</source>
         <translation>점수</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1068"/>
+        <location filename="../addasset.py" line="1069"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1075"/>
+        <location filename="../addasset.py" line="1076"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1075"/>
+        <location filename="../addasset.py" line="1076"/>
         <source>자산 보고서가 {} 파일로 저장되었습니다.</source>
         <translation>자산 보고서가 {} 파일로 저장되었습니다.</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1078"/>
+        <location filename="../addasset.py" line="1079"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1078"/>
+        <location filename="../addasset.py" line="1079"/>
         <source>보고서 생성 중 오류가 발생했습니다: {}</source>
         <translation>보고서 생성 중 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1174"/>
+        <location filename="../addasset.py" line="1175"/>
         <source>체크</source>
         <translation>체크</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="264"/>
+        <location filename="../addasset.py" line="261"/>
         <source>연합사 BMD 우선순위</source>
         <translation>연합사 BMD 우선순위</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="459"/>
+        <location filename="../addasset.py" line="456"/>
         <source>위도와 경도 형식이 올바르지 않습니다.
 올바른 형식: N##.######° 또는 S##.######°, E###.######° 또는 W###.######°</source>
         <translation>위도와 경도 형식이 올바르지 않습니다.
 올바른 형식: N##.######° 또는 S##.######°, E###.######° 또는 W###.######°</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="476"/>
+        <location filename="../addasset.py" line="473"/>
         <source>변환 오류</source>
         <translation>변환 오류</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="476"/>
+        <location filename="../addasset.py" line="473"/>
         <source>좌표 변환 중 오류가 발생했습니다: {e}</source>
         <translation>좌표 변환 중 오류가 발생했습니다: {e}</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="478"/>
+        <location filename="../addasset.py" line="475"/>
         <source>예기치 않은 오류가 발생했습니다: {e}</source>
         <translation>예기치 않은 오류가 발생했습니다: {e}</translation>
     </message>
@@ -1460,312 +1460,312 @@
 <context>
     <name>CalViewWindow</name>
     <message>
-        <location filename="../cal_view.py" line="58"/>
+        <location filename="../cal_view.py" line="59"/>
         <source>필터</source>
         <translation>필터</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="67"/>
+        <location filename="../cal_view.py" line="68"/>
         <source>구성군 선택</source>
         <translation>구성군 선택</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="377"/>
+        <location filename="../cal_view.py" line="378"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="70"/>
+        <location filename="../cal_view.py" line="71"/>
         <source>지상군</source>
         <translation>지상군</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="70"/>
+        <location filename="../cal_view.py" line="71"/>
         <source>해군</source>
         <translation>해군</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="70"/>
+        <location filename="../cal_view.py" line="71"/>
         <source>공군</source>
         <translation>공군</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="70"/>
+        <location filename="../cal_view.py" line="71"/>
         <source>기타</source>
         <translation>기타</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="78"/>
+        <location filename="../cal_view.py" line="79"/>
         <source>방어자산(DAL)</source>
         <translation>방어자산(DAL)</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="83"/>
+        <location filename="../cal_view.py" line="84"/>
         <source>BMD 우선순위 목록</source>
         <translation>BMD 우선순위 목록</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="86"/>
+        <location filename="../cal_view.py" line="87"/>
         <source>지휘통제시설</source>
         <translation>지휘통제시설</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="86"/>
+        <location filename="../cal_view.py" line="87"/>
         <source>비행단</source>
         <translation>비행단</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="86"/>
+        <location filename="../cal_view.py" line="87"/>
         <source>군수기지</source>
         <translation>군수기지</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="86"/>
+        <location filename="../cal_view.py" line="87"/>
         <source>해군기지</source>
         <translation>해군기지</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="86"/>
+        <location filename="../cal_view.py" line="87"/>
         <source>주요레이다</source>
         <translation>주요레이다</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="273"/>
+        <location filename="../cal_view.py" line="274"/>
         <source>교전효과 수준</source>
         <translation>교전효과 수준</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="98"/>
+        <location filename="../cal_view.py" line="99"/>
         <source>1단계: 원격발사대</source>
         <translation>1단계: 원격발사대</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="98"/>
+        <location filename="../cal_view.py" line="99"/>
         <source>2단계: 단층방어</source>
         <translation>2단계: 단층방어</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="98"/>
+        <location filename="../cal_view.py" line="99"/>
         <source>3단계: 중첩방어</source>
         <translation>3단계: 중첩방어</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="98"/>
+        <location filename="../cal_view.py" line="99"/>
         <source>4단계: 다층방어</source>
         <translation>4단계: 다층방어</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="107"/>
+        <location filename="../cal_view.py" line="108"/>
         <source>검색</source>
         <translation>검색</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="110"/>
+        <location filename="../cal_view.py" line="111"/>
         <source>검색어를 입력하세요</source>
         <translation>검색어를 입력하세요</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="117"/>
+        <location filename="../cal_view.py" line="118"/>
         <source>찾기</source>
         <translation>찾기</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>ID</source>
         <translation>ID</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>구성군</source>
         <translation>구성군</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>자산번호</source>
         <translation>자산번호</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>담당자</source>
         <translation>담당자</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>연락처</source>
         <translation>연락처</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>방어대상자산</source>
         <translation>방어대상자산</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>지역구분</source>
         <translation>지역구분</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>경위도</source>
         <translation>경위도</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>군사좌표(MGRS)</source>
         <translation>군사좌표(MGRS)</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>임무/기능 기술</source>
         <translation>임무/기능 기술</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>방어자산</source>
         <translation>방어자산</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>무기체계</source>
         <translation>무기체계</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>보유탄수</source>
         <translation>보유탄수</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>위협방위</source>
         <translation>위협방위</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="272"/>
+        <location filename="../cal_view.py" line="273"/>
         <source>BMD 우선순위</source>
         <translation>BMD 우선순위</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>중요도</source>
         <translation>중요도</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>취약성</source>
         <translation>취약성</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>위협</source>
         <translation>위협</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="137"/>
+        <location filename="../cal_view.py" line="138"/>
         <source>합산 점수</source>
         <translation>합산 점수</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="411"/>
+        <location filename="../cal_view.py" line="412"/>
         <source>삭제</source>
         <translation>삭제</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="186"/>
+        <location filename="../cal_view.py" line="187"/>
         <source>수정</source>
         <translation>수정</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="189"/>
+        <location filename="../cal_view.py" line="190"/>
         <source>출력</source>
         <translation>출력</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="192"/>
+        <location filename="../cal_view.py" line="193"/>
         <source>메인화면</source>
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="436"/>
+        <location filename="../cal_view.py" line="437"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="436"/>
+        <location filename="../cal_view.py" line="437"/>
         <source>수정을 위해 정확히 하나의 자산을 선택해주세요.</source>
         <translation>수정을 위해 정확히 하나의 자산을 선택해주세요.</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="449"/>
+        <location filename="../cal_view.py" line="451"/>
         <source>확인</source>
         <translation>확인</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="449"/>
+        <location filename="../cal_view.py" line="451"/>
         <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</source>
         <translation>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="501"/>
+        <location filename="../cal_view.py" line="503"/>
         <source>CAL 목록</source>
         <translation>CAL 목록</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="547"/>
+        <location filename="../cal_view.py" line="549"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="556"/>
+        <location filename="../cal_view.py" line="558"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="556"/>
+        <location filename="../cal_view.py" line="558"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF가 저장되었습니다: {}</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="561"/>
+        <location filename="../cal_view.py" line="563"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="561"/>
+        <location filename="../cal_view.py" line="563"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>다음 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="222"/>
+        <location filename="../cal_view.py" line="223"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="505"/>
+        <location filename="../cal_view.py" line="507"/>
         <source>보고서 생성 일시: </source>
         <translation>보고서 생성 일시: </translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="585"/>
+        <location filename="../cal_view.py" line="587"/>
         <source>CAL 지도 보기</source>
         <translation>CAL 지도 보기</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="612"/>
+        <location filename="../cal_view.py" line="614"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="612"/>
+        <location filename="../cal_view.py" line="614"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="614"/>
+        <location filename="../cal_view.py" line="616"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="614"/>
+        <location filename="../cal_view.py" line="616"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
@@ -1935,7 +1935,7 @@
         <translation>공통상황도</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="784"/>
+        <location filename="../copview.py" line="782"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
@@ -2035,32 +2035,32 @@
         <translation>방어반경 외곽 CAL 목록</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="830"/>
+        <location filename="../copview.py" line="828"/>
         <source>인쇄 일시: {current_time}</source>
         <translation>인쇄 일시: {current_time}</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="835"/>
+        <location filename="../copview.py" line="833"/>
         <source>인쇄 중 오류 발생: {str(e)}</source>
         <translation>인쇄 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="842"/>
+        <location filename="../copview.py" line="840"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="842"/>
+        <location filename="../copview.py" line="840"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="844"/>
+        <location filename="../copview.py" line="842"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../copview.py" line="844"/>
+        <location filename="../copview.py" line="842"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
@@ -2206,7 +2206,7 @@
         <translation>구성군 선택</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="578"/>
+        <location filename="../dal_priority.py" line="602"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
@@ -2261,7 +2261,7 @@
         <translation>주요레이다</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="307"/>
+        <location filename="../dal_priority.py" line="318"/>
         <source>교전효과 수준</source>
         <translation>교전효과 수준</translation>
     </message>
@@ -2376,7 +2376,7 @@
         <translation>위협방위</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="306"/>
+        <location filename="../dal_priority.py" line="317"/>
         <source>BMD 우선순위</source>
         <translation>BMD 우선순위</translation>
     </message>
@@ -2401,7 +2401,7 @@
         <translation>합산 점수</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="567"/>
+        <location filename="../dal_priority.py" line="591"/>
         <source>삭제</source>
         <translation>삭제</translation>
     </message>
@@ -2426,112 +2426,112 @@
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="257"/>
+        <location filename="../dal_priority.py" line="268"/>
         <source>방어반경 표시</source>
         <translation>방어반경 표시</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="265"/>
+        <location filename="../dal_priority.py" line="276"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="633"/>
+        <location filename="../dal_priority.py" line="657"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="633"/>
+        <location filename="../dal_priority.py" line="657"/>
         <source>필터가 적용되어 있거나 검색어가 입력된 상태에서는 우선순위를 변경할 수 없습니다.</source>
         <translation>필터가 적용되어 있거나 검색어가 입력된 상태에서는 우선순위를 변경할 수 없습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="728"/>
+        <location filename="../dal_priority.py" line="752"/>
         <source>확인</source>
         <translation>확인</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="638"/>
+        <location filename="../dal_priority.py" line="662"/>
         <source>정말로 우선순위를 초기화하시겠습니까?</source>
         <translation>정말로 우선순위를 초기화하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="717"/>
+        <location filename="../dal_priority.py" line="741"/>
         <source>알림</source>
         <translation>알림</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="717"/>
+        <location filename="../dal_priority.py" line="741"/>
         <source>우선순위가 저장되었습니다.</source>
         <translation>우선순위가 저장되었습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="842"/>
+        <location filename="../dal_priority.py" line="866"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="721"/>
+        <location filename="../dal_priority.py" line="745"/>
         <source>우선순위 저장 중 오류가 발생했습니다: {str(e)}</source>
         <translation>우선순위 저장 중 오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="728"/>
+        <location filename="../dal_priority.py" line="752"/>
         <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</source>
         <translation>정말로 &apos;{}&apos; (ID: {}) 을(를) 테이블에서 삭제하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="828"/>
+        <location filename="../dal_priority.py" line="852"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="837"/>
+        <location filename="../dal_priority.py" line="861"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="837"/>
+        <location filename="../dal_priority.py" line="861"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF가 저장되었습니다: {}</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="842"/>
+        <location filename="../dal_priority.py" line="866"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>다음 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="866"/>
+        <location filename="../dal_priority.py" line="890"/>
         <source>DAL 우선순위</source>
         <translation>DAL 우선순위</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="893"/>
+        <location filename="../dal_priority.py" line="917"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="893"/>
+        <location filename="../dal_priority.py" line="917"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="895"/>
+        <location filename="../dal_priority.py" line="919"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="895"/>
+        <location filename="../dal_priority.py" line="919"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="786"/>
+        <location filename="../dal_priority.py" line="810"/>
         <source>보고서 생성 일시: </source>
         <translation>보고서 생성 일시: </translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="646"/>
+        <location filename="../dal_priority.py" line="670"/>
         <source>우선순위가 초기화되었습니다.</source>
         <translation>우선순위가 초기화되었습니다.</translation>
     </message>
@@ -2549,7 +2549,7 @@
         <translation>구성군 선택</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="490"/>
+        <location filename="../dal_view.py" line="514"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
@@ -2604,7 +2604,7 @@
         <translation>주요레이다</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="274"/>
+        <location filename="../dal_view.py" line="285"/>
         <source>교전효과 수준</source>
         <translation>교전효과 수준</translation>
     </message>
@@ -2714,7 +2714,7 @@
         <translation>위협방위</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="273"/>
+        <location filename="../dal_view.py" line="284"/>
         <source>BMD 우선순위</source>
         <translation>BMD 우선순위</translation>
     </message>
@@ -2739,7 +2739,7 @@
         <translation>합산 점수</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="448"/>
+        <location filename="../dal_view.py" line="472"/>
         <source>삭제</source>
         <translation>삭제</translation>
     </message>
@@ -2754,87 +2754,87 @@
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="224"/>
+        <location filename="../dal_view.py" line="235"/>
         <source>방어반경 표시</source>
         <translation>방어반경 표시</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="232"/>
+        <location filename="../dal_view.py" line="243"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="466"/>
+        <location filename="../dal_view.py" line="490"/>
         <source>확인</source>
         <translation>확인</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="466"/>
+        <location filename="../dal_view.py" line="490"/>
         <source>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</source>
         <translation>정말로 &apos;{}&apos; (ID: {}) 을(를) 삭제하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="596"/>
+        <location filename="../dal_view.py" line="620"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="605"/>
+        <location filename="../dal_view.py" line="629"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="605"/>
+        <location filename="../dal_view.py" line="629"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF가 저장되었습니다: {}</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="610"/>
+        <location filename="../dal_view.py" line="634"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="610"/>
+        <location filename="../dal_view.py" line="634"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>다음 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="614"/>
+        <location filename="../dal_view.py" line="638"/>
         <source>정보</source>
         <translation>정보</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="638"/>
+        <location filename="../dal_view.py" line="662"/>
         <source>DAL 보기</source>
         <translation>DAL 보기</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="665"/>
+        <location filename="../dal_view.py" line="689"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="665"/>
+        <location filename="../dal_view.py" line="689"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="667"/>
+        <location filename="../dal_view.py" line="691"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="667"/>
+        <location filename="../dal_view.py" line="691"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="554"/>
+        <location filename="../dal_view.py" line="578"/>
         <source>보고서 생성 일시: </source>
         <translation>보고서 생성 일시: </translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="550"/>
+        <location filename="../dal_view.py" line="574"/>
         <source>DAL 목록</source>
         <translation>DAL 목록</translation>
     </message>
@@ -2877,29 +2877,54 @@
         <translation>통합 파일과 서브 파일을 모두 선택해주세요.</translation>
     </message>
     <message>
-        <location filename="../database_merge.py" line="202"/>
+        <location filename="../database_merge.py" line="220"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../database_merge.py" line="191"/>
+        <location filename="../database_merge.py" line="209"/>
         <source>[{os.path.basename(sub_file)}] 데이터베이스 통합 중 오류가 발생했습니다.</source>
         <translation>[{os.path.basename(sub_file)}] 데이터베이스 통합 중 오류가 발생했습니다.</translation>
     </message>
     <message>
-        <location filename="../database_merge.py" line="197"/>
+        <location filename="../database_merge.py" line="215"/>
         <source>완료</source>
         <translation>완료</translation>
     </message>
     <message>
-        <location filename="../database_merge.py" line="197"/>
+        <location filename="../database_merge.py" line="215"/>
         <source>데이터베이스 통합이 완료되었습니다.</source>
         <translation>데이터베이스 통합이 완료되었습니다.</translation>
     </message>
     <message>
-        <location filename="../database_merge.py" line="202"/>
+        <location filename="../database_merge.py" line="220"/>
         <source>데이터베이스 통합 중 오류가 발생했습니다.</source>
         <translation>데이터베이스 통합 중 오류가 발생했습니다.</translation>
+    </message>
+    <message>
+        <location filename="../database_merge.py" line="153"/>
+        <source>[{os.path.basename(sub_file)}] 테이블 {table} 통합 중...</source>
+        <translation>[{os.path.basename(sub_file)}] 테이블 {table} 통합 중...</translation>
+    </message>
+    <message>
+        <location filename="../database_merge.py" line="201"/>
+        <source>[{os.path.basename(sub_file)}] 테이블 {table} 통합 완료</source>
+        <translation>[{os.path.basename(sub_file)}] 테이블 {table} 통합 완료</translation>
+    </message>
+    <message>
+        <location filename="../database_merge.py" line="208"/>
+        <source>[{os.path.basename(sub_file)}] 오류 발생: {str(e)}</source>
+        <translation>[{os.path.basename(sub_file)}] 오류 발생: {str(e)}</translation>
+    </message>
+    <message>
+        <location filename="../database_merge.py" line="214"/>
+        <source>모든 테이블 통합 완료</source>
+        <translation>모든 테이블 통합 완료</translation>
+    </message>
+    <message>
+        <location filename="../database_merge.py" line="219"/>
+        <source>오류 발생: {str(e)}</source>
+        <translation>오류 발생: {str(e)}</translation>
     </message>
 </context>
 <context>
@@ -2943,57 +2968,57 @@
         <translation>적 미사일 기지 정보 수정</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="47"/>
+        <location filename="../enemy_base.py" line="46"/>
         <source>적 미사일 기지 정보 입력</source>
         <translation>적 미사일 기지 정보 입력</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="55"/>
+        <location filename="../enemy_base.py" line="54"/>
         <source>적 미사일 기지 정보</source>
         <translation>적 미사일 기지 정보</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="300"/>
+        <location filename="../enemy_base.py" line="299"/>
         <source>기지명</source>
         <translation>기지명</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="304"/>
+        <location filename="../enemy_base.py" line="303"/>
         <source>(영문)</source>
         <translation>(영문)</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="304"/>
+        <location filename="../enemy_base.py" line="303"/>
         <source>지역</source>
         <translation>지역</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="308"/>
+        <location filename="../enemy_base.py" line="307"/>
         <source>위도</source>
         <translation>위도</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="308"/>
+        <location filename="../enemy_base.py" line="307"/>
         <source>경도</source>
         <translation>경도</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="314"/>
+        <location filename="../enemy_base.py" line="313"/>
         <source>군사좌표(MGRS)</source>
         <translation>군사좌표(MGRS)</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="169"/>
+        <location filename="../enemy_base.py" line="168"/>
         <source>저장</source>
         <translation>저장</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="237"/>
+        <location filename="../enemy_base.py" line="236"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="237"/>
+        <location filename="../enemy_base.py" line="236"/>
         <source>올바른 경위도 형식을 입력해주세요.
 위도: N##.##### 또는 S##.#####
 경도: E###.##### 또는 W###.#####</source>
@@ -3002,37 +3027,37 @@
 경도: E###.##### 또는 W###.#####</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="280"/>
+        <location filename="../enemy_base.py" line="279"/>
         <source>성공</source>
         <translation>성공</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="278"/>
+        <location filename="../enemy_base.py" line="277"/>
         <source>적 기지 정보가 성공적으로 수정되었습니다.</source>
         <translation>적 기지 정보가 성공적으로 수정되었습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="280"/>
+        <location filename="../enemy_base.py" line="279"/>
         <source>적 기지 정보가 성공적으로 저장되었습니다.</source>
         <translation>적 기지 정보가 성공적으로 저장되었습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="284"/>
+        <location filename="../enemy_base.py" line="283"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="282"/>
+        <location filename="../enemy_base.py" line="281"/>
         <source>데이터베이스 오류: {e}</source>
         <translation>데이터베이스 오류: {e}</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="284"/>
+        <location filename="../enemy_base.py" line="283"/>
         <source>예기치 않은 오류 발생: {e}</source>
         <translation>예기치 않은 오류 발생: {e}</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="316"/>
+        <location filename="../enemy_base.py" line="315"/>
         <source>미사일 유형</source>
         <translation>미사일 유형</translation>
     </message>
@@ -3068,127 +3093,127 @@
 <context>
     <name>EnemyBaseWindow</name>
     <message>
-        <location filename="../enemy_base.py" line="399"/>
+        <location filename="../enemy_base.py" line="398"/>
         <source>기지명 또는 지역 검색</source>
         <translation>기지명 또는 지역 검색</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="412"/>
+        <location filename="../enemy_base.py" line="411"/>
         <source>기지명</source>
         <translation>기지명</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="412"/>
+        <location filename="../enemy_base.py" line="411"/>
         <source>지역</source>
         <translation>지역</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="412"/>
+        <location filename="../enemy_base.py" line="411"/>
         <source>경위도</source>
         <translation>경위도</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="502"/>
+        <location filename="../enemy_base.py" line="501"/>
         <source>적 기지 입력</source>
         <translation>적 기지 입력</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="503"/>
+        <location filename="../enemy_base.py" line="502"/>
         <source>수정</source>
         <translation>수정</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="504"/>
+        <location filename="../enemy_base.py" line="503"/>
         <source>삭제</source>
         <translation>삭제</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="505"/>
+        <location filename="../enemy_base.py" line="504"/>
         <source>메인화면</source>
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="554"/>
+        <location filename="../enemy_base.py" line="565"/>
         <source>위협반경 표시</source>
         <translation>위협반경 표시</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="559"/>
+        <location filename="../enemy_base.py" line="570"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="694"/>
+        <location filename="../enemy_base.py" line="706"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="667"/>
+        <location filename="../enemy_base.py" line="678"/>
         <source>삭제할 기지가 선택되지 않았습니다.</source>
         <translation>삭제할 기지가 선택되지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="670"/>
+        <location filename="../enemy_base.py" line="681"/>
         <source>확인</source>
         <translation>확인</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="670"/>
+        <location filename="../enemy_base.py" line="681"/>
         <source>선택한 기지들을 삭제하시겠습니까?</source>
         <translation>선택한 기지들을 삭제하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="685"/>
+        <location filename="../enemy_base.py" line="696"/>
         <source>알림</source>
         <translation>알림</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="685"/>
+        <location filename="../enemy_base.py" line="696"/>
         <source>선택한 기지들이 삭제되었습니다.</source>
         <translation>선택한 기지들이 삭제되었습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="694"/>
+        <location filename="../enemy_base.py" line="706"/>
         <source>수정을 위해 정확히 하나의 기지를 선택해주세요.</source>
         <translation>수정을 위해 정확히 하나의 기지를 선택해주세요.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="795"/>
+        <location filename="../enemy_base.py" line="807"/>
         <source>인쇄 일시: {current_time}</source>
         <translation>인쇄 일시: {current_time}</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="800"/>
+        <location filename="../enemy_base.py" line="812"/>
         <source>인쇄 중 오류 발생: {str(e)}</source>
         <translation>인쇄 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="807"/>
+        <location filename="../enemy_base.py" line="819"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="807"/>
+        <location filename="../enemy_base.py" line="819"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="809"/>
+        <location filename="../enemy_base.py" line="821"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="809"/>
+        <location filename="../enemy_base.py" line="821"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="412"/>
+        <location filename="../enemy_base.py" line="411"/>
         <source>군사좌표(MGRS)</source>
         <translation>군사좌표(MGRS)</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="531"/>
+        <location filename="../enemy_base.py" line="530"/>
         <source>미사일 유형</source>
         <translation>미사일 유형</translation>
     </message>
@@ -3295,11 +3320,36 @@
         <source>적 미사일 제원 입력</source>
         <translation>적 미사일 제원 입력</translation>
     </message>
+    <message>
+        <location filename="../enemy_spec.py" line="162"/>
+        <source>모든 필드를 입력해주세요.</source>
+        <translation>모든 필드를 입력해주세요.</translation>
+    </message>
+    <message>
+        <location filename="../enemy_spec.py" line="174"/>
+        <source>이미 존재하는 미사일 정보입니다. 수정하시겠습니까?</source>
+        <translation>이미 존재하는 미사일 정보입니다. 수정하시겠습니까?</translation>
+    </message>
+    <message>
+        <location filename="../enemy_spec.py" line="214"/>
+        <source>성공</source>
+        <translation>성공</translation>
+    </message>
+    <message>
+        <location filename="../enemy_spec.py" line="214"/>
+        <source>미사일 정보가 저장되었습니다.</source>
+        <translation>미사일 정보가 저장되었습니다.</translation>
+    </message>
+    <message>
+        <location filename="../enemy_spec.py" line="217"/>
+        <source>저장 중 오류가 발생했습니다: {str(e)}</source>
+        <translation>저장 중 오류가 발생했습니다: {str(e)}</translation>
+    </message>
 </context>
 <context>
     <name>EnemyWeaponMapView</name>
     <message>
-        <location filename="../enemy_map_view.py" line="182"/>
+        <location filename="../enemy_map_view.py" line="185"/>
         <source>좌표 변환 오류 {coord}: {e}</source>
         <translation>좌표 변환 오류 {coord}: {e}</translation>
     </message>
@@ -3486,72 +3536,72 @@
 <context>
     <name>FindCredentialsDialog</name>
     <message>
-        <location filename="../loginwindow.py" line="627"/>
+        <location filename="../loginwindow.py" line="633"/>
         <source>아이디/비밀번호 찾기</source>
         <translation>아이디/비밀번호 찾기</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="738"/>
+        <location filename="../loginwindow.py" line="744"/>
         <source>육군</source>
         <translation>육군</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="739"/>
+        <location filename="../loginwindow.py" line="745"/>
         <source>해군</source>
         <translation>해군</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="740"/>
+        <location filename="../loginwindow.py" line="746"/>
         <source>공군</source>
         <translation>공군</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="683"/>
+        <location filename="../loginwindow.py" line="689"/>
         <source>군 구분:</source>
         <translation>군 구분:</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="684"/>
+        <location filename="../loginwindow.py" line="690"/>
         <source>군번:</source>
         <translation>군번:</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="685"/>
+        <location filename="../loginwindow.py" line="691"/>
         <source>이름:</source>
         <translation>이름:</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="727"/>
+        <location filename="../loginwindow.py" line="733"/>
         <source>아이디 찾기</source>
         <translation>아이디 찾기</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="770"/>
+        <location filename="../loginwindow.py" line="776"/>
         <source>비밀번호 초기화</source>
         <translation>비밀번호 초기화</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="770"/>
+        <location filename="../loginwindow.py" line="776"/>
         <source>일치하는 사용자가 없습니다.</source>
         <translation>일치하는 사용자가 없습니다.</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="774"/>
+        <location filename="../loginwindow.py" line="780"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="774"/>
+        <location filename="../loginwindow.py" line="780"/>
         <source>오류가 발생했습니다: {str(e)}</source>
         <translation>오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="768"/>
+        <location filename="../loginwindow.py" line="774"/>
         <source>비밀번호가 군번으로 초기화되었습니다.</source>
         <translation>비밀번호가 군번으로 초기화되었습니다.</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="723"/>
+        <location filename="../loginwindow.py" line="729"/>
         <source>찾은 아이디</source>
         <translation>찾은 아이디</translation>
     </message>
@@ -3635,212 +3685,212 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../addasset.py" line="1252"/>
+        <location filename="../addasset.py" line="1253"/>
         <source>자산 관리</source>
         <translation>자산 관리</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>중요도</source>
         <translation>중요도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>작전계획 실행 중단 초래</source>
         <translation>작전계획 실행 중단 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>작전계획 실행 위험 초래</source>
         <translation>작전계획 실행 위험 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>작전계획 중요 변경 초래</source>
         <translation>작전계획 중요 변경 초래</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>차기 작전계획 단계 실행 지연</source>
         <translation>차기 작전계획 단계 실행 지연</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>임무전환/자산 위치 조정하기</source>
         <translation>임무전환/자산 위치 조정하기</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>중요도 가점(중심)</source>
         <translation>중요도 가점(중심)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>작계 1,2,3단계의 중심</source>
         <translation>작계 1,2,3단계의 중심</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>중요도 가점(기능)</source>
         <translation>중요도 가점(기능)</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1260"/>
+        <location filename="../addasset.py" line="1261"/>
         <source>비전투원 후송작전 통제소, 양륙공항, 양륙항만</source>
         <translation>비전투원 후송작전 통제소, 양륙공항, 양륙항만</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>취약성</source>
         <translation>취약성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>피해민감도</source>
         <translation>피해민감도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>방호강도</source>
         <translation>방호강도</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 29%미만으로 방호 가능</source>
         <translation>시설의 29%미만으로 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 30~74%로 방호 가능</source>
         <translation>시설의 30~74%로 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 75%이상 방호 가능</source>
         <translation>시설의 75%이상 방호 가능</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>분산배치</source>
         <translation>분산배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 29%미만으로 분산 배치</source>
         <translation>시설의 29%미만으로 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 30~74%로 분산 배치</source>
         <translation>시설의 30~74%로 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>시설의 75%이상 분산 배치</source>
         <translation>시설의 75%이상 분산 배치</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>복구가능성</source>
         <translation>복구가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>복구 시간</source>
         <translation>복구 시간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>7일 이상 또는 영구적 폐쇄</source>
         <translation>7일 이상 또는 영구적 폐쇄</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>1~7일 임시 폐쇄</source>
         <translation>1~7일 임시 폐쇄</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>1일 이상 75~100% 임무제한</source>
         <translation>1일 이상 75~100% 임무제한</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>1일 이상 25~74% 임무제한</source>
         <translation>1일 이상 25~74% 임무제한</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>복구 능력</source>
         <translation>복구 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>부대 25% 복원 능력</source>
         <translation>부대 25% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>부대 26~75% 복원 능력</source>
         <translation>부대 26~75% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1271"/>
+        <location filename="../addasset.py" line="1272"/>
         <source>부대 100% 복원 능력</source>
         <translation>부대 100% 복원 능력</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>위협</source>
         <translation>위협</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>공격가능성</source>
         <translation>공격가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>공격가능성 높음</source>
         <translation>공격가능성 높음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>공격가능성 중간</source>
         <translation>공격가능성 중간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>공격가능성 낮음</source>
         <translation>공격가능성 낮음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>탐지 가능성</source>
         <translation>탐지 가능성</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>탐지가능성 높음</source>
         <translation>탐지가능성 높음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>탐지가능성 중간</source>
         <translation>탐지가능성 중간</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1298"/>
+        <location filename="../addasset.py" line="1299"/>
         <source>탐지가능성 낮음</source>
         <translation>탐지가능성 낮음</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1388"/>
+        <location filename="../addasset.py" line="1389"/>
         <source>자산 관리 시스템</source>
         <translation>자산 관리 시스템</translation>
     </message>
     <message>
-        <location filename="../addasset.py" line="1392"/>
+        <location filename="../addasset.py" line="1393"/>
         <source>자산 추가</source>
         <translation>자산 추가</translation>
     </message>
@@ -3850,7 +3900,7 @@
         <translation>CAL 우선순위</translation>
     </message>
     <message>
-        <location filename="../cal_view.py" line="624"/>
+        <location filename="../cal_view.py" line="626"/>
         <source>CAL 자산 보기</source>
         <translation>CAL 자산 보기</translation>
     </message>
@@ -3860,47 +3910,47 @@
         <translation>BMD 우선순위</translation>
     </message>
     <message>
-        <location filename="../dal_priority.py" line="905"/>
+        <location filename="../dal_priority.py" line="929"/>
         <source>DAL 우선순위</source>
         <translation>DAL 우선순위</translation>
     </message>
     <message>
-        <location filename="../dal_view.py" line="678"/>
+        <location filename="../dal_view.py" line="702"/>
         <source>DAL 자산 보기</source>
         <translation>DAL 자산 보기</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1010"/>
+        <location filename="../weapon_assets.py" line="1022"/>
         <source>Database Error</source>
         <translation>Database Error</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="967"/>
+        <location filename="../weapon_assets.py" line="979"/>
         <source>데이터베이스 연결 오류: {e}</source>
         <translation>데이터베이스 연결 오류: {e}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1010"/>
+        <location filename="../weapon_assets.py" line="1022"/>
         <source>테이블 생성 오류: {e}</source>
         <translation>테이블 생성 오류: {e}</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="934"/>
+        <location filename="../enemy_base.py" line="946"/>
         <source>적 미사일 기지 관리 시스템</source>
         <translation>적 미사일 기지 관리 시스템</translation>
     </message>
     <message>
-        <location filename="../enemy_base.py" line="938"/>
+        <location filename="../enemy_base.py" line="950"/>
         <source>적 기지 관리</source>
         <translation>적 기지 관리</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1021"/>
+        <location filename="../weapon_assets.py" line="1033"/>
         <source>미사일 방어포대 관리</source>
         <translation>미사일 방어포대 관리</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="1017"/>
+        <location filename="../weapon_assets.py" line="1029"/>
         <source>미사일 방어포대 관리 시스템</source>
         <translation>미사일 방어포대 관리 시스템</translation>
     </message>
@@ -3908,441 +3958,439 @@
 <context>
     <name>MissileDefenseApp</name>
     <message>
-        <location filename="../simulation.py" line="54"/>
+        <location filename="../simulation.py" line="53"/>
         <source>미사일 방어 시뮬레이션</source>
         <translation>미사일 방어 시뮬레이션</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1863"/>
+        <location filename="../simulation.py" line="1881"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="204"/>
+        <location filename="../simulation.py" line="203"/>
         <source>지상군</source>
         <translation>지상군</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="204"/>
+        <location filename="../simulation.py" line="203"/>
         <source>해군</source>
         <translation>해군</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="204"/>
+        <location filename="../simulation.py" line="203"/>
         <source>공군</source>
         <translation>공군</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="211"/>
+        <location filename="../simulation.py" line="210"/>
         <source>방어대상자산 또는 지역구분 검색</source>
         <translation>방어대상자산 또는 지역구분 검색</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="222"/>
+        <location filename="../simulation.py" line="221"/>
         <source>우선순위</source>
         <translation>우선순위</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="367"/>
+        <location filename="../simulation.py" line="366"/>
         <source>구성군</source>
         <translation>구성군</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="222"/>
+        <location filename="../simulation.py" line="221"/>
         <source>지역구분</source>
         <translation>지역구분</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="222"/>
+        <location filename="../simulation.py" line="221"/>
         <source>방어대상자산</source>
         <translation>방어대상자산</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="303"/>
+        <location filename="../simulation.py" line="302"/>
         <source>경위도</source>
         <translation>경위도</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="277"/>
+        <location filename="../simulation.py" line="276"/>
         <source>적 기지명 또는 지역 검색</source>
         <translation>적 기지명 또는 지역 검색</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="295"/>
+        <location filename="../simulation.py" line="294"/>
         <source>위협반경 표시</source>
         <translation>위협반경 표시</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="303"/>
+        <location filename="../simulation.py" line="302"/>
         <source>발사기지</source>
         <translation>발사기지</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="367"/>
+        <location filename="../simulation.py" line="366"/>
         <source>지역</source>
         <translation>지역</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="303"/>
+        <location filename="../simulation.py" line="302"/>
         <source>보유미사일</source>
         <translation>보유미사일</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="354"/>
+        <location filename="../simulation.py" line="353"/>
         <source>방어반경 표시</source>
         <translation>방어반경 표시</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1650"/>
+        <location filename="../simulation.py" line="1653"/>
         <source>무기체계</source>
         <translation>무기체계</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1499"/>
+        <location filename="../simulation.py" line="1502"/>
         <source>에러</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1499"/>
+        <location filename="../simulation.py" line="1502"/>
         <source>궤적 계산 중 오류 발생: {str(e)}</source>
         <translation>궤적 계산 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2067"/>
+        <location filename="../simulation.py" line="2085"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="739"/>
+        <location filename="../simulation.py" line="738"/>
         <source>미사일 궤적 분석 오류: {e}</source>
         <translation>미사일 궤적 분석 오류: {e}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="337"/>
+        <location filename="../simulation.py" line="336"/>
         <source>찾기</source>
         <translation>찾기</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="254"/>
+        <location filename="../simulation.py" line="253"/>
         <source>메인화면</source>
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="269"/>
+        <location filename="../simulation.py" line="268"/>
         <source>적 미사일 기지 목록</source>
         <translation>적 미사일 기지 목록</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="361"/>
+        <location filename="../simulation.py" line="360"/>
         <source>방어자산만 표시</source>
         <translation>방어자산만 표시</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="367"/>
+        <location filename="../simulation.py" line="366"/>
         <source>자산명</source>
         <translation>자산명</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="400"/>
+        <location filename="../simulation.py" line="399"/>
         <source>미사일 궤적분석</source>
         <translation>미사일 궤적분석</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="430"/>
+        <location filename="../simulation.py" line="429"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1020"/>
+        <location filename="../simulation.py" line="1019"/>
         <source>총 미사일 궤적</source>
         <translation>총 미사일 궤적</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1020"/>
+        <location filename="../simulation.py" line="1019"/>
         <source>방어 가능 궤적</source>
         <translation>방어 가능 궤적</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1505"/>
+        <location filename="../simulation.py" line="1508"/>
         <source>방어율</source>
         <translation>방어율</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1505"/>
+        <location filename="../simulation.py" line="1508"/>
         <source>위협 방위각</source>
         <translation>위협 방위각</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1957"/>
+        <location filename="../simulation.py" line="1975"/>
         <source>인쇄 일시: {current_time}</source>
         <translation>인쇄 일시: {current_time}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1962"/>
+        <location filename="../simulation.py" line="1980"/>
         <source>인쇄 중 오류 발생: {str(e)}</source>
         <translation>인쇄 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1969"/>
+        <location filename="../simulation.py" line="1987"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1969"/>
+        <location filename="../simulation.py" line="1987"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1971"/>
+        <location filename="../simulation.py" line="1989"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1971"/>
+        <location filename="../simulation.py" line="1989"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="418"/>
+        <location filename="../simulation.py" line="417"/>
         <source>초기화</source>
         <translation>초기화</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="549"/>
+        <location filename="../simulation.py" line="548"/>
         <source>초기화 확인</source>
         <translation>초기화 확인</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="549"/>
+        <location filename="../simulation.py" line="548"/>
         <source>시뮬레이션을 초기화하시겠습니까?</source>
         <translation>시뮬레이션을 초기화하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="595"/>
+        <location filename="../simulation.py" line="594"/>
         <source>초기화 완료</source>
         <translation>초기화 완료</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="595"/>
+        <location filename="../simulation.py" line="594"/>
         <source>시뮬레이션이 성공적으로 초기화되었습니다.</source>
         <translation>시뮬레이션이 성공적으로 초기화되었습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="600"/>
+        <location filename="../simulation.py" line="599"/>
         <source>초기화 오류</source>
         <translation>초기화 오류</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="600"/>
+        <location filename="../simulation.py" line="599"/>
         <source>초기화 중 오류가 발생했습니다: {str(e)}</source>
         <translation>초기화 중 오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="984"/>
+        <location filename="../simulation.py" line="983"/>
         <source>요격지점</source>
         <translation>요격지점</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1208"/>
+        <location filename="../simulation.py" line="1207"/>
         <source>취소</source>
         <translation>취소</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1192"/>
+        <location filename="../simulation.py" line="1191"/>
         <source>최적화 진행 상황</source>
         <translation>최적화 진행 상황</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1410"/>
-        <source>최적화 완료</source>
-        <translation>최적화 완료</translation>
-    </message>
-    <message>
-        <location filename="../simulation.py" line="1418"/>
+        <location filename="../simulation.py" line="1421"/>
         <source>최적화 중 오류 발생: {error_message}</source>
         <translation>최적화 중 오류 발생: {error_message}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1505"/>
+        <location filename="../simulation.py" line="1508"/>
         <source>최적 위치명</source>
         <translation>최적 위치명</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1505"/>
+        <location filename="../simulation.py" line="1508"/>
         <source>최적 위치 좌표</source>
         <translation>최적 위치 좌표</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1549"/>
+        <location filename="../simulation.py" line="1552"/>
         <source>총 방어율</source>
         <translation>총 방어율</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1648"/>
+        <location filename="../simulation.py" line="1651"/>
         <source>최적 방어 위치</source>
         <translation>최적 방어 위치</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1649"/>
+        <location filename="../simulation.py" line="1652"/>
         <source>좌표</source>
         <translation>좌표</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="699"/>
+        <location filename="../simulation.py" line="698"/>
         <source>미사일 궤적 분석 중...</source>
         <translation>미사일 궤적 분석 중...</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="736"/>
+        <location filename="../simulation.py" line="735"/>
         <source>완료</source>
         <translation>완료</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="736"/>
+        <location filename="../simulation.py" line="735"/>
         <source>미사일 궤적 분석이 완료되었습니다.</source>
         <translation>미사일 궤적 분석이 완료되었습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="467"/>
+        <location filename="../simulation.py" line="466"/>
         <source>결과 테이블 출력</source>
         <translation>결과 테이블 출력</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1505"/>
+        <location filename="../simulation.py" line="1508"/>
         <source>방어 가능 자산(미사일 유형)</source>
         <translation>방어 가능 자산(미사일 유형)</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="329"/>
+        <location filename="../simulation.py" line="328"/>
         <source>방어포대 자산 목록</source>
         <translation>방어포대 자산 목록</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="336"/>
+        <location filename="../simulation.py" line="335"/>
         <source>방어포대 검색</source>
         <translation>방어포대 검색</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="409"/>
+        <location filename="../simulation.py" line="408"/>
         <source>최적 방어포대 위치산출</source>
         <translation>최적 방어포대 위치산출</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2009"/>
+        <location filename="../simulation.py" line="2027"/>
         <source>미사일 궤적 분석 결과</source>
         <translation>미사일 궤적 분석 결과</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2015"/>
+        <location filename="../simulation.py" line="2033"/>
         <source>보고서 생성 일시: </source>
         <translation>보고서 생성 일시: </translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2053"/>
+        <location filename="../simulation.py" line="2071"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2062"/>
+        <location filename="../simulation.py" line="2080"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2062"/>
+        <location filename="../simulation.py" line="2080"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF가 저장되었습니다: {}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2067"/>
+        <location filename="../simulation.py" line="2085"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>다음 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="2011"/>
+        <location filename="../simulation.py" line="2029"/>
         <source>최적 방어포대 위치 및 위협 방위각</source>
         <translation>최적 방어포대 위치 및 위협 방위각</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="700"/>
+        <location filename="../simulation.py" line="699"/>
         <source>미사일 궤도 분석</source>
         <translation>미사일 궤도 분석</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1239"/>
+        <location filename="../simulation.py" line="1238"/>
         <source>최적화 실행 중 오류 발생: {str(e)}</source>
         <translation>최적화 실행 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1288"/>
+        <location filename="../simulation.py" line="1287"/>
         <source>최적화 완료 처리 중 오류 발생: {str(e)}</source>
         <translation>최적화 완료 처리 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1162"/>
+        <location filename="../simulation.py" line="1161"/>
         <source>선택된 방어 자산이 없습니다.</source>
         <translation>선택된 방어 자산이 없습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1324"/>
+        <location filename="../simulation.py" line="1323"/>
         <source>정리 작업 중 오류 발생: {str(e)}</source>
         <translation>정리 작업 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1333"/>
+        <location filename="../simulation.py" line="1332"/>
         <source>취소 확인</source>
         <translation>취소 확인</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1333"/>
+        <location filename="../simulation.py" line="1332"/>
         <source>최적화를 취소하시겠습니까?</source>
         <translation>최적화를 취소하시겠습니까?</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1356"/>
+        <location filename="../simulation.py" line="1355"/>
         <source>취소 완료</source>
         <translation>취소 완료</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1356"/>
+        <location filename="../simulation.py" line="1355"/>
         <source>최적화가 성공적으로 취소되었습니다.</source>
         <translation>최적화가 성공적으로 취소되었습니다.</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1360"/>
+        <location filename="../simulation.py" line="1359"/>
         <source>취소 오류</source>
         <translation>취소 오류</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1360"/>
+        <location filename="../simulation.py" line="1359"/>
         <source>최적화 취소 중 오류가 발생했습니다: {str(e)}</source>
         <translation>최적화 취소 중 오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1410"/>
-        <source>최적화가 성공적으로 완료되었습니다.
-총 방어율: {summary.get(&apos;best_scores&apos;, {}).get(&apos;total_defense_rate&apos;, 0):.1f}%</source>
-        <translation>최적화가 성공적으로 완료되었습니다.
-총 방어율: {summary.get(&apos;best_scores&apos;, {}).get(&apos;total_defense_rate&apos;, 0):.1f}%</translation>
-    </message>
-    <message>
-        <location filename="../simulation.py" line="1415"/>
+        <location filename="../simulation.py" line="1418"/>
         <source>최적화 결과 처리 중 오류가 발생했습니다: {str(e)}</source>
         <translation>최적화 결과 처리 중 오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1395"/>
+        <location filename="../simulation.py" line="1394"/>
         <source>잘못된 최적화 결과 형식입니다</source>
         <translation>잘못된 최적화 결과 형식입니다</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1198"/>
+        <location filename="../simulation.py" line="1197"/>
         <source>현재 시도 진행률:</source>
         <translation>현재 시도 진행률:</translation>
     </message>
     <message>
-        <location filename="../simulation.py" line="1203"/>
+        <location filename="../simulation.py" line="1202"/>
         <source>전체 진행률:</source>
         <translation>전체 진행률:</translation>
+    </message>
+    <message>
+        <location filename="../simulation.py" line="1800"/>
+        <source>최적화 결과 요약</source>
+        <translation>최적화 결과 요약</translation>
+    </message>
+    <message>
+        <location filename="../simulation.py" line="1802"/>
+        <source>결과 요약 표시 중 오류 발생: {str(e)}</source>
+        <translation>결과 요약 표시 중 오류 발생: {str(e)}</translation>
     </message>
 </context>
 <context>
@@ -4577,17 +4625,17 @@
         <translation>모든 필드를 입력해주세요.</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="593"/>
+        <location filename="../loginwindow.py" line="599"/>
         <source>비밀번호 오류</source>
         <translation>비밀번호 오류</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="593"/>
+        <location filename="../loginwindow.py" line="599"/>
         <source>비밀번호가 일치하지 않습니다.</source>
         <translation>비밀번호가 일치하지 않습니다.</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="580"/>
+        <location filename="../loginwindow.py" line="586"/>
         <source>비밀번호는 다음 조건을 만족해야 합니다:
 - 최소 8자 이상
 - 영문 소문자 포함
@@ -4625,22 +4673,22 @@
         <translation>사용자 등록이 완료되었습니다.</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="549"/>
+        <location filename="../loginwindow.py" line="555"/>
         <source>데이터베이스 오류</source>
         <translation>데이터베이스 오류</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="549"/>
+        <location filename="../loginwindow.py" line="555"/>
         <source>등록 중 오류가 발생했습니다: {str(e)}</source>
         <translation>등록 중 오류가 발생했습니다: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="559"/>
+        <location filename="../loginwindow.py" line="565"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../loginwindow.py" line="559"/>
+        <location filename="../loginwindow.py" line="565"/>
         <source>예상치 못한 오류가 발생했습니다: {str(e)}</source>
         <translation>예상치 못한 오류가 발생했습니다: {str(e)}</translation>
     </message>
@@ -4835,7 +4883,7 @@
 <context>
     <name>SimulationEnemyWeaponMapView</name>
     <message>
-        <location filename="../simulation_map_view.py" line="426"/>
+        <location filename="../simulation_map_view.py" line="429"/>
         <source>좌표 변환 오류 {coord}: {e}</source>
         <translation>좌표 변환 오류 {coord}: {e}</translation>
     </message>
@@ -4924,7 +4972,7 @@
         <translation>구성군 선택</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="662"/>
+        <location filename="../weapon_assets.py" line="674"/>
         <source>전체</source>
         <translation>전체</translation>
     </message>
@@ -5024,82 +5072,82 @@
         <translation>메인화면</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="566"/>
+        <location filename="../weapon_assets.py" line="578"/>
         <source>방어반경 표시</source>
         <translation>방어반경 표시</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="571"/>
+        <location filename="../weapon_assets.py" line="583"/>
         <source>지도 출력</source>
         <translation>지도 출력</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="725"/>
+        <location filename="../weapon_assets.py" line="737"/>
         <source>경고</source>
         <translation>경고</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="725"/>
+        <location filename="../weapon_assets.py" line="737"/>
         <source>수정을 위해 정확히 하나의 자산을 선택해주세요.</source>
         <translation>수정을 위해 정확히 하나의 자산을 선택해주세요.</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="839"/>
+        <location filename="../weapon_assets.py" line="851"/>
         <source>보고서 생성 일시: </source>
         <translation>보고서 생성 일시: </translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="882"/>
+        <location filename="../weapon_assets.py" line="894"/>
         <source>PDF 저장</source>
         <translation>PDF 저장</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="891"/>
+        <location filename="../weapon_assets.py" line="903"/>
         <source>저장 완료</source>
         <translation>저장 완료</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="891"/>
+        <location filename="../weapon_assets.py" line="903"/>
         <source>PDF가 저장되었습니다: {}</source>
         <translation>PDF가 저장되었습니다: {}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="896"/>
+        <location filename="../weapon_assets.py" line="908"/>
         <source>오류</source>
         <translation>오류</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="896"/>
+        <location filename="../weapon_assets.py" line="908"/>
         <source>다음 오류가 발생했습니다: {}</source>
         <translation>다음 오류가 발생했습니다: {}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="937"/>
+        <location filename="../weapon_assets.py" line="949"/>
         <source>인쇄 일시: {current_time}</source>
         <translation>인쇄 일시: {current_time}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="942"/>
+        <location filename="../weapon_assets.py" line="954"/>
         <source>인쇄 중 오류 발생: {str(e)}</source>
         <translation>인쇄 중 오류 발생: {str(e)}</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="949"/>
+        <location filename="../weapon_assets.py" line="961"/>
         <source>인쇄 완료</source>
         <translation>인쇄 완료</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="949"/>
+        <location filename="../weapon_assets.py" line="961"/>
         <source>지도가 성공적으로 출력되었습니다.</source>
         <translation>지도가 성공적으로 출력되었습니다.</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="951"/>
+        <location filename="../weapon_assets.py" line="963"/>
         <source>인쇄 실패</source>
         <translation>인쇄 실패</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="951"/>
+        <location filename="../weapon_assets.py" line="963"/>
         <source>지도 출력 중 오류가 발생했습니다.</source>
         <translation>지도 출력 중 오류가 발생했습니다.</translation>
     </message>
@@ -5119,7 +5167,7 @@
         <translation>방어포대명</translation>
     </message>
     <message>
-        <location filename="../weapon_assets.py" line="835"/>
+        <location filename="../weapon_assets.py" line="847"/>
         <source>미사일 방어포대 목록</source>
         <translation>미사일 방어포대 목록</translation>
     </message>

@@ -38,11 +38,11 @@ class SimulationCalMapView(QObject):
         critical_assets = self.tr("중요자산")
         assets_classification = self.tr("자산구분")
         legend_html = f"""
-            <div style="position: fixed; bottom: 200px; right: 20px;width: auto; height: auto; background-color: white; 
+            <div style="position: fixed; top: 20px; left: 20px; width: auto; height: auto; background-color: white; 
             border: 2px solid grey; z-index:9999; font-size:14px; padding: 10px; border-radius: 5px;">
             <strong>{assets_classification}</strong><br>
             <div style="margin-top: 5px;">
-            <p><span style="color: black;">&#9733;</span> {defended_assets}</p>
+            <p><span style="color: black;">&#9733; </span> {defended_assets}</p>
             <p><span style="color: black;">&#9679;</span> {critical_assets}</p>
         </div></div>
         """
@@ -145,7 +145,7 @@ class SimulationWeaponMapView(QObject):
 
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 20px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
@@ -345,7 +345,7 @@ class SimulationEnemyBaseMapView(QObject):
         legend_html = f"""
             <div id="maplegend" style="
                 position: fixed; 
-                bottom: 50px; 
+                bottom: 20px; 
                 right: 20px; 
                 width: auto; 
                 height: auto; 
@@ -361,7 +361,10 @@ class SimulationEnemyBaseMapView(QObject):
                 <div style="margin-top: 5px;">
         """
         for weapon_type, info in weapon_info.items():
-            legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type} ({max_radius}: {info["max_radius"]}km)<br>'
+            if weapon_type != 'Various Types':
+                legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type} ({max_radius}: {info["max_radius"]}km)<br>'
+            else:
+                legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type}<br>'
         legend_html += """
                 </div>
             </div>

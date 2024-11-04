@@ -27,11 +27,12 @@ import hmac  # 메시지 인증코드 (MAC) 사용
 class CalViewWindow(QtWidgets.QDialog, QObject):
     """저장된 자산을 보여주는 창"""
 
-    def __init__(self, parent):
+    def __init__(self, parent, asset_id = None):
         super(CalViewWindow, self).__init__(parent)
         self.parent = parent
         self.db_path = self.parent.db_path
         self.setMinimumSize(1024, 768)
+        self.asset_id = asset_id  # 자산 ID (수정 시 사용)
         self.map = folium.Map(
             location=[self.parent.map_app.loadSettings()['latitude'], self.parent.map_app.loadSettings()['longitude']],
             zoom_start=self.parent.map_app.loadSettings()['zoom'],
@@ -437,10 +438,11 @@ class CalViewWindow(QtWidgets.QDialog, QObject):
             return
 
         row = checked_rows[0]
-        asset_id = int(self.assets_table.item(row, 1).text())
+        self.asset_id = int(self.assets_table.item(row, 1).text())
+        self.parent.add_asset_page.asset_id = self.asset_id
         self.parent.add_asset_page.set_edit_mode(True)  # 편집 모드로 설정
         self.parent.show_edit_asset_page()
-        self.parent.add_asset_page.set_data(asset_id)
+        self.parent.add_asset_page.set_data(self.parent.add_asset_page.asset_id)
 
     def delete_asset(self, row):
         """선택된 자산을 삭제"""

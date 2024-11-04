@@ -49,7 +49,7 @@ class CalMapView(QObject):
 
         # 구성군 범례 생성
         legend_html = f'''
-        <div style="position: fixed; bottom: 50px; right: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; right: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{composition_group}</strong><br>
@@ -65,7 +65,7 @@ class CalMapView(QObject):
 
         # BMD 우선순위 범례 생성
         bmd_legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{bmd_priorities}</strong><br>
@@ -222,7 +222,7 @@ class PriorityCalMapView(QObject):
 
         # BMD 우선순위 범례 생성
         bmd_legend_html = f'''
-        <div style="position: fixed; bottom: 50px; left: 50px; width: 150px; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: 150px; 
                     border:2px solid grey; z-index:9999; font-size:14px; background-color:white;">
             <div style="position: relative; top: 3px; left: 3px;">
             <strong>{bmd_priorities}</strong><br>

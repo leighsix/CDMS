@@ -202,22 +202,33 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
 
         # 무기체계 체크박스 그룹
         weapon_group = QGroupBox(self.tr("무기체계"))
-        weapon_layout = QHBoxLayout()
+        weapon_layout = QGridLayout()
         weapon_layout.setContentsMargins(5, 5, 5, 5)  # 여백 조정
         weapon_layout.setSpacing(15)  # 체크박스 간 간격 조정
+
         self.weapon_systems_checkboxes = {}
         weapon_systems = []
         with open('weapon_systems.json', 'r', encoding='utf-8') as file:
             weapon_systems_dic = json.load(file)
+
         for weapon in weapon_systems_dic.keys():
             weapon_systems.append(weapon)
-        for weapon in weapon_systems:
+
+        # 한 줄에 표시할 최대 아이템 수 설정
+        max_columns = 4  # 이 값을 조절하여 한 줄에 표시될 체크박스 수를 조정할 수 있습니다
+
+        for i, weapon in enumerate(weapon_systems):
             checkbox = QCheckBox(weapon)
             checkbox.stateChanged.connect(self.update_map)
             self.weapon_systems_checkboxes[weapon] = checkbox
-            weapon_layout.addWidget(checkbox)
+            # i를 max_columns로 나누어 행과 열 위치 계산
+            row = i // max_columns
+            col = i % max_columns
+            weapon_layout.addWidget(checkbox, row, col)
+
         weapon_group.setLayout(weapon_layout)
-        weapon_group.setFixedHeight(weapon_layout.sizeHint().height() + 20)  # 높이 조정
+        # 높이를 자동으로 조정하도록 변경
+        weapon_group.adjustSize()
         right_layout.addWidget(weapon_group)
 
         # 방어반경 체크박스
@@ -361,17 +372,30 @@ class DalViewWindow(QtWidgets.QDialog, QObject):
                 asset_name = self.assets_table.item(row, 6).text()
                 area = self.assets_table.item(row, 7).text()
                 coordinate = self.assets_table.item(row, 8).text()
-                weapon_systems = self.assets_table.item(row, 12).text().split(',')
+                weapon_systems_text = self.assets_table.item(row, 12).text()
                 threat_degree = self.assets_table.item(row, 14).text()
                 engagement_effectiveness = self.assets_table.item(row, 15).text()
                 bmd_priority = self.assets_table.item(row, 16).text()
-                for weapon_system in weapon_systems:
-                    weapon, ammo = weapon_system.strip().split('(')
-                    ammo = int(ammo.rstrip(')'))
+
+                # weapon_systems가 비어있거나 None인 경우 처리
+                if not weapon_systems_text or weapon_systems_text.strip() == '':
                     for weapon_systems_check, checkbox in self.weapon_systems_checkboxes.items():
-                        if checkbox.isChecked() and weapon == weapon_systems_check:
-                            selected_assets.append((unit, asset_name, area, coordinate, weapon, ammo, threat_degree,
-                                            engagement_effectiveness, bmd_priority))
+                        if checkbox.isChecked():
+                            selected_assets.append((unit, asset_name, area, coordinate, None, 0, threat_degree,
+                                                    engagement_effectiveness, bmd_priority))
+                else:
+                    weapon_systems = weapon_systems_text.split(',')
+                    for weapon_system in weapon_systems:
+                        try:
+                            weapon, ammo = weapon_system.strip().split('(')
+                            ammo = int(ammo.rstrip(')'))
+                        except ValueError:
+                            weapon, ammo = None, 0
+
+                        for weapon_systems_check, checkbox in self.weapon_systems_checkboxes.items():
+                            if checkbox.isChecked() and weapon == weapon_systems_check:
+                                selected_assets.append((unit, asset_name, area, coordinate, weapon, ammo, threat_degree,
+                                                        engagement_effectiveness, bmd_priority))
         return selected_assets
 
     def load_assets(self):

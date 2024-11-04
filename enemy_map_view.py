@@ -101,7 +101,7 @@ class EnemyBaseMapView(QObject):
         legend_html = f"""
             <div id="maplegend" style="
                 position: fixed; 
-                bottom: 50px; 
+                bottom: 20px; 
                 right: 20px; 
                 width: auto; 
                 height: auto; 
@@ -117,7 +117,10 @@ class EnemyBaseMapView(QObject):
                 <div style="margin-top: 5px;">
         """
         for weapon_type, info in weapon_info.items():
-            legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type} ({max_radius}: {info["max_radius"]}km)<br>'
+            if weapon_type != 'Various Types':
+                legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type} ({max_radius}: {info["max_radius"]}km)<br>'
+            else:
+                legend_html += f'<span style="color:{info["color"]};">&#9650;</span> {weapon_type}<br>'
         legend_html += """
                 </div>
             </div>

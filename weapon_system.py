@@ -292,6 +292,7 @@ class WeaponSystemWindow(QDialog):
                 json.dump(data, file, ensure_ascii=False, indent=4)
 
             self.load_weapon_systems()
+            self.clear_inputs()
 
 class CheckBoxHeader(QHeaderView):
     def __init__(self, orientation, parent):

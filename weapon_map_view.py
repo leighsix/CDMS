@@ -75,7 +75,7 @@ class WeaponAssetMapView(QObject):
         weapon_systems = self.tr("무기체계")
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
@@ -186,7 +186,7 @@ class WeaponMapView(QObject):
         max_radius = self.tr("최대반경")
         # 범례 생성
         legend_html = f"""
-        <div style="position: fixed; bottom: 50px; left: 50px; width: auto; height: auto; 
+        <div style="position: fixed; bottom: 20px; left: 20px; width: auto; height: auto; 
         background-color: white; border: 2px solid grey; z-index:9999; font-size:14px;
         padding: 10px; border-radius: 5px;">
         <strong>{weapon_systems}</strong><br>
